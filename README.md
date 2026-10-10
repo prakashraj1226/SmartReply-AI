@@ -249,3 +249,4 @@ docker exec -i smartreply-postgres psql -U smartreply -d smartreply_db < smartre
 
 ## 📄 License
 SmartReply AI is released under the MIT License.
+# SmartReply-AI
