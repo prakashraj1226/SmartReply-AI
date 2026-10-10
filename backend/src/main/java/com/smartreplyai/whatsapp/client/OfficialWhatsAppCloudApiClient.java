@@ -71,6 +71,10 @@ public class OfficialWhatsAppCloudApiClient implements WhatsAppClient {
                 return WhatsAppSendResult.ok(wamid, false);
             } else {
                 logger.error("WhatsApp Cloud API error HTTP {}: {}", response.statusCode(), response.body());
+                if (response.body() != null && response.body().contains("131047")) {
+                    logger.info("Outside 24h window (error 131047). Falling back to pre-approved 'hello_world' template...");
+                    return sendTemplateMessage(account, recipientPhone, "hello_world", "en_US", List.of());
+                }
                 return WhatsAppSendResult.failure("WhatsApp API Error: " + response.body(), false);
             }
         } catch (Exception e) {
@@ -91,7 +95,7 @@ public class OfficialWhatsAppCloudApiClient implements WhatsAppClient {
 
             Map<String, Object> template = new HashMap<>();
             template.put("name", templateName);
-            template.put("language", Map.of("code", languageCode != null ? languageCode : "en"));
+            template.put("language", Map.of("code", languageCode != null ? languageCode : "en_US"));
 
             Map<String, Object> body = new HashMap<>();
             body.put("messaging_product", "whatsapp");

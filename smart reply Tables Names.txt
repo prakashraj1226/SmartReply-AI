@@ -1,0 +1,37 @@
+
+Tables Names
+----------
+
+users
+businesses
+business_members
+conversations
+messages
+customers
+knowledge_articles
+appointments
+automation_rules
+subscription_plans
+subscriptions
+audit_logs
+
+DB Login
+-----------
+Host	localhost
+Port	5432
+Database	smartreply_db (Change from postgres to this)
+Username	smartreply
+Password	smartreply_secret
+-----------------
+
+
+
+Phone Number ID:
+1378873838639112
+
+WhatsApp Business account ID:
+1976776156330460
+
+EAAZA5hjiUouIBStDvQH9garVXYNDejhegkiu2E7FS86onK4spFQPckN1purrITA7cZCyhuvwcOssyybKkXDacSNLiqlftIyFPpuwdwyN2ZBvCAoY2ooIkJ8PZCtN8UZAfkr6WsZB80maWcsMJkj8BK4AdZBXZAfyqjs9XQ4O4vIRSdZCEqqmfgaXSuPCtOkZAcNUy2lSMOEcIuoLko3PZC37HZBelhSHwO4ElPNvht5xEdvatchSQUks9UyYx9VDBEqhuzjJFnVZCAS5gQNBx9Bv9YabzqO1h
+
+

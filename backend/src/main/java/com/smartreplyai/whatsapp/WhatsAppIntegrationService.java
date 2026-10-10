@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -273,6 +274,11 @@ public class WhatsAppIntegrationService {
         IntegrationAccount account = integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
                 .orElseThrow(() -> new BadRequestException("WhatsApp integration not configured"));
 
+        // In WhatsApp Cloud API, new conversations must be initiated with a pre-approved template (hello_world)
+        WhatsAppSendResult templateResult = whatsAppClient.sendTemplateMessage(account, recipientPhone, "hello_world", "en_US", List.of());
+        if (templateResult.isSuccess()) {
+            return templateResult;
+        }
         return whatsAppClient.sendTextMessage(account, recipientPhone, text);
     }
 

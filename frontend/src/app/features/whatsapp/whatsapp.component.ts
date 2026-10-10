@@ -673,6 +673,9 @@ export class WhatsAppIntegrationComponent implements OnInit {
   }
 
   saveConfig(): void {
+    if (this.formData.accessToken && this.formData.phoneNumberId) {
+      this.formData.isSandbox = false;
+    }
     this.isSaving.set(true);
     this.whatsAppService.updateConfig(this.formData).subscribe({
       next: (res) => {
