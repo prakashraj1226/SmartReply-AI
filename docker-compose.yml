@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartreply-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartreply_db}
+      POSTGRES_USER: ${POSTGRES_USER:-smartreply}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartreply_secret}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartreply -d smartreply_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smartreply-backend
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-smartreply_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-smartreply}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-smartreply_secret}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-smartreply_verify_token_secure_2026}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: smartreply-frontend
+    restart: always
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

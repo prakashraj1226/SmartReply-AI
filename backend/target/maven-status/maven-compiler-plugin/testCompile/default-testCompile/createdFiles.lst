@@ -1,0 +1,11 @@
+com/smartreplyai/automation/AutomationEngineServiceTest.class
+com/smartreplyai/customer/CustomerServiceTest.class
+com/smartreplyai/ai/RuleBasedKnowledgeAiProviderTest.class
+com/smartreplyai/conversation/ConversationServiceTest.class
+com/smartreplyai/subscription/SubscriptionServiceTest.class
+com/smartreplyai/auth/AuthServiceTest.class
+com/smartreplyai/settings/SettingsServiceTest.class
+com/smartreplyai/admin/AdminServiceTest.class
+com/smartreplyai/knowledgebase/KnowledgeBaseServiceTest.class
+com/smartreplyai/whatsapp/WhatsAppIntegrationServiceTest.class
+com/smartreplyai/appointment/AppointmentServiceTest.class

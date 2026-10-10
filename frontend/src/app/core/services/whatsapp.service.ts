@@ -1,0 +1,72 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data: T;
+  timestamp: string;
+}
+
+export interface WhatsAppConfig {
+  id: string;
+  accountId?: string;
+  phoneNumberId?: string;
+  phoneNumber?: string;
+  webhookVerifyToken?: string;
+  status: 'CONNECTED' | 'SANDBOX' | 'DISCONNECTED' | 'ERROR';
+  sandbox: boolean;
+  hasAccessToken: boolean;
+  webhookCallbackUrl: string;
+}
+
+export interface UpdateWhatsAppConfigRequest {
+  accountId?: string;
+  phoneNumberId?: string;
+  phoneNumber?: string;
+  accessToken?: string;
+  webhookVerifyToken?: string;
+  appSecret?: string;
+  isSandbox?: boolean;
+}
+
+export interface WhatsAppSendResult {
+  success: boolean;
+  messageId?: string;
+  status: string;
+  errorMessage?: string;
+  simulated: boolean;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class WhatsAppService {
+  private apiUrl = '/api/whatsapp';
+
+  constructor(private http: HttpClient) {}
+
+  getConfig(): Observable<ApiResponse<WhatsAppConfig>> {
+    return this.http.get<ApiResponse<WhatsAppConfig>>(`${this.apiUrl}/config`);
+  }
+
+  updateConfig(req: UpdateWhatsAppConfigRequest): Observable<ApiResponse<WhatsAppConfig>> {
+    return this.http.put<ApiResponse<WhatsAppConfig>>(`${this.apiUrl}/config`, req);
+  }
+
+  testSend(recipientPhone: string, message: string): Observable<ApiResponse<WhatsAppSendResult>> {
+    return this.http.post<ApiResponse<WhatsAppSendResult>>(`${this.apiUrl}/test-send`, {
+      recipientPhone,
+      message
+    });
+  }
+
+  simulateWebhook(fromPhone: string, text: string, senderName: string): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.apiUrl}/simulate-webhook`, {
+      fromPhone,
+      text,
+      senderName
+    });
+  }
+}

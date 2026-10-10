@@ -1,0 +1,11 @@
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/admin/AdminServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/ai/RuleBasedKnowledgeAiProviderTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/appointment/AppointmentServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/auth/AuthServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/automation/AutomationEngineServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/conversation/ConversationServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/customer/CustomerServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/knowledgebase/KnowledgeBaseServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/settings/SettingsServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/subscription/SubscriptionServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/whatsapp/WhatsAppIntegrationServiceTest.java
