@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -68,7 +69,7 @@ export interface VerifyPaymentRequest {
   providedIn: 'root'
 })
 export class SubscriptionService {
-  private apiUrl = '/api/subscriptions';
+  private apiUrl = `${environment.apiUrl}/subscriptions`;
 
   constructor(private http: HttpClient) {}
 

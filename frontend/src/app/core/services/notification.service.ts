@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -31,7 +32,7 @@ export interface PageResult<T> {
   providedIn: 'root'
 })
 export class NotificationService {
-  private apiUrl = '/api/notifications';
+  private apiUrl = `${environment.apiUrl}/notifications`;
 
   unreadCount = signal<number>(0);
 

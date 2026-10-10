@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -48,7 +49,7 @@ export interface PageResult<T> {
   providedIn: 'root'
 })
 export class AutomationService {
-  private apiUrl = '/api/automations';
+  private apiUrl = `${environment.apiUrl}/automations`;
 
   constructor(private http: HttpClient) {}
 
