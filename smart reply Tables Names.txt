@@ -51,3 +51,10 @@ github
 ------
 prakashraj1226
 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
+
+SPRING_DATASOURCE_URL="jdbc:postgresql://ep-bold-lake-azagg7zd.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require" \
+SPRING_DATASOURCE_USERNAME="neondb_owner" \
+SPRING_DATASOURCE_PASSWORD="npg_N7BLEG3HIneF" \
+SERVER_PORT=8081 \
+mvn spring-boot:run
+
