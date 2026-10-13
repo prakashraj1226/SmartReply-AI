@@ -2,7 +2,7 @@ services:
   # 1. Spring Boot Backend Web Service (Free Tier)
   - type: web
     name: smartreply-backend
-    env: docker
+    runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
@@ -21,14 +21,16 @@ services:
         value: "*"
       - key: WHATSAPP_VERIFY_TOKEN
         value: "smartreply_verify_token_secure_2026"
+      - key: PORT
+        value: "8080"
 
   # 2. Angular Frontend Static Site (Free Tier)
   - type: web
     name: smartreply-frontend
-    env: static
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist/frontend/browser
+    publishDir: ./dist/frontend/browser
     plan: free
     routes:
       - type: rewrite
