@@ -71,6 +71,7 @@ com/smartreplyai/customer/CustomerController.class
 com/smartreplyai/common/GlobalExceptionHandler.class
 com/smartreplyai/auth/dto/AuthResponse.class
 com/smartreplyai/whatsapp/client/OfficialWhatsAppCloudApiClient.class
+com/smartreplyai/auth/dto/ResetPasswordRequest.class
 com/smartreplyai/settings/dto/AiConfigDto.class
 com/smartreplyai/customer/CustomerRepository.class
 com/smartreplyai/settings/dto/TeamMemberDto.class
@@ -83,6 +84,7 @@ com/smartreplyai/tenant/TenantFilter.class
 com/smartreplyai/knowledgebase/dto/UpdateArticleRequest.class
 com/smartreplyai/common/ApiResponse.class
 com/smartreplyai/settings/dto/InviteMemberRequest.class
+com/smartreplyai/auth/dto/ForgotPasswordRequest.class
 com/smartreplyai/common/BadRequestException.class
 com/smartreplyai/appointment/dto/CreateAppointmentRequest.class
 com/smartreplyai/reports/ReportsSummaryDto.class

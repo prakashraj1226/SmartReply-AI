@@ -27,8 +27,10 @@
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/User.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/UserRepository.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/dto/AuthResponse.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/dto/ForgotPasswordRequest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/dto/LoginRequest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/dto/RegisterRequest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/dto/ResetPasswordRequest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/dto/UserProfileResponse.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/automation/AutomationController.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/automation/AutomationEngineService.java

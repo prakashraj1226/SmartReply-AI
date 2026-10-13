@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090d19">
+  <meta name="description" content="SmartReply AI is an AI-powered WhatsApp automation and customer support platform for clinics, salons, real estate, and local businesses.">
+  <title>SmartReply AI — 24/7 WhatsApp AI Receptionist & Support Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+
+<!-- Navbar -->
+<header class="navbar">
+  <a class="brand" href="#home">
+    <span class="brand-icon">S</span>
+    <span>SmartReply<span class="accent">AI</span></span>
+  </a>
+  <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+  <nav id="navLinks">
+    <a href="#features">Features</a>
+    <a href="#demo">Live Demo</a>
+    <a href="#how">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a class="nav-cta" href="#get-started">Get Started</a>
+  </nav>
+</header>
+
+<main>
+  <!-- Hero Section -->
+  <section class="hero" id="home">
+    <div class="hero-content">
+      <div class="eyebrow">
+        <span class="live-dot"></span> 24/7 WhatsApp AI Customer Receptionist
+      </div>
+      <h1>Every inquiry.<br><span class="gradient">Answered in seconds.</span></h1>
+      <p class="hero-text">
+        Turn WhatsApp inquiries into booked appointments and repeat customers. SmartReply AI automates customer support, checks schedules, and resolves FAQs instantly with zero hallucinations.
+      </p>
+      <div class="hero-actions">
+        <a href="#demo" class="button primary">Try Interactive Demo ↗</a>
+        <a href="#features" class="button secondary">Explore Features</a>
+      </div>
+      <p class="microcopy">✦ Official Meta WhatsApp Cloud API Ready · Zero Double Bookings</p>
+    </div>
+
+    <!-- Product Preview Card -->
+    <div class="preview-wrap" aria-label="Interactive SmartReply AI WhatsApp Preview">
+      <div class="glow"></div>
+      <div class="preview">
+        <div class="preview-top">
+          <div class="preview-controls">
+            <span class="window-dot red"></span>
+            <span class="window-dot yellow"></span>
+            <span class="window-dot green"></span>
+          </div>
+          <span class="preview-label">WHATSAPP LIVE RECEPTIONIST</span>
+          <span class="live-badge">🟢 ONLINE</span>
+        </div>
+
+        <!-- Scenario Switcher Tabs -->
+        <div class="scenario-tabs">
+          <button class="scenario-btn active" data-scenario="booking">Appointment</button>
+          <button class="scenario-btn" data-scenario="faq">Pricing & FAQs</button>
+          <button class="scenario-btn" data-scenario="handoff">Human Handoff</button>
+        </div>
+
+        <div class="preview-body">
+          <div class="chat-date">Today · WhatsApp Business</div>
+
+          <!-- Customer Message -->
+          <div class="message user-message" id="customerMsg">
+            <span class="msg-sender">Customer</span>
+            <p id="customerText">Hi! Do you have any open slots for a teeth cleaning consultation this Saturday afternoon?</p>
+            <span class="msg-time">2:31 PM</span>
+          </div>
+
+          <!-- AI Assistant Response -->
+          <div class="ai-heading">
+            <span class="brand-icon small">S</span>
+            <span>SmartReply AI Receptionist</span>
+            <span class="verified-tag">✓ Verified KB</span>
+          </div>
+
+          <div class="message ai-message" id="aiMsg">
+            <p id="aiText">
+              Hi Rahul! 👋 Yes, Dr. Sharma has two slots open this Saturday (Oct 17):<br><br>
+              • <strong>2:30 PM</strong><br>
+              • <strong>4:15 PM</strong><br><br>
+              Consultation is ₹499. Would you like me to confirm the 2:30 PM slot for you?
+            </p>
+            <div class="ai-meta">
+              <span class="instant-badge">⚡ Replied in 0.8s</span>
+              <span class="msg-time">2:31 PM ✓✓</span>
+            </div>
+          </div>
+
+          <div class="preview-footer">
+            <span id="scenarioFooter">✦ Grounded on Verified FAQs · Calendar Synchronized</span>
+            <span class="demo-tag">LIVE AGENT READY</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Badges -->
+      <div class="floating-card top-float">✦ Auto-Detects Conflicting Appointments</div>
+      <div class="floating-card bottom-float">✦ Meta Cloud API Integration</div>
+    </div>
+  </section>
+
+  <!-- Trust Strip -->
+  <section class="trust-strip">
+    <span>ENGINEERED FOR HIGH-CONVERSION SERVICE BUSINESSES</span>
+    <div>🏥 Dental & Medical Clinics</div>
+    <div>💇 Salons & Luxury Spas</div>
+    <div>🏢 Real Estate Agencies</div>
+    <div>🎓 Coaching & Institutes</div>
+    <div>🛍️ Local Retail SMBs</div>
+  </section>
+
+  <!-- Features Grid -->
+  <section class="section" id="features">
+    <div class="section-heading">
+      <span class="section-kicker">WHY CHOOSE SMARTREPLY AI</span>
+      <h2>Everything you need to <span class="gradient">automate WhatsApp sales.</span></h2>
+      <p>Never lose a customer to slow replies. Our platform unifies AI automation with human agent control.</p>
+    </div>
+
+    <div class="feature-grid">
+      <article class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>Zero-Hallucination AI Receptionist</h3>
+        <p>Trained exclusively on your approved business FAQs, pricing, and services. Never invents fake information or promises incorrect rates.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon">📅</div>
+        <h3>Collision-Proof Appointment Booking</h3>
+        <p>Built-in double booking prevention. Synchronizes staff rosters, service durations, and operating hours in real time.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon">💬</div>
+        <h3>Unified 3-Panel Team Inbox</h3>
+        <p>Intercom-style inbox for human agents. Filter open threads, read delivery status (`SENT`, `DELIVERED`, `READ`), and add internal staff notes.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Instant Human Escalation</h3>
+        <p>When questions require human intervention or special quotes, the AI seamlessly flags staff and pauses automatic replies.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Strict Multi-Tenant Isolation</h3>
+        <p>Enterprise-grade security ensuring customer messages, contacts, and business profiles remain strictly private and isolated.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Analytics & Billing Ready</h3>
+        <p>Track message volume, resolution rate, and active conversations. Built-in tier management and Razorpay subscription support.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Interactive Sandbox Simulator Section -->
+  <section class="section demo-section" id="demo">
+    <div class="section-heading">
+      <span class="section-kicker">TEST THE AI YOURSELF</span>
+      <h2>Interactive WhatsApp Simulator</h2>
+      <p>Try sending a question below to see how SmartReply AI evaluates business knowledge in real time.</p>
+    </div>
+
+    <div class="sim-wrapper">
+      <div class="sim-window">
+        <div class="sim-header">
+          <div class="sim-avatar">🏥</div>
+          <div class="sim-info">
+            <strong>Apex Dental Care (SmartReply AI)</strong>
+            <span>🟢 Always Active · Responds instantly</span>
+          </div>
+        </div>
+
+        <div class="sim-messages" id="simMessages">
+          <div class="bubble bot-bubble">
+            Hello! 👋 Welcome to Apex Dental Care. How can I assist you with appointments, services, or pricing today?
+            <span class="bubble-time">10:00 AM</span>
+          </div>
+        </div>
+
+        <!-- Quick Prompt Chips -->
+        <div class="prompt-chips">
+          <button class="chip-btn" data-query="What are your clinic timings?">Clinic Timings</button>
+          <button class="chip-btn" data-query="How much does root canal treatment cost?">Root Canal Pricing</button>
+          <button class="chip-btn" data-query="Can I book an appointment for tomorrow at 5 PM?">Book Tomorrow 5 PM</button>
+        </div>
+
+        <!-- Input Box -->
+        <form class="sim-input-box" id="simForm">
+          <input type="text" id="simInput" placeholder="Type a message (e.g., Do you accept insurance?)..." autocomplete="off" required>
+          <button type="submit" class="button primary send-btn">Send ↗</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-section" id="how">
+    <div class="section-heading">
+      <span class="section-kicker">SIMPLE ONBOARDING</span>
+      <h2>Up and running in <span class="gradient">3 simple steps.</span></h2>
+      <p>No coding required. Start automating WhatsApp conversations within minutes.</p>
+    </div>
+
+    <div class="steps">
+      <article class="step">
+        <span>01</span>
+        <h3>Connect WhatsApp API</h3>
+        <p>Link your WhatsApp Business Number with our official Meta Cloud API integration in one click.</p>
+      </article>
+      <article class="step">
+        <span>02</span>
+        <h3>Upload FAQs & Schedule</h3>
+        <p>Add your services, opening hours, and staff schedule via CSV or our simple knowledge dashboard.</p>
+      </article>
+      <article class="step">
+        <span>03</span>
+        <h3>Turn On Autopilot</h3>
+        <p>SmartReply AI greets new leads, answers recurring questions, and books appointments 24 hours a day.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Pricing Preview Section -->
+  <section class="section" id="pricing">
+    <div class="section-heading">
+      <span class="section-kicker">TRANSPARENT PRICING</span>
+      <h2>Built to scale with your business.</h2>
+      <p>Start free, upgrade as your WhatsApp message volume grows.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <!-- Starter Plan -->
+      <div class="pricing-card">
+        <h3>Starter</h3>
+        <p class="plan-desc">For individual clinics & boutique salons.</p>
+        <div class="price">₹999<span>/month</span></div>
+        <ul class="pricing-features">
+          <li>✓ 1 WhatsApp Business Number</li>
+          <li>✓ Up to 1,000 AI Conversations/mo</li>
+          <li>✓ 50 Knowledge Base FAQs</li>
+          <li>✓ Collision-Proof Booking Calendar</li>
+          <li>✓ 1 Human Agent Seat</li>
+        </ul>
+        <a href="#get-started" class="button secondary full-width">Get Started</a>
+      </div>
+
+      <!-- Growth Plan -->
+      <div class="pricing-card featured">
+        <div class="badge-featured">MOST POPULAR</div>
+        <h3>Growth</h3>
+        <p class="plan-desc">For growing practices & busy service centres.</p>
+        <div class="price">₹2,499<span>/month</span></div>
+        <ul class="pricing-features">
+          <li>✓ Everything in Starter</li>
+          <li>✓ Up to 5,000 AI Conversations/mo</li>
+          <li>✓ Unlimited Knowledge Base FAQs</li>
+          <li>✓ Multi-Staff Rosters & Reminders</li>
+          <li>✓ 5 Human Agent Team Seats</li>
+          <li>✓ Priority Meta Cloud Routing</li>
+        </ul>
+        <a href="#get-started" class="button primary full-width">Upgrade to Growth ↗</a>
+      </div>
+
+      <!-- Pro / Enterprise Plan -->
+      <div class="pricing-card">
+        <h3>Pro / Multi-Branch</h3>
+        <p class="plan-desc">For multi-location brands & high volume.</p>
+        <div class="price">₹4,999<span>/month</span></div>
+        <ul class="pricing-features">
+          <li>✓ Multiple Branch Locations</li>
+          <li>✓ 15,000+ AI Conversations/mo</li>
+          <li>✓ Custom AI Grounding Models</li>
+          <li>✓ Dedicated Account Manager</li>
+          <li>✓ Custom CRM & Webhook Sync</li>
+        </ul>
+        <a href="#get-started" class="button secondary full-width">Contact Sales</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Call to Action -->
+  <section class="cta-section" id="get-started">
+    <div class="cta-box">
+      <span class="section-kicker">READY TO ACCELERATE YOUR BUSINESS?</span>
+      <h2>Stop losing customers to unanswered messages.</h2>
+      <p>Join clinics, salons, and businesses delivering 5-star customer service 24/7 with SmartReply AI.</p>
+      <div class="cta-buttons">
+        <a class="button primary" href="mailto:contact@smartreplyai.in?subject=SmartReply%20AI%20Demo%20Request">Request Business Demo ↗</a>
+      </div>
+      <p class="microcopy">Need a custom integration? Email us at contact@smartreplyai.in</p>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-left">
+    <a class="brand" href="#home">
+      <span class="brand-icon">S</span>
+      <span>SmartReply<span class="accent">AI</span></span>
+    </a>
+    <p>Automate customer conversations with precision and care.</p>
+  </div>
+  <div class="footer-links">
+    <a href="#features">Features</a>
+    <a href="#demo">Demo</a>
+    <a href="#pricing">Pricing</a>
+    <a href="mailto:contact@smartreplyai.in">Support</a>
+  </div>
+  <div class="footer-bottom">
+    <span>© <span id="year"></span> SmartReply AI. All rights reserved.</span>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -17,6 +17,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.smartreplyai.whatsapp.IntegrationAccount;
+import com.smartreplyai.whatsapp.IntegrationAccountRepository;
+import com.smartreplyai.whatsapp.client.OfficialWhatsAppCloudApiClient;
+import com.smartreplyai.whatsapp.client.WhatsAppSendResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -24,25 +31,33 @@ import java.util.UUID;
 @Service
 public class ConversationService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ConversationService.class);
+
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final CustomerRepository customerRepository;
     private final BusinessRepository businessRepository;
     private final UserRepository userRepository;
     private final AiService aiService;
+    private final IntegrationAccountRepository integrationAccountRepository;
+    private final OfficialWhatsAppCloudApiClient whatsAppClient;
 
     public ConversationService(ConversationRepository conversationRepository,
                                MessageRepository messageRepository,
                                CustomerRepository customerRepository,
                                BusinessRepository businessRepository,
                                UserRepository userRepository,
-                               AiService aiService) {
+                               AiService aiService,
+                               IntegrationAccountRepository integrationAccountRepository,
+                               OfficialWhatsAppCloudApiClient whatsAppClient) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.customerRepository = customerRepository;
         this.businessRepository = businessRepository;
         this.userRepository = userRepository;
         this.aiService = aiService;
+        this.integrationAccountRepository = integrationAccountRepository;
+        this.whatsAppClient = whatsAppClient;
     }
 
     @Transactional(readOnly = true)
@@ -91,6 +106,24 @@ public class ConversationService {
         conversation.setLastMessageAt(Instant.now());
         conversation.setUnreadCount(0);
         conversationRepository.save(conversation);
+
+        // Outbound WhatsApp dispatch if customer has phone number
+        if (conversation.getCustomer() != null && conversation.getCustomer().getPhoneNumber() != null) {
+            integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
+                    .ifPresent(account -> {
+                        try {
+                            WhatsAppSendResult result = whatsAppClient.sendTextMessage(account, conversation.getCustomer().getPhoneNumber(), textContent.trim());
+                            if (result.isSuccess()) {
+                                logger.info("Outbound WhatsApp agent message dispatched to {}: id={}, simulated={}",
+                                        conversation.getCustomer().getPhoneNumber(), result.getMessageId(), result.isSimulated());
+                            } else {
+                                logger.warn("Outbound WhatsApp message failed: {}", result.getErrorMessage());
+                            }
+                        } catch (Exception e) {
+                            logger.error("Failed to dispatch WhatsApp outbound message", e);
+                        }
+                    });
+        }
 
         return message;
     }
@@ -143,6 +176,18 @@ public class ConversationService {
                     conversation.setStatus("PENDING"); // Human attention needed!
                 } else {
                     conversation.setUnreadCount(0); // Answered cleanly
+                }
+
+                // Dispatch AI autonomous reply to customer's WhatsApp
+                if (customer.getPhoneNumber() != null) {
+                    integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
+                            .ifPresent(account -> {
+                                try {
+                                    whatsAppClient.sendTextMessage(account, customer.getPhoneNumber(), aiResponse.getReplyText());
+                                } catch (Exception e) {
+                                    logger.error("Failed to dispatch WhatsApp AI reply", e);
+                                }
+                            });
                 }
             }
         }

@@ -22,7 +22,8 @@ import { TopbarComponent } from '../topbar/topbar.component';
   styles: [`
     .layout-container {
       display: flex;
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
       background-color: var(--slate-50);
     }
 
@@ -30,15 +31,37 @@ import { TopbarComponent } from '../topbar/topbar.component';
       flex: 1;
       display: flex;
       flex-direction: column;
+      height: 100vh;
       min-width: 0;
+      overflow: hidden;
     }
 
     .page-content {
       flex: 1;
-      padding: 1.75rem 2rem;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0.75rem 1rem;
       max-width: 1600px;
       width: 100%;
       margin: 0 auto;
+    }
+
+    .page-content::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .page-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .page-content::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+
+    .page-content::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
 
     @media (max-width: 768px) {

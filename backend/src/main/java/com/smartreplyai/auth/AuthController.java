@@ -12,6 +12,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import com.smartreplyai.auth.dto.ForgotPasswordRequest;
+import com.smartreplyai.auth.dto.ResetPasswordRequest;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -33,6 +37,18 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.ok("Login successful", response));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        Map<String, Object> result = authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.ok("Password reset link dispatched", result));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        Map<String, Object> result = authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.ok("Password updated successfully", result));
     }
 
     @GetMapping("/me")
