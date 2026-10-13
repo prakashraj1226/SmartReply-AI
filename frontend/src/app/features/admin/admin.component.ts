@@ -167,18 +167,18 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem } f
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let biz of (filteredBusinesses().length > 0 ? filteredBusinesses() : seedBusinesses)">
+              <tr *ngFor="let biz of filteredBusinesses()">
                 <td>
                   <div class="biz-name-cell">
                     <strong>{{ biz.name }}</strong>
                     <span class="biz-slug">/{{ biz.slug }}</span>
                   </div>
                 </td>
-                <td><span class="tag-pill">{{ biz.category || 'Healthcare & Dental' }}</span></td>
+                <td><span class="tag-pill">{{ biz.category || 'General' }}</span></td>
                 <td>
                   <div class="contact-info">
-                    <span>{{ biz.email || 'dr.rajesh@smilecare.in' }}</span>
-                    <span class="phone-sub">{{ biz.phone || '+91 98401 23456' }}</span>
+                    <span>{{ biz.email || '—' }}</span>
+                    <span class="phone-sub" *ngIf="biz.phone">{{ biz.phone }}</span>
                   </div>
                 </td>
                 <td><span class="plan-pill">{{ biz.planName }}</span></td>
@@ -240,10 +240,10 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem } f
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let u of (filteredUsers().length > 0 ? filteredUsers() : seedUsers)">
+              <tr *ngFor="let u of filteredUsers()">
                 <td>
                   <div class="user-cell">
-                    <div class="member-avatar">{{ u.fullName.charAt(0).toUpperCase() }}</div>
+                    <div class="member-avatar">{{ (u.fullName || 'U').charAt(0).toUpperCase() }}</div>
                     <div>
                       <strong>{{ u.fullName }}</strong>
                       <div class="email-sub">{{ u.email }}</div>
@@ -251,9 +251,12 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem } f
                   </div>
                 </td>
                 <td><span class="role-pill">{{ u.role }}</span></td>
-                <td>{{ u.businessName || 'SmileCare Clinic' }}</td>
+                <td>{{ u.businessName || '—' }}</td>
                 <td>{{ u.createdAt | date:'mediumDate' }}</td>
                 <td><span class="status-pill-green">● Active</span></td>
+              </tr>
+              <tr *ngIf="filteredUsers().length === 0">
+                <td colspan="5" class="text-center py-4 text-muted">No users found.</td>
               </tr>
             </tbody>
           </table>
@@ -289,12 +292,15 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem } f
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let log of (auditLogs().length > 0 ? auditLogs() : seedAuditLogs)">
+              <tr *ngFor="let log of auditLogs()">
                 <td>{{ log.createdAt | date:'medium' }}</td>
                 <td><strong>{{ log.userEmail }}</strong></td>
                 <td><span class="tag-pill">{{ log.action }}</span></td>
                 <td>{{ log.entityType }}</td>
                 <td><code>{{ log.ipAddress || '127.0.0.1' }}</code></td>
+              </tr>
+              <tr *ngIf="auditLogs().length === 0">
+                <td colspan="5" class="text-center py-4 text-muted">No audit logs recorded yet.</td>
               </tr>
             </tbody>
           </table>
@@ -833,127 +839,6 @@ export class AdminComponent implements OnInit {
   alertMessage = signal<string | null>(null);
   alertType = signal<'success' | 'error'>('success');
 
-  seedBusinesses: AdminBusiness[] = [
-    {
-      id: 'biz-1',
-      name: 'SmileCare Dental Clinic',
-      slug: 'smilecare',
-      category: 'Healthcare & Dental',
-      email: 'rajesh@smilecare.com',
-      phone: '+91 98401 23456',
-      planName: 'Growth Plan',
-      memberCount: 3,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
-      isActive: true,
-      onboardingCompleted: true
-    },
-    {
-      id: 'biz-2',
-      name: 'Glow Wellness Salon & Spa',
-      slug: 'glow-salon',
-      category: 'Salon & Wellness',
-      email: 'booking@glowwellness.in',
-      phone: '+91 94440 88776',
-      planName: 'Starter Plan',
-      memberCount: 2,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString(),
-      isActive: true,
-      onboardingCompleted: true
-    },
-    {
-      id: 'biz-3',
-      name: 'Skyline Realtors & Properties',
-      slug: 'skyline-realty',
-      category: 'Real Estate',
-      email: 'leads@skylinerealty.com',
-      phone: '+91 98840 99887',
-      planName: 'Enterprise Pro',
-      memberCount: 8,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 45).toISOString(),
-      isActive: true,
-      onboardingCompleted: true
-    }
-  ];
-
-  seedUsers: AdminUser[] = [
-    {
-      id: 'u-1',
-      fullName: 'Dr. Rajesh Patel',
-      email: 'rajesh@smilecare.com',
-      role: 'BUSINESS_OWNER',
-      businessName: 'SmileCare Dental Clinic',
-      isActive: true,
-      emailVerified: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()
-    },
-    {
-      id: 'u-2',
-      fullName: 'Nurse Anita',
-      email: 'anita@smilecare.com',
-      role: 'AGENT',
-      businessName: 'SmileCare Dental Clinic',
-      isActive: true,
-      emailVerified: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 25).toISOString()
-    },
-    {
-      id: 'u-3',
-      fullName: 'Vikram Joshi',
-      email: 'vikram@glowwellness.in',
-      role: 'BUSINESS_OWNER',
-      businessName: 'Glow Wellness Salon & Spa',
-      isActive: true,
-      emailVerified: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString()
-    },
-    {
-      id: 'u-4',
-      fullName: 'Platform Super Admin',
-      email: 'admin@smartreply.ai',
-      role: 'SUPER_ADMIN',
-      businessName: 'SmartReply AI Platform',
-      isActive: true,
-      emailVerified: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90).toISOString()
-    }
-  ];
-
-  seedAuditLogs: AuditLogItem[] = [
-    {
-      id: 'log-1',
-      businessName: 'SmileCare Dental Clinic',
-      userEmail: 'rajesh@smilecare.com',
-      action: 'UPDATE_AI_CONFIG',
-      entityType: 'AI_PERSONA',
-      entityId: 'ai-cfg-1',
-      detailsJson: '{"confidenceThreshold":0.78}',
-      ipAddress: '106.51.78.22',
-      createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
-    },
-    {
-      id: 'log-2',
-      businessName: 'SmileCare Dental Clinic',
-      userEmail: 'rajesh@smilecare.com',
-      action: 'ADD_KNOWLEDGE_FAQ',
-      entityType: 'FAQ_RECORD',
-      entityId: 'faq-101',
-      detailsJson: '{"question":"What are scaling charges?"}',
-      ipAddress: '106.51.78.22',
-      createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString()
-    },
-    {
-      id: 'log-3',
-      businessName: 'SmartReply Platform',
-      userEmail: 'admin@smartreply.ai',
-      action: 'VERIFY_TENANT_WEBHOOK',
-      entityType: 'WHATSAPP_CONFIG',
-      entityId: 'wa-1',
-      detailsJson: '{"status":"CONNECTED"}',
-      ipAddress: '49.207.211.89',
-      createdAt: new Date(Date.now() - 1000 * 60 * 300).toISOString()
-    }
-  ];
-
   constructor(private adminService: AdminService) {}
 
   ngOnInit(): void {
@@ -971,27 +856,27 @@ export class AdminComponent implements OnInit {
     this.adminService.getBusinesses().subscribe({
       next: res => {
         const list = (res.success && res.data) ? res.data : [];
-        this.businesses.set(list.length > 0 ? list : this.seedBusinesses);
+        this.businesses.set(list);
       },
-      error: () => this.businesses.set(this.seedBusinesses)
+      error: () => this.businesses.set([])
     });
 
     this.adminService.getUsers().subscribe({
       next: res => {
         const list = (res.success && res.data) ? res.data : [];
-        this.users.set(list.length > 0 ? list : this.seedUsers);
+        this.users.set(list);
       },
-      error: () => this.users.set(this.seedUsers)
+      error: () => this.users.set([])
     });
 
     this.adminService.getAuditLogs().subscribe({
       next: res => {
         const list = (res.success && res.data) ? res.data : [];
-        this.auditLogs.set(list.length > 0 ? list : this.seedAuditLogs);
+        this.auditLogs.set(list);
         this.isLoading.set(false);
       },
       error: () => {
-        this.auditLogs.set(this.seedAuditLogs);
+        this.auditLogs.set([]);
         this.isLoading.set(false);
       }
     });
@@ -999,7 +884,7 @@ export class AdminComponent implements OnInit {
 
   filteredBusinesses(): AdminBusiness[] {
     const q = this.businessSearchQuery.trim().toLowerCase();
-    const source = this.businesses().length > 0 ? this.businesses() : this.seedBusinesses;
+    const source = this.businesses();
     if (!q) return source;
     return source.filter(b =>
       b.name.toLowerCase().includes(q) ||
@@ -1011,7 +896,7 @@ export class AdminComponent implements OnInit {
 
   filteredUsers(): AdminUser[] {
     const q = this.userSearchQuery.trim().toLowerCase();
-    const source = this.users().length > 0 ? this.users() : this.seedUsers;
+    const source = this.users();
     if (!q) return source;
     return source.filter(u =>
       u.fullName.toLowerCase().includes(q) ||

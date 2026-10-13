@@ -132,8 +132,8 @@ import { AutomationService, AutomationRule, AutomationExecution, CreateAutomatio
           <p>Loading workflow triggers...</p>
         </div>
 
-        <div class="rules-cards-grid" *ngIf="!isLoadingRules()">
-          <div *ngFor="let rule of (rules().length > 0 ? rules() : seedRules)" class="rule-card">
+        <div class="rules-cards-grid" *ngIf="!isLoadingRules() && rules().length > 0">
+          <div *ngFor="let rule of rules()" class="rule-card">
             <div class="rule-card-top">
               <div class="trigger-badge-wrap">
                 <span class="trigger-chip">{{ formatTrigger(rule.triggerEvent) }}</span>
@@ -163,6 +163,10 @@ import { AutomationService, AutomationRule, AutomationExecution, CreateAutomatio
               </button>
             </div>
           </div>
+        </div>
+
+        <div *ngIf="!isLoadingRules() && rules().length === 0" class="text-center py-5 text-muted">
+          <p>No automation rules configured yet. Click "+ Create Automation" to get started.</p>
         </div>
       </div>
 
@@ -195,14 +199,20 @@ import { AutomationService, AutomationRule, AutomationExecution, CreateAutomatio
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let ex of (executions().length > 0 ? executions() : seedExecutions)">
-                <td>{{ formatDate(ex.executedAt || ex.createdAt) }}</td>
-                <td><strong>{{ ex.ruleName || 'Auto-Greet Inbound' }}</strong></td>
+              <tr *ngFor="let ex of executions()">
+                <td>{{ formatDate(ex.executedAt) }}</td>
+                <td><strong>{{ ex.ruleName || 'Automation' }}</strong></td>
                 <td><span class="tag-pill">{{ formatTrigger(ex.triggerEvent || 'FIRST_MESSAGE_RECEIVED') }}</span></td>
                 <td>
-                  <span class="status-pill-green">✓ Executed</span>
+                  <span class="status-pill-green" *ngIf="ex.status === 'SUCCESS'">✓ Executed</span>
+                  <span class="status-pill-suspended" *ngIf="ex.status !== 'SUCCESS'">✗ {{ ex.status }}</span>
                 </td>
-                <td><span class="latency-text">{{ ex.executionDurationMs || 42 }}ms</span></td>
+                <td><span class="latency-text">{{ ex.errorMessage || 'OK' }}</span></td>
+              </tr>
+              <tr *ngIf="executions().length === 0">
+                <td colspan="5" class="text-center py-4 text-muted">
+                  No automation executions recorded yet. Triggers will be logged here when active.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -230,7 +240,7 @@ import { AutomationService, AutomationRule, AutomationExecution, CreateAutomatio
           <div class="modal-body">
             <div class="form-group">
               <label>Rule Name *</label>
-              <input type="text" class="form-control" [(ngModel)]="ruleData.name" placeholder="e.g. Greet New Inbound Patient" />
+              <input type="text" class="form-control" [(ngModel)]="ruleData.name" placeholder="e.g. Greet New Inbound Customer" />
             </div>
 
             <div class="form-group">
@@ -247,7 +257,7 @@ import { AutomationService, AutomationRule, AutomationExecution, CreateAutomatio
               <label>Action Type</label>
               <select class="form-control" [(ngModel)]="selectedActionType">
                 <option value="SEND_REPLY">Send Automated WhatsApp Reply</option>
-                <option value="NOTIFY_USER">Notify Clinic Doctor / Staff</option>
+                <option value="NOTIFY_USER">Notify Staff / Team Member</option>
               </select>
             </div>
 
@@ -1030,74 +1040,7 @@ export class AutomationsComponent implements OnInit {
   selectedActionType = 'NOTIFY_USER';
   notifyTitle = 'New Customer Message';
   notifyMessage = 'A new customer has sent their first WhatsApp enquiry.';
-  replyText = 'Welcome to SmileCare Dental Clinic! Thanks for messaging us. How can we assist you today?';
-
-  // Seed fallback rules for clinic demo
-  seedRules: AutomationRule[] = [
-    {
-      id: 'rule-1',
-      name: 'Auto-Greet New Inbound WhatsApp Patient',
-      triggerEvent: 'FIRST_MESSAGE_RECEIVED',
-      conditionsJson: '{}',
-      actionsJson: '[{"type":"SEND_REPLY","textContent":"Welcome to SmileCare Dental Clinic! 👋 How can Dr. Rajesh assist you today?"}]',
-      active: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString()
-    },
-    {
-      id: 'rule-2',
-      name: 'Immediate Doctor Escalation on Acute Pain',
-      triggerEvent: 'AI_FALLBACK_TRIGGERED',
-      conditionsJson: '{"intent":"emergency"}',
-      actionsJson: '[{"type":"NOTIFY_USER","title":"🚨 Emergency Patient Triage","message":"Patient Meera Desai reported severe molar pain"}]',
-      active: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString()
-    },
-    {
-      id: 'rule-3',
-      name: 'Automated 24h Appointment Reminder',
-      triggerEvent: 'APPOINTMENT_CONFIRMED',
-      conditionsJson: '{"timeWindow":"24h"}',
-      actionsJson: '[{"type":"SEND_REPLY","textContent":"Friendly reminder: Your dental scaling appointment is scheduled tomorrow at SmileCare Clinic."}]',
-      active: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString()
-    },
-    {
-      id: 'rule-4',
-      name: 'Unanswered Inbound SLA Breach Alert',
-      triggerEvent: 'CONVERSATION_UNANSWERED',
-      conditionsJson: '{"slaMinutes":15}',
-      actionsJson: '[{"type":"NOTIFY_USER","title":"⏳ SLA Alert","message":"Patient thread unanswered for over 15 minutes"}]',
-      active: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString()
-    }
-  ];
-
-  seedExecutions: any[] = [
-    {
-      id: 'ex-1',
-      ruleName: 'Auto-Greet New Inbound WhatsApp Patient',
-      triggerEvent: 'FIRST_MESSAGE_RECEIVED',
-      status: 'SUCCESS',
-      executionDurationMs: 38,
-      createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString()
-    },
-    {
-      id: 'ex-2',
-      ruleName: 'Immediate Doctor Escalation on Acute Pain',
-      triggerEvent: 'AI_FALLBACK_TRIGGERED',
-      status: 'SUCCESS',
-      executionDurationMs: 44,
-      createdAt: new Date(Date.now() - 1000 * 60 * 110).toISOString()
-    },
-    {
-      id: 'ex-3',
-      ruleName: 'Automated 24h Appointment Reminder',
-      triggerEvent: 'APPOINTMENT_CONFIRMED',
-      status: 'SUCCESS',
-      executionDurationMs: 31,
-      createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString()
-    }
-  ];
+  replyText = 'Welcome! Thanks for messaging us. How can we assist you today?';
 
   constructor(private automationService: AutomationService) {}
 
@@ -1109,12 +1052,11 @@ export class AutomationsComponent implements OnInit {
     this.isLoadingRules.set(true);
     this.automationService.getRules().subscribe({
       next: (res) => {
-        const list = res.data || [];
-        this.rules.set(list.length > 0 ? list : this.seedRules);
+        this.rules.set(res.data || []);
         this.isLoadingRules.set(false);
       },
       error: () => {
-        this.rules.set(this.seedRules);
+        this.rules.set([]);
         this.isLoadingRules.set(false);
       }
     });
@@ -1124,12 +1066,11 @@ export class AutomationsComponent implements OnInit {
     this.isLoadingExecutions.set(true);
     this.automationService.getExecutions(0, 50).subscribe({
       next: (res) => {
-        const list = res.data?.content || [];
-        this.executions.set(list.length > 0 ? list : this.seedExecutions);
+        this.executions.set(res.data?.content || []);
         this.isLoadingExecutions.set(false);
       },
       error: () => {
-        this.executions.set(this.seedExecutions);
+        this.executions.set([]);
         this.isLoadingExecutions.set(false);
       }
     });

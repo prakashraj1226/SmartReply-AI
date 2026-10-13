@@ -33,7 +33,7 @@ import { AuthService } from '../../core/services/auth.service';
           {{ user.businessName ? user.businessName.charAt(0).toUpperCase() : 'B' }}
         </div>
         <div class="tenant-info">
-          <span class="tenant-title">{{ user.businessName || 'SmileCare Clinic' }}</span>
+          <span class="tenant-title">{{ user.businessName || 'My Workspace' }}</span>
           <span class="tenant-plan">STARTER PLAN</span>
         </div>
       </div>

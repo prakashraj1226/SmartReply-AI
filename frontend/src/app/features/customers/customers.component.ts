@@ -281,12 +281,12 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
 
               <div class="form-group">
                 <label class="form-label">Tags (comma separated)</label>
-                <input type="text" class="form-input" formControlName="tagsInput" placeholder="Dental Scaling, VIP, Chennai" />
+                <input type="text" class="form-input" formControlName="tagsInput" placeholder="VIP, High Priority, Inbound" />
               </div>
 
               <div class="form-group">
-                <label class="form-label">Internal Clinical Notes</label>
-                <textarea class="form-textarea" rows="3" formControlName="notes" placeholder="Preferred appointment times, treatment notes..."></textarea>
+                <label class="form-label">Internal Contact Notes</label>
+                <textarea class="form-textarea" rows="3" formControlName="notes" placeholder="Preferred contact times, inquiry notes..."></textarea>
               </div>
             </div>
 
@@ -348,12 +348,12 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
             </div>
 
             <div class="detail-section">
-              <label class="section-label">Internal Treatment Notes</label>
+              <label class="section-label">Internal Notes & History</label>
               <textarea
                 class="form-textarea"
                 rows="6"
                 [(ngModel)]="selectedCustomer.notes"
-                placeholder="Add clinical history, dental treatment notes, or schedule notes..."
+                placeholder="Add client history, communication preferences, or follow-up notes..."
               ></textarea>
               <button class="btn-save-notes" (click)="saveCustomerNotes()">
                 Update Notes
@@ -1237,81 +1237,7 @@ export class CustomersComponent implements OnInit {
 
   private colors = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2', '#4f46e5'];
 
-  // Seed fallback clinic customers when DB returns 0 items
-  private seedCustomers: Customer[] = [
-    {
-      id: 'cust-1',
-      businessId: 'biz-1',
-      name: 'Ananya Sharma',
-      phoneNumber: '+91 98401 23456',
-      email: 'ananya.s@gmail.com',
-      optInStatus: 'OPTED_IN',
-      tagsJson: '["Dental Scaling", "VIP", "Anna Nagar"]',
-      notes: 'Scheduled for teeth cleaning this Saturday 4:30 PM. Prefers afternoon consultations.',
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'cust-2',
-      businessId: 'biz-1',
-      name: 'Vikram Kumar',
-      phoneNumber: '+91 94440 98765',
-      email: 'vikram.k@outlook.com',
-      optInStatus: 'OPTED_IN',
-      tagsJson: '["Root Canal", "Diagnostics"]',
-      notes: 'Consulted for lower molar root canal. Waiting for X-ray review.',
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'cust-3',
-      businessId: 'biz-1',
-      name: 'Meera Desai',
-      phoneNumber: '+91 98840 55443',
-      email: 'meera.desai@yahoo.com',
-      optInStatus: 'OPTED_IN',
-      tagsJson: '["Emergency", "Severe Pain"]',
-      notes: 'Urgent consultation for acute toothache. Prescribed analgesics.',
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'cust-4',
-      businessId: 'biz-1',
-      name: 'Karthik S.',
-      phoneNumber: '+91 97910 11223',
-      email: 'karthik.s@techcorp.in',
-      optInStatus: 'OPTED_IN',
-      tagsJson: '["Dental Implants", "High Priority"]',
-      notes: 'Implant consultation scheduled with Dr. Rajesh Patel.',
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'cust-5',
-      businessId: 'biz-1',
-      name: 'Priya Sundaram',
-      phoneNumber: '+91 98412 66778',
-      email: 'priya.sundaram@gmail.com',
-      optInStatus: 'OPTED_IN',
-      tagsJson: '["Orthodontics", "Braces"]',
-      notes: 'Aligner checkup completed. Next appointment in 4 weeks.',
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 18).toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'cust-6',
-      businessId: 'biz-1',
-      name: 'Dr. Ramesh Pillai',
-      phoneNumber: '+91 99400 33445',
-      email: 'ramesh.pillai@medclinic.org',
-      optInStatus: 'OPTED_OUT',
-      tagsJson: '["Referral Partner"]',
-      notes: 'Referral specialist. Opted out of bulk WhatsApp notifications.',
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 25).toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ];
+
 
   get filteredCustomers(): Customer[] {
     return this.customers.filter(c => {
@@ -1461,7 +1387,7 @@ export class CustomersComponent implements OnInit {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement('a');
         link.setAttribute('href', encodedUri);
-        link.setAttribute('download', 'smilecare_patients.csv');
+        link.setAttribute('download', 'customers.csv');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

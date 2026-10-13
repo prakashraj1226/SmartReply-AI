@@ -88,7 +88,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 class="form-input"
                 [class.error]="isFieldInvalid('businessName')"
                 formControlName="businessName"
-                placeholder="e.g. Apex Dental & Aesthetic Clinic"
+                placeholder="e.g. Apex Enterprises"
               />
               <div class="field-error" *ngIf="isFieldInvalid('businessName')">Business name is required</div>
             </div>
@@ -101,7 +101,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 class="form-input"
                 [class.error]="isFieldInvalid('email')"
                 formControlName="email"
-                placeholder="priya@apexdental.com"
+                placeholder="owner@company.com"
                 autocomplete="email"
               />
               <div class="field-error" *ngIf="isFieldInvalid('email')">Valid email is required</div>

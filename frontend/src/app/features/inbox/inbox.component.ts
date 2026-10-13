@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InboxService, ConversationDto, MessageDto } from '../../core/services/inbox.service';
 import { CustomerService, Customer } from '../../core/services/customer.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-inbox',
@@ -273,7 +274,7 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
           </div>
 
           <!-- AI Suggested Replies Chip Bar -->
-          <div class="suggestions-bar">
+          <div class="suggestions-bar" *ngIf="suggestedReplies().length > 0">
             <div class="suggestion-label">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -282,7 +283,7 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
             </div>
             <div class="suggestions-list">
               <button
-                *ngFor="let suggestion of (suggestedReplies().length > 0 ? suggestedReplies() : defaultSuggestions)"
+                *ngFor="let suggestion of suggestedReplies()"
                 class="suggestion-chip"
                 (click)="applySuggestion(suggestion)"
               >
@@ -296,7 +297,7 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
             <div class="composer-input-row">
               <textarea
                 [(ngModel)]="outgoingMessageText"
-                placeholder="Type reply as clinic staff (Shift + Enter for new line)..."
+                placeholder="Type reply as staff (Shift + Enter for new line)..."
                 rows="2"
                 (keydown.enter)="onEnterPress($event)"
               ></textarea>
@@ -416,10 +417,10 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
             <div class="sample-chips">
               <span class="chip-label">Quick samples:</span>
               <button class="sample-chip" (click)="setSampleText('What are your opening hours on Saturday?')">Opening Hours</button>
-              <button class="sample-chip" (click)="setSampleText('How much is dental scaling and polishing?')">Pricing (₹800)</button>
-              <button class="sample-chip" (click)="setSampleText('I have severe emergency tooth pain today!')">Emergency Pain</button>
+              <button class="sample-chip" (click)="setSampleText('What are your services and pricing?')">Pricing Inquiry</button>
+              <button class="sample-chip" (click)="setSampleText('I need urgent customer support right away!')">Urgent Support</button>
               <button class="sample-chip" (click)="setSampleText('Can I book an appointment tomorrow at 4:30 PM?')">Book Slot</button>
-              <button class="sample-chip" (click)="setSampleText('Who is the chief dental doctor at your clinic?')">Doctor Info</button>
+              <button class="sample-chip" (click)="setSampleText('Can I speak with a human support agent?')">Human Handoff</button>
             </div>
           </div>
           <div class="modal-footer">
@@ -1744,202 +1745,14 @@ export class InboxComponent implements OnInit {
   simulateCustomerId = '';
   simulateMessageText = 'What are your business hours on Saturday?';
 
-  defaultSuggestions = [
-    'Yes, Dr. Rajesh Patel is available tomorrow at 4:30 PM.',
-    'Our dental scaling and polishing consultation is ₹800.',
-    'We are located at Anna Nagar, Chennai. Walk-ins welcome!'
-  ];
+  defaultSuggestions: string[] = [];
 
   private colors = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2', '#4f46e5'];
 
-  // Realistic pre-seeded fallback conversations for SmileCare Dental when DB has 0 items
-  private seedConversations: ConversationDto[] = [
-    {
-      id: 'conv-seed-0',
-      businessId: 'biz-1',
-      customerId: 'cust-user-1',
-      customerName: 'Prakash Raj (You)',
-      customerPhone: '+91 90944 60709',
-      status: 'OPEN',
-      aiEnabled: true,
-      unreadCount: 0,
-      assignedAgentName: 'Dr. Rajesh Patel',
-      lastMessageSnippet: 'Can I book an appointment for dental scaling this Saturday?',
-      lastMessageAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 2).toISOString()
-    },
-    {
-      id: 'conv-seed-1',
-      businessId: 'biz-1',
-      customerId: 'cust-1',
-      customerName: 'Ananya Sharma',
-      customerPhone: '+91 98401 23456',
-      status: 'OPEN',
-      aiEnabled: true,
-      unreadCount: 1,
-      assignedAgentName: 'Dr. Rajesh Patel',
-      lastMessageSnippet: 'Can I book an appointment for dental scaling this Saturday?',
-      lastMessageAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 12).toISOString()
-    },
-    {
-      id: 'conv-seed-2',
-      businessId: 'biz-1',
-      customerId: 'cust-2',
-      customerName: 'Vikram Kumar',
-      customerPhone: '+91 94440 98765',
-      status: 'OPEN',
-      aiEnabled: true,
-      unreadCount: 0,
-      assignedAgentName: 'Nurse Anita',
-      lastMessageSnippet: 'Thank you! The AI answered my query about scaling charges.',
-      lastMessageAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
-    },
-    {
-      id: 'conv-seed-3',
-      businessId: 'biz-1',
-      customerId: 'cust-3',
-      customerName: 'Meera Desai',
-      customerPhone: '+91 98840 55443',
-      status: 'PENDING',
-      aiEnabled: false,
-      unreadCount: 0,
-      assignedAgentName: 'Dr. Rajesh Patel',
-      lastMessageSnippet: 'I have severe pain in lower molar. Can doctor inspect immediately?',
-      lastMessageAt: new Date(Date.now() - 1000 * 60 * 110).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 110).toISOString()
-    },
-    {
-      id: 'conv-seed-4',
-      businessId: 'biz-1',
-      customerId: 'cust-4',
-      customerName: 'Karthik S.',
-      customerPhone: '+91 97910 11223',
-      status: 'RESOLVED',
-      aiEnabled: true,
-      unreadCount: 0,
-      assignedAgentName: 'Nurse Anita',
-      lastMessageSnippet: 'Appointment confirmed for Tuesday 10:00 AM. See you then!',
-      lastMessageAt: new Date(Date.now() - 1000 * 60 * 400).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 800).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 400).toISOString()
-    },
-    {
-      id: 'conv-seed-5',
-      businessId: 'biz-1',
-      customerId: 'cust-5',
-      customerName: 'Divya R.',
-      customerPhone: '+91 98412 66778',
-      status: 'RESOLVED',
-      aiEnabled: true,
-      unreadCount: 0,
-      assignedAgentName: 'Dr. Rajesh Patel',
-      lastMessageSnippet: 'Root canal post-op checkup completed smoothly.',
-      lastMessageAt: new Date(Date.now() - 1000 * 60 * 700).toISOString(),
-      createdAt: new Date(Date.now() - 1000 * 60 * 1200).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 700).toISOString()
-    }
-  ];
-
-  private seedMessages: Record<string, MessageDto[]> = {
-    'conv-seed-0': [
-      {
-        id: 'msg-u1',
-        conversationId: 'conv-seed-0',
-        senderType: 'CUSTOMER',
-        textContent: 'Hello! I am inquiring about appointment timings and scaling charges at SmileCare.',
-        deliveryStatus: 'READ',
-        createdAt: new Date(Date.now() - 1000 * 60 * 8).toISOString()
-      },
-      {
-        id: 'msg-u2',
-        conversationId: 'conv-seed-0',
-        senderType: 'AI',
-        textContent: 'Hello Prakash! 👋 SmileCare Dental Clinic is open Monday to Saturday from 9:00 AM to 8:00 PM. Dental scaling & polishing starts from ₹800. Single-sitting Root Canal Treatment (RCT) starts from ₹3,500. We have open appointment slots with Dr. Rajesh Patel tomorrow at 11:30 AM and 4:30 PM. Which time works best for you?',
-        deliveryStatus: 'DELIVERED',
-        createdAt: new Date(Date.now() - 1000 * 60 * 7).toISOString()
-      }
-    ],
-    'conv-seed-1': [
-      {
-        id: 'msg-1',
-        conversationId: 'conv-seed-1',
-        senderType: 'CUSTOMER',
-        textContent: 'Hi, are you open on Saturday? And can I book an appointment for dental scaling?',
-        deliveryStatus: 'READ',
-        createdAt: new Date(Date.now() - 1000 * 60 * 14).toISOString()
-      },
-      {
-        id: 'msg-2',
-        conversationId: 'conv-seed-1',
-        senderType: 'AI',
-        textContent: 'Hello Ananya! 👋 Yes, SmileCare Dental Clinic is open on Saturday from 9:00 AM to 6:00 PM. Dental scaling & polishing starts from ₹800. Would you like to schedule an appointment with Dr. Rajesh Patel for 4:30 PM this Saturday?',
-        deliveryStatus: 'DELIVERED',
-        createdAt: new Date(Date.now() - 1000 * 60 * 13).toISOString()
-      },
-      {
-        id: 'msg-3',
-        conversationId: 'conv-seed-1',
-        senderType: 'CUSTOMER',
-        textContent: 'Yes please! 4:30 PM works great for me.',
-        deliveryStatus: 'DELIVERED',
-        createdAt: new Date(Date.now() - 1000 * 60 * 12).toISOString()
-      }
-    ],
-    'conv-seed-2': [
-      {
-        id: 'msg-4',
-        conversationId: 'conv-seed-2',
-        senderType: 'CUSTOMER',
-        textContent: 'Hello, what are your root canal charges?',
-        deliveryStatus: 'READ',
-        createdAt: new Date(Date.now() - 1000 * 60 * 50).toISOString()
-      },
-      {
-        id: 'msg-5',
-        conversationId: 'conv-seed-2',
-        senderType: 'AI',
-        textContent: 'Hello Vikram! Single-sitting Root Canal Treatment (RCT) at SmileCare Clinic ranges from ₹3,500 to ₹5,500 depending on tooth complexity. All treatments include digital X-ray diagnostics and local anesthesia.',
-        deliveryStatus: 'DELIVERED',
-        createdAt: new Date(Date.now() - 1000 * 60 * 49).toISOString()
-      },
-      {
-        id: 'msg-6',
-        conversationId: 'conv-seed-2',
-        senderType: 'CUSTOMER',
-        textContent: 'Thank you! The AI answered my query about scaling charges.',
-        deliveryStatus: 'READ',
-        createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
-      }
-    ],
-    'conv-seed-3': [
-      {
-        id: 'msg-7',
-        conversationId: 'conv-seed-3',
-        senderType: 'CUSTOMER',
-        textContent: 'I have severe pain in lower molar. Can doctor inspect immediately?',
-        deliveryStatus: 'READ',
-        createdAt: new Date(Date.now() - 1000 * 60 * 110).toISOString()
-      },
-      {
-        id: 'msg-8',
-        conversationId: 'conv-seed-3',
-        senderType: 'AGENT',
-        textContent: 'Hello Meera, I am Dr. Rajesh Patel. Please come in directly to the clinic right away. We have an emergency triage chair reserved for acute toothache.',
-        deliveryStatus: 'DELIVERED',
-        createdAt: new Date(Date.now() - 1000 * 60 * 105).toISOString()
-      }
-    ]
-  };
-
   constructor(
     private inboxService: InboxService,
-    private customerService: CustomerService
+    private customerService: CustomerService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -2019,13 +1832,6 @@ export class InboxComponent implements OnInit {
 
   loadMessages(convId: string): void {
     this.isLoadingMessages.set(true);
-    if (this.seedMessages[convId]) {
-      this.messages.set(this.seedMessages[convId]);
-      this.isLoadingMessages.set(false);
-      this.scrollToBottom();
-      return;
-    }
-
     this.inboxService.getMessages(convId).subscribe({
       next: (res) => {
         this.messages.set(res.data || []);
@@ -2033,7 +1839,7 @@ export class InboxComponent implements OnInit {
         this.scrollToBottom();
       },
       error: () => {
-        this.messages.set(this.seedMessages['conv-seed-0'] || this.seedMessages['conv-seed-1'] || []);
+        this.messages.set([]);
         this.isLoadingMessages.set(false);
         this.scrollToBottom();
       }
@@ -2049,7 +1855,7 @@ export class InboxComponent implements OnInit {
         this.suggestedReplies.set(res.data || []);
       },
       error: () => {
-        this.suggestedReplies.set(this.defaultSuggestions);
+        this.suggestedReplies.set([]);
       }
     });
   }
@@ -2070,17 +1876,6 @@ export class InboxComponent implements OnInit {
       deliveryStatus: 'DELIVERED',
       createdAt: new Date().toISOString()
     };
-
-    if (conv.id.startsWith('conv-seed')) {
-      if (!this.seedMessages[conv.id]) this.seedMessages[conv.id] = [];
-      this.seedMessages[conv.id].push(newAgentMsg);
-      this.messages.update(msgs => [...msgs, newAgentMsg]);
-      conv.lastMessageSnippet = text;
-      conv.lastMessageAt = new Date().toISOString();
-      this.isSending.set(false);
-      this.scrollToBottom();
-      return;
-    }
 
     this.inboxService.sendAgentReply(conv.id, text).subscribe({
       next: (res) => {
@@ -2213,10 +2008,6 @@ export class InboxComponent implements OnInit {
             deliveryStatus: 'DELIVERED',
             createdAt: new Date(Date.now() + 800).toISOString()
           };
-          if (!this.seedMessages[conv.id]) {
-            this.seedMessages[conv.id] = [];
-          }
-          this.seedMessages[conv.id].push(custMsg, aiMsg);
           this.messages.update(msgs => [...msgs, custMsg, aiMsg]);
           conv.lastMessageSnippet = custText;
           conv.lastMessageAt = new Date().toISOString();
@@ -2229,23 +2020,18 @@ export class InboxComponent implements OnInit {
   }
 
   generateGroundedAiResponse(query: string): string {
+    const bizName = this.authService.currentUser()?.businessName || 'our business';
     const q = query.toLowerCase();
-    if (q.includes('price') || q.includes('cost') || q.includes('charge') || q.includes('rate') || q.includes('how much') || q.includes('scaling') || q.includes('cleaning')) {
-      return 'Hello! Dental Scaling & Polishing starts from ₹800 at SmileCare. Consultation is ₹400, and single-sitting Root Canal Treatment (RCT) starts from ₹3,500. We can reserve a slot for you this Saturday!';
+    if (q.includes('price') || q.includes('cost') || q.includes('charge') || q.includes('rate') || q.includes('how much')) {
+      return `Hello! Thanks for asking about our pricing at ${bizName}. Our rates depend on the service requested. Would you like us to share our catalog or connect you with a representative?`;
     }
-    if (q.includes('hour') || q.includes('timing') || q.includes('time') || q.includes('open') || q.includes('saturday') || q.includes('sunday')) {
-      return 'Hello! SmileCare Dental Clinic is open Monday to Saturday from 9:00 AM to 8:00 PM, and Sundays from 10:00 AM to 2:00 PM. Would you like to schedule an appointment with Dr. Rajesh Patel?';
-    }
-    if (q.includes('pain') || q.includes('emergency') || q.includes('toothache') || q.includes('ache') || q.includes('urgent') || q.includes('bleed') || q.includes('swelling')) {
-      return '⚠️ Urgent Triage Alert: Severe tooth pain is handled on priority at SmileCare Clinic. Dr. Rajesh Patel has reserved an emergency walk-in chair right now at our Anna Nagar clinic. Please come in immediately or reply with your location.';
+    if (q.includes('hour') || q.includes('timing') || q.includes('time') || q.includes('open')) {
+      return `Hello! ${bizName} is open Monday through Saturday from 9:00 AM to 7:00 PM. Would you like to schedule an appointment?`;
     }
     if (q.includes('appointment') || q.includes('book') || q.includes('slot') || q.includes('schedule') || q.includes('visit')) {
-      return 'Certainly! We have open appointment slots with Dr. Rajesh Patel tomorrow at 11:30 AM and 4:30 PM. Which time works best for you?';
+      return `Certainly! We have open appointment slots at ${bizName}. Which date and time works best for you?`;
     }
-    if (q.includes('doctor') || q.includes('dentist') || q.includes('dr') || q.includes('who')) {
-      return 'Our senior surgeon is Dr. Rajesh Patel (BDS, MDS - 14+ years experience), specializing in painless root canal treatments, cosmetic dental veneers, and orthodontic scaling.';
-    }
-    return `Hello! SmileCare Dental Clinic AI Assistant here. We received your query: "${query}". Our clinic is open Mon-Sat 9 AM - 8 PM. Would you like to schedule an appointment with Dr. Rajesh Patel?`;
+    return `Hello! Thank you for reaching out to ${bizName}. We received your query: "${query}". How can our team assist you further?`;
   }
 
   getInitials(name: string): string {

@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { KnowledgeBaseService, KnowledgeCategory, KnowledgeArticle, CsvPreviewResponse } from '../../core/services/knowledge-base.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-knowledge-base',
@@ -239,7 +240,7 @@ import { KnowledgeBaseService, KnowledgeCategory, KnowledgeArticle, CsvPreviewRe
                 class="form-textarea"
                 rows="4"
                 formControlName="answer"
-                placeholder="e.g. Our initial dental consultation fee is ₹500, which includes a comprehensive oral checkup and digital X-ray."
+                placeholder="e.g. Our business is open Monday through Saturday from 9:00 AM to 7:00 PM."
               ></textarea>
             </div>
 
@@ -337,13 +338,13 @@ import { KnowledgeBaseService, KnowledgeCategory, KnowledgeArticle, CsvPreviewRe
             </div>
 
             <div class="quick-prompts">
-              <button class="prompt-chip" (click)="setTestPrompt('What are your clinic operating hours?')">
+              <button class="prompt-chip" (click)="setTestPrompt('What are your business operating hours?')">
                 Operating hours?
               </button>
-              <button class="prompt-chip" (click)="setTestPrompt('How much does dental scaling cost?')">
-                Scaling cost?
+              <button class="prompt-chip" (click)="setTestPrompt('What are your services and pricing?')">
+                Pricing & Services?
               </button>
-              <button class="prompt-chip" (click)="setTestPrompt('How do I book an appointment with Dr. Rajesh?')">
+              <button class="prompt-chip" (click)="setTestPrompt('How do I book an appointment?')">
                 Book appointment?
               </button>
             </div>
@@ -967,11 +968,12 @@ import { KnowledgeBaseService, KnowledgeCategory, KnowledgeArticle, CsvPreviewRe
 export class KnowledgeBaseComponent implements OnInit {
   private kbService = inject(KnowledgeBaseService);
   private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
 
   categories: KnowledgeCategory[] = [];
   articles: KnowledgeArticle[] = [];
   displayArticles: KnowledgeArticle[] = [];
-  displayTotalArticles = '24';
+  displayTotalArticles = '0';
   selectedCategoryId: string | null = null;
   searchQuery = '';
   isLoading = false;
@@ -993,81 +995,7 @@ export class KnowledgeBaseComponent implements OnInit {
   testResult: { answer: string; matchedQuestion: string; confidence: number } | null = null;
   testFallback = false;
 
-  // High quality clinic FAQs for Dr. Rajesh / SmileCare context
-  seedArticles: KnowledgeArticle[] = [
-    {
-      id: 'art-1',
-      businessId: 'seed',
-      categoryId: 'cat-1',
-      categoryName: 'General Information',
-      question: 'What are your clinic operating hours & weekend consultation timings?',
-      answer: 'SmileCare Dental is open Monday through Saturday from 9:00 AM to 8:00 PM, and on Sundays for emergency and pre-booked appointments from 10:00 AM to 2:00 PM.',
-      keywords: 'hours, timings, open, sunday, working time',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'art-2',
-      businessId: 'seed',
-      categoryId: 'cat-2',
-      categoryName: 'Treatments & Pricing',
-      question: 'How much does dental scaling and teeth cleaning cost?',
-      answer: 'Full mouth ultrasonic dental scaling and polishing costs ₹800 - ₹1,200 depending on tartar buildup. The treatment takes around 30 to 45 minutes.',
-      keywords: 'scaling, cleaning, polishing, fee, cost, price',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'art-3',
-      businessId: 'seed',
-      categoryId: 'cat-3',
-      categoryName: 'Appointments',
-      question: 'How do I book or reschedule an appointment with Dr. Rajesh?',
-      answer: 'You can book directly via WhatsApp right here by sending your preferred day and time! Our AI assistant or reception staff will instantly confirm the open time slot.',
-      keywords: 'book, appointment, schedule, doctor, timing',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'art-4',
-      businessId: 'seed',
-      categoryId: 'cat-4',
-      categoryName: 'Emergency Care',
-      question: 'Do you handle emergency toothache, swelling, or sudden dental trauma?',
-      answer: 'Yes! Urgent emergency walk-ins and same-day priority appointments are available. Please call our dedicated helpline or message us on WhatsApp for emergency triage.',
-      keywords: 'emergency, pain, toothache, trauma, urgent',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'art-5',
-      businessId: 'seed',
-      categoryId: 'cat-2',
-      categoryName: 'Treatments & Pricing',
-      question: 'What is the procedure and cost for root canal treatment (RCT)?',
-      answer: 'Single-sitting rotary RCT starts at ₹2,500. Dental crowns (Ceramic or Zirconia) range from ₹3,000 to ₹7,000 with a 5-10 year warranty.',
-      keywords: 'root canal, rct, crown, cap, dental fee',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'art-6',
-      businessId: 'seed',
-      categoryId: 'cat-5',
-      categoryName: 'Insurance & Billing',
-      question: 'Do you accept health insurance or cashless EMI payment options?',
-      answer: 'We accept all major cashless corporate dental insurance networks, as well as 0% interest monthly EMI via Bajaj Finserv and major credit cards.',
-      keywords: 'insurance, cashless, emi, payment, bajaj',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ];
+
 
   articleForm: FormGroup = this.fb.group({
     categoryId: [null],
@@ -1120,8 +1048,8 @@ export class KnowledgeBaseComponent implements OnInit {
     });
   }
 
-  private applyFilterOrSeed(): void {
-    let filtered = [...this.seedArticles];
+  private filterArticles(): void {
+    let filtered = [...this.articles];
     if (this.selectedCategoryId) {
       filtered = filtered.filter(a => a.categoryId === this.selectedCategoryId);
     }
@@ -1134,7 +1062,7 @@ export class KnowledgeBaseComponent implements OnInit {
       );
     }
     this.displayArticles = filtered;
-    this.displayTotalArticles = this.seedArticles.length.toString();
+    this.displayTotalArticles = this.articles.length.toString();
   }
 
   selectCategory(catId: string | null): void {
@@ -1191,21 +1119,8 @@ export class KnowledgeBaseComponent implements OnInit {
         },
         error: () => {
           this.isSaving = false;
-          // Local fallback creation
-          this.seedArticles.unshift({
-            id: 'art-' + Date.now(),
-            businessId: 'seed',
-            categoryId: formVal.categoryId,
-            categoryName: 'Custom FAQ',
-            question: formVal.question,
-            answer: formVal.answer,
-            keywords: formVal.keywords,
-            active: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-          this.applyFilterOrSeed();
           this.showArticleModal = false;
+          this.loadArticles();
         }
       });
     }
@@ -1223,10 +1138,7 @@ export class KnowledgeBaseComponent implements OnInit {
     if (!confirm('Are you sure you want to delete this FAQ article?')) return;
     this.kbService.deleteArticle(article.id).subscribe({
       next: () => this.loadArticles(),
-      error: () => {
-        this.seedArticles = this.seedArticles.filter(a => a.id !== article.id);
-        this.applyFilterOrSeed();
-      }
+      error: () => this.loadArticles()
     });
   }
 
@@ -1289,30 +1201,34 @@ export class KnowledgeBaseComponent implements OnInit {
   simulateAiAnswer(): void {
     if (!this.testQuery.trim()) return;
     const q = this.testQuery.toLowerCase();
-    if (q.includes('hour') || q.includes('time') || q.includes('sunday')) {
+    const articles = this.articles;
+    const match = articles.find(a =>
+      a.question.toLowerCase().includes(q) ||
+      (a.keywords && a.keywords.toLowerCase().split(',').some(k => q.includes(k.trim())))
+    );
+
+    if (match) {
       this.testResult = {
-        answer: 'SmileCare Dental is open Monday through Saturday from 9:00 AM to 8:00 PM, and on Sundays for emergency and pre-booked appointments from 10:00 AM to 2:00 PM.',
-        matchedQuestion: 'What are your clinic operating hours & weekend consultation timings?',
-        confidence: 99
+        answer: match.answer,
+        matchedQuestion: match.question,
+        confidence: 95
       };
-    } else if (q.includes('scaling') || q.includes('cost') || q.includes('clean') || q.includes('price')) {
+      this.testFallback = false;
+    } else if (articles.length > 0) {
       this.testResult = {
-        answer: 'Full mouth ultrasonic dental scaling and polishing costs ₹800 - ₹1,200 depending on tartar buildup. The treatment takes around 30 to 45 minutes.',
-        matchedQuestion: 'How much does dental scaling and teeth cleaning cost?',
-        confidence: 96
+        answer: articles[0].answer,
+        matchedQuestion: articles[0].question,
+        confidence: 82
       };
-    } else if (q.includes('book') || q.includes('appointment')) {
-      this.testResult = {
-        answer: 'You can book directly via WhatsApp right here by sending your preferred day and time! Our AI assistant or reception staff will instantly confirm the open time slot.',
-        matchedQuestion: 'How do I book or reschedule an appointment with Dr. Rajesh?',
-        confidence: 98
-      };
+      this.testFallback = false;
     } else {
+      const bizName = this.authService.currentUser()?.businessName || 'our team';
       this.testResult = {
-        answer: 'Our initial dental consultation fee is ₹500, which includes a comprehensive oral checkup and digital X-ray.',
-        matchedQuestion: 'What are your consultation fees and checkup charges?',
-        confidence: 91
+        answer: `Hello! Thank you for contacting ${bizName}. Our AI concierge will help you shortly.`,
+        matchedQuestion: 'Default Business Greeting',
+        confidence: 75
       };
+      this.testFallback = true;
     }
   }
 }

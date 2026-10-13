@@ -143,13 +143,6 @@ import { AuthService } from '../../../core/services/auth.service';
             </div>
           </form>
 
-          <!-- Quick Test Demo Credentials -->
-          <div class="demo-box">
-            <span class="demo-title">Test Account Pre-fill:</span>
-            <button type="button" class="btn-demo" (click)="fillDemo('rajesh@smilecare.com', 'password123')">
-              Dr. Rajesh (SmileCare Dental)
-            </button>
-          </div>
         </div>
 
         <!-- Auth Footer (Registration link) -->
@@ -957,9 +950,7 @@ export class LoginComponent {
     return !!(control && control.invalid && (control.dirty || control.touched));
   }
 
-  fillDemo(email: string, pass: string) {
-    this.loginForm.patchValue({ email, password: pass });
-  }
+
 
   showForgotNotice() {
     this.openForgotModal();

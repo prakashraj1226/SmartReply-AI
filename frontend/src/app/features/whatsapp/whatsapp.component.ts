@@ -62,8 +62,8 @@ import { WhatsAppService, WhatsAppConfig, UpdateWhatsAppConfigRequest, WhatsAppS
               </svg>
             </div>
           </div>
-          <div class="kpi-number phone-num-kpi">{{ formData.phoneNumber || '+91 98401 23456' }}</div>
-          <div class="kpi-subtext">SmileCare Official WhatsApp</div>
+          <div class="kpi-number phone-num-kpi">{{ formData.phoneNumber || 'Not Connected' }}</div>
+          <div class="kpi-subtext">Official WhatsApp Account</div>
         </div>
 
         <div class="kpi-card">
@@ -1059,13 +1059,13 @@ export class WhatsAppIntegrationComponent implements OnInit {
     isSandbox: true
   };
 
-  testRecipientPhone = '+91 98401 23456';
-  testMessageText = 'Hello! This is a test verification message from SmileCare Dental via SmartReply AI.';
+  testRecipientPhone = '';
+  testMessageText = 'Hello! This is a test verification message via SmartReply AI.';
   testResult: WhatsAppSendResult | null = null;
 
-  simPhone = '+91 98401 23456';
-  simName = 'Ananya Sharma';
-  simText = 'What are your clinic operating hours on Saturday?';
+  simPhone = '';
+  simName = 'Customer';
+  simText = 'What are your business operating hours?';
   webhookResultMsg = '';
 
   isSaving = signal(false);

@@ -152,8 +152,8 @@ import { AuthService } from '../../core/services/auth.service';
         <form (ngSubmit)="saveProfile()" class="card-body-form">
           <div class="form-row-2">
             <div class="form-group">
-              <label>Clinic / Business Name *</label>
-              <input type="text" [(ngModel)]="profile.name" name="name" class="form-control" placeholder="SmileCare Dental Clinic" />
+              <label>Business Name *</label>
+              <input type="text" [(ngModel)]="profile.name" name="name" class="form-control" placeholder="e.g. Acme Services / Wellness Center" />
             </div>
             <div class="form-group">
               <label>Industry Category</label>
@@ -170,8 +170,8 @@ import { AuthService } from '../../core/services/auth.service';
 
           <div class="form-row-2">
             <div class="form-group">
-              <label>Official Clinic Email</label>
-              <input type="email" [(ngModel)]="profile.email" name="email" class="form-control" placeholder="contact@smilecaredental.in" />
+              <label>Official Business Email</label>
+              <input type="email" [(ngModel)]="profile.email" name="email" class="form-control" placeholder="contact@example.com" />
             </div>
             <div class="form-group">
               <label>Official Contact Phone</label>
@@ -197,7 +197,7 @@ import { AuthService } from '../../core/services/auth.service';
 
           <div class="form-group">
             <label>Business Description & Services</label>
-            <textarea [(ngModel)]="profile.description" name="description" rows="3" class="form-control" placeholder="Premier multi-specialty dental clinic specializing in painless root canals, cosmetic teeth scaling, and invisible aligners."></textarea>
+            <textarea [(ngModel)]="profile.description" name="description" rows="3" class="form-control" placeholder="Describe your business services, opening hours, and products offered."></textarea>
           </div>
 
           <div class="form-actions-bar">
@@ -229,13 +229,13 @@ import { AuthService } from '../../core/services/auth.service';
           <div class="form-row-2">
             <div class="form-group">
               <label>AI Assistant Name</label>
-              <input type="text" [(ngModel)]="aiConfig.assistantName" name="assistantName" class="form-control" placeholder="SmileCare AI Concierge" />
+              <input type="text" [(ngModel)]="aiConfig.assistantName" name="assistantName" class="form-control" placeholder="AI Customer Concierge" />
             </div>
             <div class="form-group">
               <label>Conversation Tone</label>
               <select [(ngModel)]="aiConfig.tone" name="tone" class="form-control">
                 <option value="PROFESSIONAL">Professional & Courteous</option>
-                <option value="WARM_EMPATHETIC">Warm & Empathetic (Recommended for Clinics)</option>
+                <option value="WARM_EMPATHETIC">Warm & Empathetic</option>
                 <option value="CASUAL_FRIENDLY">Casual & Friendly</option>
                 <option value="FORMAL">Strict & Formal</option>
               </select>
@@ -244,12 +244,12 @@ import { AuthService } from '../../core/services/auth.service';
 
           <div class="form-group">
             <label>Welcome Greeting Message</label>
-            <textarea [(ngModel)]="aiConfig.greetingMessage" name="greetingMessage" rows="2" class="form-control" placeholder="Hello! Welcome to SmileCare Dental Clinic. How can we help you today?"></textarea>
+            <textarea [(ngModel)]="aiConfig.greetingMessage" name="greetingMessage" rows="2" class="form-control" placeholder="Hello! Welcome to our business. How can we help you today?"></textarea>
           </div>
 
           <div class="form-group">
             <label>Human Escalation Fallback Message</label>
-            <textarea [(ngModel)]="aiConfig.fallbackMessage" name="fallbackMessage" rows="2" class="form-control" placeholder="I will connect you directly with Dr. Rajesh Patel or our front desk staff right away."></textarea>
+            <textarea [(ngModel)]="aiConfig.fallbackMessage" name="fallbackMessage" rows="2" class="form-control" placeholder="I will connect you directly with a team member right away."></textarea>
           </div>
 
           <div class="slider-box">
@@ -372,7 +372,7 @@ import { AuthService } from '../../core/services/auth.service';
               <div class="modal-icon-badge">👥</div>
               <div>
                 <h3>Invite Staff Member</h3>
-                <p class="modal-subtitle">Grant access to SmileCare Clinic workspace</p>
+                <p class="modal-subtitle">Grant access to business workspace</p>
               </div>
             </div>
             <button class="close-btn" (click)="showInviteModal.set(false)">&times;</button>
@@ -381,12 +381,12 @@ import { AuthService } from '../../core/services/auth.service';
           <div class="modal-body">
             <div class="form-group">
               <label>Full Name *</label>
-              <input type="text" [(ngModel)]="newMember.fullName" class="form-control" placeholder="Nurse Anita" />
+              <input type="text" [(ngModel)]="newMember.fullName" class="form-control" placeholder="e.g. Jane Doe" />
             </div>
 
             <div class="form-group">
               <label>Work Email *</label>
-              <input type="email" [(ngModel)]="newMember.email" class="form-control" placeholder="anita@smilecare.com" />
+              <input type="email" [(ngModel)]="newMember.email" class="form-control" placeholder="colleague@example.com" />
             </div>
 
             <div class="form-group">

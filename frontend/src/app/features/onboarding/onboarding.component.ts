@@ -43,7 +43,7 @@ import { AuthService } from '../../core/services/auth.service';
               <div class="form-row">
                 <div class="form-group flex-1">
                   <label class="form-label" for="name">Official Business Name</label>
-                  <input id="name" type="text" class="form-input" formControlName="name" placeholder="Apex Dental Clinic" />
+                  <input id="name" type="text" class="form-input" formControlName="name" placeholder="e.g. Acme Enterprises / Apex Center" />
                 </div>
                 <div class="form-group flex-1">
                   <label class="form-label" for="category">Category / Industry</label>
@@ -72,7 +72,7 @@ import { AuthService } from '../../core/services/auth.service';
 
               <div class="form-group">
                 <label class="form-label" for="address">Physical Business Address</label>
-                <input id="address" type="text" class="form-input" formControlName="address" placeholder="102, Green Park Avenue, Bengaluru, Karnataka" />
+                <input id="address" type="text" class="form-input" formControlName="address" placeholder="102, Business Park, Anna Nagar, Chennai" />
               </div>
 
               <div class="form-group">
@@ -82,7 +82,7 @@ import { AuthService } from '../../core/services/auth.service';
                   class="form-textarea"
                   rows="3"
                   formControlName="description"
-                  placeholder="e.g. We are a premier multi-specialty dental clinic offering root canals, dental implants, teeth whitening, and general checkups with expert doctors."
+                  placeholder="e.g. Provide a brief summary of your business, key services, and products for autonomous customer assistance."
                 ></textarea>
               </div>
 

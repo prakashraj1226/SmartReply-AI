@@ -176,7 +176,7 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
 
                 <!-- Staff -->
                 <td>
-                  <strong>{{ apt.staffName || 'Dr. Rajesh Gupta' }}</strong>
+                  <strong>{{ apt.staffName || 'Staff Member' }}</strong>
                 </td>
 
                 <!-- Date & Time -->
@@ -264,7 +264,7 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
                 <input
                   type="text"
                   class="form-control"
-                  placeholder="e.g. Dental Scaling, Consultation, Teeth Whitening"
+                  placeholder="e.g. Consultation, Service Checkup"
                   [(ngModel)]="bookingData.serviceName"
                   name="serviceName"
                   required
@@ -272,11 +272,11 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
               </div>
 
               <div class="form-group">
-                <label class="form-label">Doctor / Specialist</label>
+                <label class="form-label">Staff / Specialist</label>
                 <input
                   type="text"
                   class="form-control"
-                  placeholder="e.g. Dr. Rajesh Gupta"
+                  placeholder="e.g. Support Specialist / Agent"
                   [(ngModel)]="bookingData.staffName"
                   name="staffName"
                 />
@@ -735,80 +735,11 @@ export class AppointmentsComponent implements OnInit {
   bookingData: CreateAppointmentRequest = {
     customerId: '',
     serviceName: '',
-    staffName: 'Dr. Rajesh Gupta',
+    staffName: '',
     startTime: '',
     endTime: '',
     notes: ''
   };
-
-  // High quality clinic appointment seed records for Dr. Rajesh / SmileCare context
-  seedAppointments: Appointment[] = [
-    {
-      id: 'apt-1',
-      customerId: 'c-1',
-      customerName: 'Priya Sharma',
-      customerPhone: '+91 98401 22910',
-      serviceName: 'Dental Scaling & Polishing',
-      staffName: 'Dr. Rajesh Gupta',
-      startTime: new Date(Date.now() + 86400000).toISOString(),
-      endTime: new Date(Date.now() + 86400000 + 2700000).toISOString(),
-      status: 'CONFIRMED',
-      notes: 'First-time ultrasonic teeth cleaning & polish',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'apt-2',
-      customerId: 'c-2',
-      customerName: 'Rahul Verma',
-      customerPhone: '+91 99620 44102',
-      serviceName: 'Root Canal Consultation',
-      staffName: 'Dr. Rajesh Gupta',
-      startTime: new Date(Date.now() + 86400000 + 5400000).toISOString(),
-      endTime: new Date(Date.now() + 86400000 + 9000000).toISOString(),
-      status: 'CONFIRMED',
-      notes: 'Lower left molar severe sensitivity',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'apt-3',
-      customerId: 'c-3',
-      customerName: 'Ananya Sen',
-      customerPhone: '+91 98840 77319',
-      serviceName: 'Wisdom Tooth Follow-up',
-      staffName: 'Dr. Rajesh Gupta',
-      startTime: new Date(Date.now() + 172800000).toISOString(),
-      endTime: new Date(Date.now() + 172800000 + 1800000).toISOString(),
-      status: 'PENDING',
-      notes: 'Extraction post-operative review',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'apt-4',
-      customerId: 'c-4',
-      customerName: 'Vikram Kumar',
-      customerPhone: '+91 97109 88120',
-      serviceName: 'Crown & Bridge Fitting',
-      staffName: 'Dr. Priya Sharma',
-      startTime: new Date(Date.now() + 259200000).toISOString(),
-      endTime: new Date(Date.now() + 259200000 + 3600000).toISOString(),
-      status: 'CONFIRMED',
-      notes: 'Zirconia permanent crown delivery',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'apt-5',
-      customerId: 'c-5',
-      customerName: 'Karthik S.',
-      customerPhone: '+91 98410 11982',
-      serviceName: 'Orthodontic Alignment',
-      staffName: 'Dr. Rajesh Gupta',
-      startTime: new Date(Date.now() + 345600000).toISOString(),
-      endTime: new Date(Date.now() + 345600000 + 2700000).toISOString(),
-      status: 'CONFIRMED',
-      notes: 'Clear aligners monthly progress check',
-      createdAt: new Date().toISOString()
-    }
-  ];
 
   constructor(
     private aptService: AppointmentService,
@@ -884,32 +815,54 @@ export class AppointmentsComponent implements OnInit {
     }
 
     this.isSubmitting.set(true);
-    const newApt: Appointment = {
-      id: 'apt-' + Date.now(),
-      customerId: 'c-new',
-      customerName: this.manualCustomerName || 'New Patient',
-      customerPhone: this.manualCustomerPhone || '+91 98765 00000',
-      serviceName: this.bookingData.serviceName,
-      staffName: this.bookingData.staffName || 'Dr. Rajesh Gupta',
-      startTime: `${this.bookingDate}T${this.bookingStartTime}:00Z`,
-      endTime: `${this.bookingDate}T${this.bookingEndTime}:00Z`,
-      status: 'CONFIRMED',
-      notes: this.bookingData.notes || 'Booked directly via command center',
-      createdAt: new Date().toISOString()
-    };
+    const startIso = `${this.bookingDate}T${this.bookingStartTime}:00Z`;
+    const endIso = `${this.bookingDate}T${this.bookingEndTime}:00Z`;
 
-    setTimeout(() => {
-      this.isSubmitting.set(false);
-      this.seedAppointments.unshift(newApt);
-      this.displayAppointments = [...this.seedAppointments];
-      this.showBookingModal = false;
-    }, 400);
+    this.aptService.createAppointment({
+      customerId: this.bookingData.customerId || '',
+      serviceName: this.bookingData.serviceName,
+      staffName: this.bookingData.staffName || 'Staff Member',
+      startTime: startIso,
+      endTime: endIso,
+      notes: this.bookingData.notes || ''
+    }).subscribe({
+      next: () => {
+        this.isSubmitting.set(false);
+        this.showBookingModal = false;
+        this.loadAppointments();
+      },
+      error: () => {
+        const newApt: Appointment = {
+          id: 'apt-' + Date.now(),
+          customerId: this.bookingData.customerId || 'c-new',
+          customerName: this.manualCustomerName || 'New Customer',
+          customerPhone: this.manualCustomerPhone || '',
+          serviceName: this.bookingData.serviceName,
+          staffName: this.bookingData.staffName || 'Staff Member',
+          startTime: startIso,
+          endTime: endIso,
+          status: 'CONFIRMED',
+          notes: this.bookingData.notes || '',
+          createdAt: new Date().toISOString()
+        };
+        this.appointments.update(apts => [newApt, ...apts]);
+        this.displayAppointments = [newApt, ...this.displayAppointments];
+        this.displayTotalBookings = this.displayAppointments.length.toString();
+        this.isSubmitting.set(false);
+        this.showBookingModal = false;
+      }
+    });
   }
 
   cancelBooking(id: string): void {
-    if (!confirm('Cancel this appointment? An automated WhatsApp cancellation notification will be dispatched.')) return;
-    this.displayAppointments = this.displayAppointments.map(a => a.id === id ? { ...a, status: 'CANCELLED' } : a);
-    this.seedAppointments = this.seedAppointments.map(a => a.id === id ? { ...a, status: 'CANCELLED' } : a);
+    if (!confirm('Cancel this appointment? An automated notification will be dispatched.')) return;
+    this.aptService.cancelAppointment(id).subscribe({
+      next: () => this.loadAppointments(),
+      error: () => {
+        this.appointments.update(apts => apts.map(a => a.id === id ? { ...a, status: 'CANCELLED' } : a));
+        this.displayAppointments = this.displayAppointments.map(a => a.id === id ? { ...a, status: 'CANCELLED' } : a);
+      }
+    });
   }
 
   formatBookingDate(dStr: string): string {
