@@ -48,8 +48,8 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
               </svg>
             </div>
           </div>
-          <div class="kpi-number">{{ conversations().length || 5 }}</div>
-          <div class="kpi-subtext">Active WhatsApp patient threads</div>
+          <div class="kpi-number">{{ conversations().length }}</div>
+          <div class="kpi-subtext">Active WhatsApp customer threads</div>
         </div>
 
         <div class="kpi-card">
@@ -138,6 +138,12 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
             <div *ngIf="isLoadingList()" class="loading-state">
               <div class="spinner"></div>
               <p>Loading conversations...</p>
+            </div>
+
+            <div *ngIf="!isLoadingList() && conversations().length === 0" style="padding: 2.5rem 1rem; text-align: center; color: #64748b;">
+              <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">💬</div>
+              <p style="font-weight: 700; color: #334155; margin-bottom: 0.35rem; font-size: 0.875rem;">No active conversations</p>
+              <p style="font-size: 0.75rem; line-height: 1.4;">Inbound WhatsApp chats will appear here in real time.</p>
             </div>
 
             <div
@@ -1945,17 +1951,7 @@ export class InboxComponent implements OnInit {
     this.isLoadingList.set(true);
     this.inboxService.getConversations(this.selectedStatus(), this.searchQuery).subscribe({
       next: (res) => {
-        let list = res.data?.content || [];
-        if (list.length === 0) {
-          // Fall back to pre-seeded clinic conversations filtered by status & search
-          list = this.seedConversations.filter(c => {
-            const matchesStatus = this.selectedStatus() === 'ALL' || c.status === this.selectedStatus();
-            const matchesQuery = !this.searchQuery ||
-              c.customerName.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-              c.customerPhone.includes(this.searchQuery);
-            return matchesStatus && matchesQuery;
-          });
-        }
+        const list = res.data?.content || [];
         this.conversations.set(list);
         this.isLoadingList.set(false);
 
@@ -1963,20 +1959,24 @@ export class InboxComponent implements OnInit {
           const updated = list.find(c => c.id === this.selectedConversation()!.id);
           if (updated) {
             this.selectedConversation.set(updated);
+          } else if (list.length > 0) {
+            this.selectConversation(list[0]);
+          } else {
+            this.selectedConversation.set(null);
+            this.messages.set([]);
           }
         } else if (list.length > 0) {
-          const prakashConv = list.find(c => c.customerPhone.includes('9094460709') || c.customerName.toLowerCase().includes('prakash'));
-          this.selectConversation(prakashConv || list[0]);
+          this.selectConversation(list[0]);
+        } else {
+          this.selectedConversation.set(null);
+          this.messages.set([]);
         }
       },
       error: () => {
-        const fallback = this.seedConversations;
-        this.conversations.set(fallback);
+        this.conversations.set([]);
         this.isLoadingList.set(false);
-        if (fallback.length > 0) {
-          const prakashConv = fallback.find(c => c.customerPhone.includes('9094460709'));
-          this.selectConversation(prakashConv || fallback[0]);
-        }
+        this.selectedConversation.set(null);
+        this.messages.set([]);
       }
     });
   }
@@ -1984,28 +1984,14 @@ export class InboxComponent implements OnInit {
   loadCustomers(): void {
     this.customerService.getCustomers('', 0, 50).subscribe({
       next: (res) => {
-        let list = res.data?.content || [];
-        if (list.length === 0) {
-          list = [
-            { id: 'cust-user-1', name: 'Prakash Raj (You)', phoneNumber: '+91 90944 60709', email: '18uca50prakash@gmail.com' } as any,
-            { id: 'cust-1', name: 'Ananya Sharma', phoneNumber: '+91 98401 23456', email: 'ananya@example.com' } as any,
-            { id: 'cust-2', name: 'Vikram Kumar', phoneNumber: '+91 94440 98765', email: 'vikram@example.com' } as any
-          ];
-        }
+        const list = res.data?.content || [];
         this.customerList.set(list);
         if (list.length > 0 && !this.simulateCustomerId) {
-          const userCust = list.find(c => c.phoneNumber.includes('9094460709') || c.name.toLowerCase().includes('prakash'));
-          this.simulateCustomerId = userCust ? userCust.id : list[0].id;
+          this.simulateCustomerId = list[0].id;
         }
       },
       error: () => {
-        const fallbackList = [
-          { id: 'cust-user-1', name: 'Prakash Raj (You)', phoneNumber: '+91 90944 60709', email: '18uca50prakash@gmail.com' } as any,
-          { id: 'cust-1', name: 'Ananya Sharma', phoneNumber: '+91 98401 23456', email: 'ananya@example.com' } as any,
-          { id: 'cust-2', name: 'Vikram Kumar', phoneNumber: '+91 94440 98765', email: 'vikram@example.com' } as any
-        ];
-        this.customerList.set(fallbackList);
-        this.simulateCustomerId = 'cust-user-1';
+        this.customerList.set([]);
       }
     });
   }

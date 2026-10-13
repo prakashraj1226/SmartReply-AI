@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService, BusinessProfile, AiConfig, TeamMember, InviteMemberRequest } from '../../core/services/settings.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-settings',
@@ -51,8 +52,8 @@ import { SettingsService, BusinessProfile, AiConfig, TeamMember, InviteMemberReq
               </svg>
             </div>
           </div>
-          <div class="kpi-number clinic-title">{{ profile.name || 'SmileCare Clinic' }}</div>
-          <div class="kpi-subtext">{{ profile.category || 'Healthcare & Dental' }}</div>
+          <div class="kpi-number clinic-title">{{ profile.name || authService.currentUser()?.businessName || 'Workspace' }}</div>
+          <div class="kpi-subtext">{{ profile.category || 'Business Profile' }}</div>
         </div>
 
         <div class="kpi-card">
@@ -84,8 +85,8 @@ import { SettingsService, BusinessProfile, AiConfig, TeamMember, InviteMemberReq
               </svg>
             </div>
           </div>
-          <div class="kpi-number">{{ teamMembers().length || 3 }} Members</div>
-          <div class="kpi-subtext">Doctors, dental nurses, and admins</div>
+          <div class="kpi-number">{{ teamMembers().length }} Members</div>
+          <div class="kpi-subtext">Authorized team members and agents</div>
         </div>
 
         <div class="kpi-card">
@@ -301,10 +302,10 @@ import { SettingsService, BusinessProfile, AiConfig, TeamMember, InviteMemberReq
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let m of (teamMembers().length > 0 ? teamMembers() : defaultMembers)">
+              <tr *ngFor="let m of teamMembers()">
                 <td>
                   <div class="user-cell">
-                    <div class="member-avatar">{{ m.fullName.charAt(0).toUpperCase() }}</div>
+                    <div class="member-avatar">{{ (m.fullName || 'U').charAt(0).toUpperCase() }}</div>
                     <strong>{{ m.fullName }}</strong>
                   </div>
                 </td>
@@ -1170,34 +1171,28 @@ export class SettingsComponent implements OnInit {
 
   profile: BusinessProfile = {
     id: '',
-    name: 'SmileCare Dental Clinic',
-    category: 'Healthcare & Dental',
-    email: 'dr.rajesh@smilecare.in',
-    phone: '+91 98401 23456',
-    address: 'No. 42, 2nd Avenue, Anna Nagar, Chennai - 600040',
+    name: '',
+    category: 'General Services',
+    email: '',
+    phone: '',
+    address: '',
     timezone: 'Asia/Kolkata',
     operatingHoursJson: '',
     preferredLanguage: 'en',
-    description: 'Premier dental healthcare and cosmetic dentistry clinic in Chennai.'
+    description: ''
   };
 
   aiConfig: AiConfig = {
-    assistantName: 'SmileCare AI Assistant',
-    tone: 'WARM_EMPATHETIC',
-    greetingMessage: 'Hello! Welcome to SmileCare Dental Clinic. How can we help you today?',
-    fallbackMessage: 'Let me connect you with Dr. Rajesh Patel or our clinic staff right away.',
-    confidenceThreshold: 0.78,
+    assistantName: 'AI Assistant',
+    tone: 'PROFESSIONAL',
+    greetingMessage: 'Hello! How can we help you today?',
+    fallbackMessage: 'Let me connect you directly with one of our team members.',
+    confidenceThreshold: 0.75,
     enabled: true,
     maxResponseTokens: 250
   };
 
   teamMembers = signal<TeamMember[]>([]);
-
-  defaultMembers: any[] = [
-    { id: 'tm-1', fullName: 'Dr. Rajesh Patel', email: 'rajesh@smilecare.com', role: 'BUSINESS_OWNER' },
-    { id: 'tm-2', fullName: 'Nurse Anita', email: 'anita@smilecare.com', role: 'AGENT' },
-    { id: 'tm-3', fullName: 'Front Desk Admin', email: 'reception@smilecare.com', role: 'AGENT' }
-  ];
 
   newMember: InviteMemberRequest = {
     email: '',
@@ -1205,9 +1200,19 @@ export class SettingsComponent implements OnInit {
     role: 'AGENT'
   };
 
-  constructor(private settingsService: SettingsService) {}
+  constructor(
+    private settingsService: SettingsService,
+    public authService: AuthService
+  ) {}
 
   ngOnInit(): void {
+    const user = this.authService.currentUser();
+    if (user) {
+      this.profile.name = user.businessName || '';
+      this.profile.email = user.email || '';
+      this.aiConfig.assistantName = (user.businessName || 'SmartReply') + ' Assistant';
+      this.aiConfig.greetingMessage = `Hello! Welcome to ${user.businessName || 'our business'}. How can we assist you today?`;
+    }
     this.loadAllSettings();
   }
 
@@ -1237,11 +1242,31 @@ export class SettingsComponent implements OnInit {
         if (res.success && res.data && res.data.length > 0) {
           this.teamMembers.set(res.data);
         } else {
-          this.teamMembers.set(this.defaultMembers);
+          const user = this.authService.currentUser();
+          this.teamMembers.set([
+            {
+              id: user?.id || 'owner-1',
+              userId: user?.id || 'owner-1',
+              fullName: user?.fullName || 'Business Owner',
+              email: user?.email || '',
+              role: user?.role || 'BUSINESS_OWNER',
+              joinedAt: new Date().toISOString()
+            }
+          ]);
         }
       },
       error: () => {
-        this.teamMembers.set(this.defaultMembers);
+        const user = this.authService.currentUser();
+        this.teamMembers.set([
+          {
+            id: user?.id || 'owner-1',
+            userId: user?.id || 'owner-1',
+            fullName: user?.fullName || 'Business Owner',
+            email: user?.email || '',
+            role: user?.role || 'BUSINESS_OWNER',
+            joinedAt: new Date().toISOString()
+          }
+        ]);
       }
     });
   }

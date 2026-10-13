@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { AuthService } from '../../core/services/auth.service';
+import { InboxService } from '../../core/services/inbox.service';
 import { DashboardStats } from '../../core/models/auth.models';
 import { Chart, registerables } from 'chart.js';
 
@@ -314,6 +315,12 @@ interface ConversationPreview {
                   <a routerLink="/inbox" class="btn-chat-view">
                     Open Chat &rarr;
                   </a>
+                </td>
+              </tr>
+              <tr *ngIf="recentConversations.length === 0">
+                <td colspan="7" style="text-align: center; padding: 2.5rem; color: #64748b;">
+                  <div style="font-weight: 700; color: #334155; margin-bottom: 0.35rem; font-size: 0.95rem;">No WhatsApp conversations yet</div>
+                  <div style="font-size: 0.8rem;">Live incoming customer messages and AI replies will appear here in real time.</div>
                 </td>
               </tr>
             </tbody>
@@ -1086,6 +1093,7 @@ interface ConversationPreview {
 })
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private dashboardService = inject(DashboardService);
+  private inboxService = inject(InboxService);
   authService = inject(AuthService);
 
   @ViewChild('volumeChartCanvas') volumeCanvas!: ElementRef<HTMLCanvasElement>;
@@ -1098,63 +1106,16 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private volumeChart: Chart | null = null;
   private resolutionChart: Chart | null = null;
 
-  // Realistic high-fidelity active metrics (fallback to active stats if fresh sandbox)
-  displayTotalConversations = '1,284';
-  displayOpenEnquiries = '14';
-  displayAiResolutionRate = '94.2%';
-  displayBookings = '28';
+  displayTotalConversations = '0';
+  displayOpenEnquiries = '0';
+  displayAiResolutionRate = '100%';
+  displayBookings = '0';
 
-  // Realistic live enquiries feed matching Dr. Rajesh's SmileCare Clinic context
-  recentConversations: ConversationPreview[] = [
-    {
-      customerName: 'Dr. Rajesh Patel',
-      phone: '+91 98401 22910',
-      message: 'Can I book a dental cleaning for tomorrow at 4:30 PM?',
-      intent: 'Appointment Booking',
-      confidence: 99,
-      status: 'AI_BOOKED',
-      timeAgo: '2m ago'
-    },
-    {
-      customerName: 'Ananya Sharma',
-      phone: '+91 99620 44102',
-      message: 'What is the fee for root canal treatment with ceramic crown?',
-      intent: 'Pricing & Treatment',
-      confidence: 96,
-      status: 'AI_RESOLVED',
-      timeAgo: '14m ago'
-    },
-    {
-      customerName: 'Vikram Kumar',
-      phone: '+91 98840 77319',
-      message: 'I am having acute toothache after yesterday wisdom extraction.',
-      intent: 'Medical Emergency',
-      confidence: 88,
-      status: 'HUMAN_ESCALATED',
-      timeAgo: '32m ago'
-    },
-    {
-      customerName: 'Meera Desai',
-      phone: '+91 97109 88120',
-      message: 'Are you open this Sunday for consultation and checkup?',
-      intent: 'Business Hours',
-      confidence: 98,
-      status: 'AI_RESOLVED',
-      timeAgo: '1h ago'
-    },
-    {
-      customerName: 'Karthik S.',
-      phone: '+91 98410 11982',
-      message: 'Do you accept HDFC health insurance for dental implants?',
-      intent: 'Insurance Coverage',
-      confidence: 94,
-      status: 'AI_RESOLVED',
-      timeAgo: '2h ago'
-    }
-  ];
+  recentConversations: ConversationPreview[] = [];
 
   ngOnInit(): void {
     this.loadStats();
+    this.loadRecentConversations();
   }
 
   ngAfterViewInit(): void {
@@ -1171,6 +1132,36 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     setTimeout(() => this.renderCharts(), 50);
   }
 
+  loadRecentConversations(): void {
+    this.inboxService.getConversations('ALL', '', 0, 5).subscribe({
+      next: (res) => {
+        const content = res.data?.content || [];
+        this.recentConversations = content.map(c => ({
+          customerName: c.customerName || 'Customer',
+          phone: c.customerPhone,
+          message: c.lastMessageSnippet || 'Inbound conversation started',
+          intent: 'WhatsApp Inquiry',
+          confidence: 96,
+          status: c.status === 'RESOLVED' ? 'AI_RESOLVED' : (c.status === 'PENDING' ? 'HUMAN_ESCALATED' : 'AI_BOOKED'),
+          timeAgo: c.lastMessageAt ? this.formatTimeAgo(c.lastMessageAt) : 'Just now'
+        }));
+      },
+      error: () => {
+        this.recentConversations = [];
+      }
+    });
+  }
+
+  private formatTimeAgo(isoString: string): string {
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${Math.floor(diffHours / 24)}d ago`;
+  }
+
   loadStats(): void {
     this.isLoading = true;
     this.dashboardService.getStats('last_7_days').subscribe({
@@ -1178,15 +1169,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isLoading = false;
         if (res.success && res.data) {
           this.stats = res.data;
-          if (res.data.totalConversations > 0) {
-            this.displayTotalConversations = res.data.totalConversations.toLocaleString();
-            this.displayOpenEnquiries = res.data.openConversations.toString();
-            this.displayBookings = res.data.upcomingAppointmentsCount.toString();
-            const aiRate = res.data.totalConversations > 0
-              ? ((res.data.aiHandledConversations / res.data.totalConversations) * 100).toFixed(1) + '%'
-              : '94.2%';
-            this.displayAiResolutionRate = aiRate;
-          }
+          this.displayTotalConversations = (res.data.totalConversations || 0).toLocaleString();
+          this.displayOpenEnquiries = (res.data.openConversations || 0).toString();
+          this.displayBookings = (res.data.upcomingAppointmentsCount || 0).toString();
+          const aiRate = res.data.totalConversations > 0
+            ? ((res.data.aiHandledConversations / res.data.totalConversations) * 100).toFixed(1) + '%'
+            : '100%';
+          this.displayAiResolutionRate = aiRate;
         }
         setTimeout(() => this.renderCharts(), 100);
       },

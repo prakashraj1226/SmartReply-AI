@@ -213,6 +213,14 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
                   <span *ngIf="apt.status === 'CANCELLED'" class="cancelled-text">Cancelled</span>
                 </td>
               </tr>
+              <tr *ngIf="displayAppointments.length === 0">
+                <td colspan="7" style="text-align: center; padding: 2.5rem; color: #64748b;">
+                  <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📅</div>
+                  <div style="font-weight: 700; color: #334155; margin-bottom: 0.25rem;">No scheduled appointments yet</div>
+                  <div style="font-size: 0.8rem; margin-bottom: 1rem;">Appointments booked via WhatsApp or scheduled manually will appear here.</div>
+                  <button type="button" class="btn-hero-primary" (click)="openBookingModal()" style="display: inline-block;">+ Book New Appointment</button>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -707,7 +715,7 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
 export class AppointmentsComponent implements OnInit {
   appointments = signal<Appointment[]>([]);
   displayAppointments: Appointment[] = [];
-  displayTotalBookings = '42';
+  displayTotalBookings = '0';
   customers = signal<Customer[]>([]);
   viewMode = signal<'UPCOMING' | 'TODAY' | 'ALL'>('UPCOMING');
   isLoading = signal(false);
@@ -818,19 +826,16 @@ export class AppointmentsComponent implements OnInit {
       next: (res) => {
         this.isLoading.set(false);
         const list = res.data?.content || [];
-        if (list.length > 0) {
-          this.appointments.set(list);
-          this.displayAppointments = list;
-          this.displayTotalBookings = list.length.toString();
-        } else {
-          this.displayAppointments = [...this.seedAppointments];
-          this.displayTotalBookings = '42';
-        }
+        this.appointments.set(list);
+        this.displayAppointments = list;
+        this.displayTotalBookings = list.length.toString();
+        this.filterAppointments();
       },
       error: () => {
         this.isLoading.set(false);
-        this.displayAppointments = [...this.seedAppointments];
-        this.displayTotalBookings = '42';
+        this.appointments.set([]);
+        this.displayAppointments = [];
+        this.displayTotalBookings = '0';
       }
     });
   }
@@ -847,7 +852,7 @@ export class AppointmentsComponent implements OnInit {
   }
 
   filterAppointments(): void {
-    let filtered = [...this.seedAppointments];
+    let filtered = [...this.appointments()];
     if (this.searchQuery && this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase();
       filtered = filtered.filter(a =>

@@ -197,6 +197,13 @@ import { KnowledgeBaseService, KnowledgeCategory, KnowledgeArticle, CsvPreviewRe
             </div>
           </div>
         </div>
+
+        <div *ngIf="displayArticles.length === 0" style="grid-column: 1 / -1; padding: 3.5rem 1rem; text-align: center; background: #ffffff; border-radius: 14px; border: 1px dashed #cbd5e1; color: #64748b;">
+          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">📚</div>
+          <h3 style="font-size: 1rem; font-weight: 800; color: #1e293b; margin-bottom: 0.25rem;">No Knowledge Base FAQ Articles Yet</h3>
+          <p style="font-size: 0.8rem; margin-bottom: 1.25rem; max-width: 480px; margin-left: auto; margin-right: auto;">Add approved questions and answers so the AI assistant can autonomously reply to WhatsApp customer inquiries with zero hallucinations.</p>
+          <button type="button" class="btn-hero-primary" (click)="openAddModal()" style="display: inline-flex;">+ Add Your First FAQ</button>
+        </div>
       </div>
 
       <!-- Add/Edit Article Modal -->
@@ -1077,24 +1084,14 @@ export class KnowledgeBaseComponent implements OnInit {
   loadCategories(): void {
     this.kbService.getCategories().subscribe({
       next: (res) => {
-        if (res.success && res.data && res.data.length > 0) {
+        if (res.success && res.data) {
           this.categories = res.data;
         } else {
-          this.categories = [
-            { id: 'cat-1', name: 'General Information', displayOrder: 1 },
-            { id: 'cat-2', name: 'Treatments & Pricing', displayOrder: 2 },
-            { id: 'cat-3', name: 'Appointments', displayOrder: 3 },
-            { id: 'cat-4', name: 'Emergency Care', displayOrder: 4 },
-            { id: 'cat-5', name: 'Insurance & Billing', displayOrder: 5 }
-          ];
+          this.categories = [];
         }
       },
       error: () => {
-        this.categories = [
-          { id: 'cat-1', name: 'General Information', displayOrder: 1 },
-          { id: 'cat-2', name: 'Treatments & Pricing', displayOrder: 2 },
-          { id: 'cat-3', name: 'Appointments', displayOrder: 3 }
-        ];
+        this.categories = [];
       }
     });
   }
@@ -1104,17 +1101,21 @@ export class KnowledgeBaseComponent implements OnInit {
     this.kbService.getArticles(this.selectedCategoryId || undefined, this.searchQuery).subscribe({
       next: (res) => {
         this.isLoading = false;
-        if (res.success && res.data && res.data.content && res.data.content.length > 0) {
-          this.articles = res.data.content;
+        if (res.success && res.data) {
+          this.articles = res.data.content || [];
           this.displayArticles = this.articles;
-          this.displayTotalArticles = res.data.totalElements.toString();
+          this.displayTotalArticles = (res.data.totalElements || 0).toString();
         } else {
-          this.applyFilterOrSeed();
+          this.articles = [];
+          this.displayArticles = [];
+          this.displayTotalArticles = '0';
         }
       },
       error: () => {
         this.isLoading = false;
-        this.applyFilterOrSeed();
+        this.articles = [];
+        this.displayArticles = [];
+        this.displayTotalArticles = '0';
       }
     });
   }

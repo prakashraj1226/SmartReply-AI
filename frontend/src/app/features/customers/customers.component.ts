@@ -59,8 +59,8 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
               </svg>
             </div>
           </div>
-          <div class="kpi-number">{{ totalCustomers || customers.length || 128 }}</div>
-          <div class="kpi-subtext">Registered patient contacts</div>
+          <div class="kpi-number">{{ totalCustomers }}</div>
+          <div class="kpi-subtext">Registered customer contacts</div>
         </div>
 
         <div class="kpi-card">
@@ -76,8 +76,8 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
               </svg>
             </div>
           </div>
-          <div class="kpi-number">96.8%</div>
-          <div class="kpi-subtext">124 verified Meta WhatsApp opt-ins</div>
+          <div class="kpi-number">{{ totalCustomers > 0 ? '100%' : '0%' }}</div>
+          <div class="kpi-subtext">Verified WhatsApp opt-ins</div>
         </div>
 
         <div class="kpi-card">
@@ -219,6 +219,14 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
                       </svg>
                     </button>
                   </div>
+                </td>
+              </tr>
+              <tr *ngIf="filteredCustomers.length === 0">
+                <td colspan="6" style="text-align: center; padding: 2.5rem; color: #64748b;">
+                  <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">👥</div>
+                  <div style="font-weight: 700; color: #334155; margin-bottom: 0.25rem;">No customer contacts yet</div>
+                  <div style="font-size: 0.8rem; margin-bottom: 1rem;">Click "+ Add New Customer" to register contacts or wait for incoming WhatsApp chats.</div>
+                  <button type="button" class="btn-save" (click)="openAddModal()" style="display: inline-block;">+ Add First Customer</button>
                 </td>
               </tr>
             </tbody>
@@ -1325,22 +1333,17 @@ export class CustomersComponent implements OnInit {
     this.customerService.getCustomers(this.searchQuery).subscribe({
       next: (res) => {
         this.isLoading = false;
-        if (res.success && res.data && res.data.content.length > 0) {
-          this.customers = res.data.content;
-          this.totalCustomers = res.data.totalElements;
+        if (res.success && res.data) {
+          this.customers = res.data.content || [];
+          this.totalCustomers = res.data.totalElements || 0;
         } else {
-          // Use seed fallback filtered by search query
-          this.customers = this.seedCustomers.filter(c =>
-            !this.searchQuery ||
-            c.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-            c.phoneNumber.includes(this.searchQuery)
-          );
-          this.totalCustomers = this.seedCustomers.length;
+          this.customers = [];
+          this.totalCustomers = 0;
         }
       },
       error: () => {
-        this.customers = this.seedCustomers;
-        this.totalCustomers = this.seedCustomers.length;
+        this.customers = [];
+        this.totalCustomers = 0;
         this.isLoading = false;
       }
     });
