@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { AssistantService } from '../../core/services/assistant.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -148,7 +149,7 @@ import { AuthService } from '../../core/services/auth.service';
       <!-- Bottom Status Pill & User Card (Exact Reference 4 & 5) -->
       <div class="sidebar-bottom-panel" *ngIf="!isCollapsed">
         <!-- AI Engine Status Pill -->
-        <div class="ai-assistant-pill">
+        <button type="button" class="ai-assistant-pill" [class.open]="assistant.panelOpen()" (click)="assistant.togglePanel()">
           <div class="ai-pill-left">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -156,7 +157,7 @@ import { AuthService } from '../../core/services/auth.service';
             <span>AI Assistant</span>
           </div>
           <span class="ai-pill-count">24/7</span>
-        </div>
+        </button>
 
         <!-- User Profile Card in Sidebar -->
         <div class="sidebar-user-card" *ngIf="authService.currentUser() as user">
@@ -381,6 +382,7 @@ import { AuthService } from '../../core/services/auth.service';
       display: flex;
       align-items: center;
       justify-content: space-between;
+      width: 100%;
       background: rgba(37, 99, 235, 0.15);
       border: 1px solid rgba(59, 130, 246, 0.3);
       padding: 0.3rem 0.55rem;
@@ -388,6 +390,14 @@ import { AuthService } from '../../core/services/auth.service';
       color: #93c5fd;
       font-size: 0.6875rem;
       font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .ai-assistant-pill:hover,
+    .ai-assistant-pill.open {
+      background: rgba(37, 99, 235, 0.32);
+      color: #ffffff;
     }
 
     .ai-pill-left {
@@ -476,6 +486,7 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class SidebarComponent {
   authService = inject(AuthService);
+  assistant = inject(AssistantService);
   isCollapsed = false;
 
   toggleCollapse() {

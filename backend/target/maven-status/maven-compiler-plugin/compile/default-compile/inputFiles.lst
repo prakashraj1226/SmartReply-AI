@@ -24,6 +24,14 @@
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/appointment/dto/TimeSlotDto.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/appointment/dto/UpdateAppointmentRequest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/appointment/dto/UpdateAppointmentStatusRequest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/assistant/AssistantController.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/assistant/AssistantService.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/assistant/GeminiChatClient.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/assistant/TenantAssistantContext.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/assistant/dto/AssistantChatRequest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/assistant/dto/AssistantChatResponse.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/assistant/dto/AssistantStatusDto.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/assistant/dto/AssistantTurn.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/AuthController.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/AuthService.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/auth/User.java

@@ -4,12 +4,14 @@ com/smartreplyai/customer/CustomerServiceTest.class
 com/smartreplyai/tenant/CatalogAndOnboardingTest.class
 com/smartreplyai/tenant/TenantRbacTest.class
 com/smartreplyai/conversation/ConversationServiceTest.class
+com/smartreplyai/assistant/TenantAssistantContextTest.class
 com/smartreplyai/auth/AuthServiceTest.class
 com/smartreplyai/settings/SettingsServiceTest.class
 com/smartreplyai/admin/AdminServiceTest.class
 com/smartreplyai/ai/RuleBasedKnowledgeAiProviderTest.class
 com/smartreplyai/tenant/MultiTenantEntitiesTest.class
 com/smartreplyai/subscription/SubscriptionServiceTest.class
+com/smartreplyai/assistant/GeminiChatClientTest.class
 com/smartreplyai/knowledgebase/KnowledgeBaseServiceTest.class
 com/smartreplyai/whatsapp/WhatsAppIntegrationServiceTest.class
 com/smartreplyai/appointment/AppointmentServiceTest.class

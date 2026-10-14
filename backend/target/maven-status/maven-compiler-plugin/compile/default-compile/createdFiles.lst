@@ -10,6 +10,7 @@ com/smartreplyai/admin/AuditLogRepository.class
 com/smartreplyai/branch/dto/BranchDto.class
 com/smartreplyai/appointment/Appointment.class
 com/smartreplyai/business/BusinessMember.class
+com/smartreplyai/assistant/dto/AssistantTurn.class
 com/smartreplyai/security/TenantRole.class
 com/smartreplyai/branch/dto/CreateBranchRequest.class
 com/smartreplyai/subscription/PaymentTransaction.class
@@ -61,18 +62,21 @@ com/smartreplyai/automation/AutomationRule.class
 com/smartreplyai/servicecatalog/ServiceItemRepository.class
 com/smartreplyai/whatsapp/dto/WhatsAppConfigDto.class
 com/smartreplyai/notification/NotificationService.class
+com/smartreplyai/assistant/AssistantService.class
 com/smartreplyai/auth/User.class
 com/smartreplyai/message/dto/MessageDto.class
 com/smartreplyai/auth/UserRepository.class
 com/smartreplyai/auth/dto/LoginRequest.class
 com/smartreplyai/business/BusinessService.class
 com/smartreplyai/knowledgebase/KnowledgeArticle.class
+com/smartreplyai/assistant/GeminiChatClient.class
 com/smartreplyai/whatsapp/WhatsAppConfigController.class
 com/smartreplyai/admin/AdminController.class
 com/smartreplyai/staff/StaffLeave.class
 com/smartreplyai/knowledgebase/dto/CsvPreviewItem.class
 com/smartreplyai/settings/SettingsController.class
 com/smartreplyai/whatsapp/dto/UpdateWhatsAppConfigRequest.class
+com/smartreplyai/assistant/TenantAssistantContext.class
 com/smartreplyai/dashboard/DashboardStatsController.class
 com/smartreplyai/staff/StaffService.class
 com/smartreplyai/staff/dto/StaffLeaveDto.class
@@ -97,6 +101,7 @@ com/smartreplyai/customer/CustomerService.class
 com/smartreplyai/customer/CustomerController.class
 com/smartreplyai/common/GlobalExceptionHandler.class
 com/smartreplyai/auth/dto/AuthResponse.class
+com/smartreplyai/assistant/dto/AssistantChatRequest.class
 com/smartreplyai/staff/dto/StaffDto$AssignedServiceSummary.class
 com/smartreplyai/whatsapp/client/OfficialWhatsAppCloudApiClient.class
 com/smartreplyai/auth/dto/ResetPasswordRequest.class
@@ -107,6 +112,7 @@ com/smartreplyai/settings/SettingsService.class
 com/smartreplyai/staff/dto/SaveStaffAvailabilityRequest.class
 com/smartreplyai/auth/dto/UserProfileResponse.class
 com/smartreplyai/security/CustomUserDetailsService.class
+com/smartreplyai/assistant/dto/AssistantChatResponse.class
 com/smartreplyai/automation/dto/CreateAutomationRuleRequest.class
 com/smartreplyai/appointment/dto/UpdateAppointmentRequest.class
 com/smartreplyai/tenant/TenantFilter.class
@@ -128,8 +134,10 @@ com/smartreplyai/staff/StaffLeaveRepository.class
 com/smartreplyai/security/UserPrincipal.class
 com/smartreplyai/ai/dto/AiGenerationResponse.class
 com/smartreplyai/business/BusinessMemberRepository.class
+com/smartreplyai/assistant/AssistantController.class
 com/smartreplyai/automation/dto/AutomationExecutionDto.class
 com/smartreplyai/subscription/SubscriptionService.class
+com/smartreplyai/assistant/dto/AssistantStatusDto.class
 com/smartreplyai/knowledgebase/KnowledgeCategoryRepository.class
 com/smartreplyai/whatsapp/client/WhatsAppClient.class
 com/smartreplyai/staff/StaffAvailability.class

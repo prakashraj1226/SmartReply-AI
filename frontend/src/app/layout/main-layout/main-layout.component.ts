@@ -3,14 +3,16 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
+import { AssistantPanelComponent } from '../assistant-panel/assistant-panel.component';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, SidebarComponent, TopbarComponent],
+  imports: [CommonModule, RouterModule, SidebarComponent, TopbarComponent, AssistantPanelComponent],
   template: `
     <div class="layout-container">
       <app-sidebar></app-sidebar>
+      <app-assistant-panel></app-assistant-panel>
       <div class="main-wrapper">
         <app-topbar></app-topbar>
         <main class="page-content">
