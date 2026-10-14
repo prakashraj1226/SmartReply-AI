@@ -19,12 +19,11 @@ interface ChatLine {
       [class.open]="assistant.panelOpen()"
       (animationend)="onPanelAnimationEnd($event)"
       role="dialog"
-      aria-label="AI Assistant"
+      aria-label="SmartReply Bot"
     >
       <header class="panel-header">
         <div>
-          <p class="panel-kicker">Gemini</p>
-          <h2>AI Assistant</h2>
+          <h2>SmartReply Bot</h2>
         </div>
         <button type="button" class="close-btn" (click)="assistant.closePanel()" aria-label="Close assistant">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -40,7 +39,7 @@ interface ChatLine {
 
       <div class="messages" #messageList>
         <div class="empty" *ngIf="messages().length === 0">
-          <p>Ask about this business. Gemini answers from the current workspace: FAQs, services, staff, and appointments.</p>
+          <p>Ask about this business. SmartReply Bot answers from the current workspace: FAQs, services, staff, and appointments.</p>
           <div class="suggestions">
             <button type="button" *ngFor="let prompt of suggestions" (click)="ask(prompt)">{{ prompt }}</button>
           </div>
@@ -119,19 +118,11 @@ interface ChatLine {
       color: #ffffff;
     }
 
-    .panel-kicker {
-      margin: 0;
-      font-size: 0.65rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #93c5fd;
-    }
-
     .panel-header h2 {
-      margin: 0.1rem 0 0;
+      margin: 0;
       font-size: 1rem;
       font-weight: 800;
+      color: #ffffff;
     }
 
     .close-btn {

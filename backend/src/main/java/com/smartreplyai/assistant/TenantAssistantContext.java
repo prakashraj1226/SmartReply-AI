@@ -67,7 +67,7 @@ public class TenantAssistantContext {
         DateTimeFormatter when = DateTimeFormatter.ofPattern("EEE d MMM yyyy, h:mm a").withZone(zone);
         StringBuilder prompt = new StringBuilder();
         prompt.append("""
-                You are SmartReply AI for this one business. Answer only from the workspace data below.
+                Your name is SmartReply Bot. You assist this one business. Answer only from the workspace data below.
                 If a fact is not listed, say you do not have it in this workspace. Do not invent prices, hours, staff, customers, or bookings.
                 Answer in short sentences. Use the same language as the user's question when you can.
                 """);
