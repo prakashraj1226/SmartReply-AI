@@ -38,6 +38,7 @@ public class AdminService {
     private final IntegrationAccountRepository integrationAccountRepository;
     private final AuditLogRepository auditLogRepository;
     private final AuditLogService auditLogService;
+    private final com.smartreplyai.appointment.AppointmentRepository appointmentRepository;
 
     public AdminService(BusinessRepository businessRepository,
                         UserRepository userRepository,
@@ -47,7 +48,8 @@ public class AdminService {
                         SubscriptionRepository subscriptionRepository,
                         IntegrationAccountRepository integrationAccountRepository,
                         AuditLogRepository auditLogRepository,
-                        AuditLogService auditLogService) {
+                        AuditLogService auditLogService,
+                        com.smartreplyai.appointment.AppointmentRepository appointmentRepository) {
         this.businessRepository = businessRepository;
         this.userRepository = userRepository;
         this.businessMemberRepository = businessMemberRepository;
@@ -57,6 +59,7 @@ public class AdminService {
         this.integrationAccountRepository = integrationAccountRepository;
         this.auditLogRepository = auditLogRepository;
         this.auditLogService = auditLogService;
+        this.appointmentRepository = appointmentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -76,8 +79,16 @@ public class AdminService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         long activeIntegrations = integrationAccountRepository.count();
+        long totalAppointments = appointmentRepository.count();
+        long completedAppointments = appointmentRepository.countByStatus("COMPLETED");
 
-        return new AdminOverviewDto(
+        Map<String, Long> businessesByIndustry = allBusinesses.stream()
+                .collect(Collectors.groupingBy(
+                        b -> (b.getCategory() != null && !b.getCategory().isBlank()) ? b.getCategory() : "General",
+                        Collectors.counting()
+                ));
+
+        AdminOverviewDto overview = new AdminOverviewDto(
                 totalBusinesses,
                 activeBusinesses,
                 totalUsers,
@@ -86,6 +97,11 @@ public class AdminService {
                 estimatedMrrInr,
                 activeIntegrations
         );
+        overview.setTotalAppointments(totalAppointments);
+        overview.setCompletedAppointments(completedAppointments);
+        overview.setBusinessesByIndustry(businessesByIndustry);
+
+        return overview;
     }
 
     @Transactional(readOnly = true)

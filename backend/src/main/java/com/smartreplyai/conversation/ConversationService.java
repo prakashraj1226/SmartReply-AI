@@ -158,7 +158,9 @@ public class ConversationService {
 
         // 2. Trigger AI Autonomous Response if AI is enabled
         if (conversation.isAiEnabled()) {
-            AiGenerationResponse aiResponse = aiService.processIncomingMessage(businessId, textContent, List.of());
+            AiGenerationResponse aiResponse = aiService.processIncomingMessage(
+                    businessId, textContent, List.of(), customer.getPhoneNumber(), customer.getName()
+            );
 
             if (aiResponse != null && aiResponse.getReplyText() != null) {
                 Message aiMessage = new Message();
@@ -228,5 +230,13 @@ public class ConversationService {
         Conversation conversation = getConversationById(businessId, conversationId);
         conversation.setUnreadCount(0);
         conversationRepository.save(conversation);
+    }
+
+    @Transactional
+    public void deleteConversation(UUID businessId, UUID conversationId) {
+        Conversation conversation = getConversationById(businessId, conversationId);
+        messageRepository.deleteByBusinessIdAndConversationId(businessId, conversationId);
+        conversationRepository.delete(conversation);
+        logger.info("Deleted conversation {} and messages for business {}", conversationId, businessId);
     }
 }

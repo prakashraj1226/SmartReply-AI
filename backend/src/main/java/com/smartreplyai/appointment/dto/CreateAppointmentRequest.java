@@ -1,25 +1,28 @@
 package com.smartreplyai.appointment.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
 public class CreateAppointmentRequest {
 
-    @NotNull(message = "Customer ID is required")
     private UUID customerId;
+    private String customerName;
+    private String customerPhone;
 
-    @NotBlank(message = "Service name is required")
+    private UUID branchId;
+    private UUID serviceId;
     private String serviceName;
 
+    private UUID staffId;
     private String staffName;
 
     @NotNull(message = "Start time is required")
     private Instant startTime;
 
-    @NotNull(message = "End time is required")
     private Instant endTime;
+
+    private String bookingSource = "STAFF_MANUAL"; // WHATSAPP, WEB_PORTAL, STAFF_MANUAL, AI_ASSISTANT
 
     private String notes;
 
@@ -27,7 +30,7 @@ public class CreateAppointmentRequest {
     }
 
     public CreateAppointmentRequest(UUID customerId, String serviceName, String staffName,
-                                  Instant startTime, Instant endTime, String notes) {
+                                   Instant startTime, Instant endTime, String notes) {
         this.customerId = customerId;
         this.serviceName = serviceName;
         this.staffName = staffName;
@@ -44,12 +47,52 @@ public class CreateAppointmentRequest {
         this.customerId = customerId;
     }
 
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    public void setCustomerPhone(String customerPhone) {
+        this.customerPhone = customerPhone;
+    }
+
+    public UUID getBranchId() {
+        return branchId;
+    }
+
+    public void setBranchId(UUID branchId) {
+        this.branchId = branchId;
+    }
+
+    public UUID getServiceId() {
+        return serviceId;
+    }
+
+    public void setServiceId(UUID serviceId) {
+        this.serviceId = serviceId;
+    }
+
     public String getServiceName() {
         return serviceName;
     }
 
     public void setServiceName(String serviceName) {
         this.serviceName = serviceName;
+    }
+
+    public UUID getStaffId() {
+        return staffId;
+    }
+
+    public void setStaffId(UUID staffId) {
+        this.staffId = staffId;
     }
 
     public String getStaffName() {
@@ -74,6 +117,14 @@ public class CreateAppointmentRequest {
 
     public void setEndTime(Instant endTime) {
         this.endTime = endTime;
+    }
+
+    public String getBookingSource() {
+        return bookingSource;
+    }
+
+    public void setBookingSource(String bookingSource) {
+        this.bookingSource = bookingSource;
     }
 
     public String getNotes() {

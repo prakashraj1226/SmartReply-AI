@@ -24,10 +24,16 @@ public class BusinessMember {
     private User user;
 
     @Column(nullable = false, length = 50)
-    private String role; // OWNER, AGENT, ADMIN
+    private String role; // OWNER, AGENT, ADMIN, BUSINESS_OWNER, BUSINESS_ADMIN, MANAGER, RECEPTIONIST, DOCTOR, DENTIST, SALON_STAFF
+
+    @Column(name = "membership_status", nullable = false, length = 50)
+    private String membershipStatus = "ACTIVE"; // ACTIVE, SUSPENDED, INVITED
 
     @Column(name = "permissions_json", columnDefinition = "TEXT")
     private String permissionsJson;
+
+    @Column(name = "joined_at", nullable = false)
+    private Instant joinedAt = Instant.now();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
@@ -39,6 +45,8 @@ public class BusinessMember {
         this.business = business;
         this.user = user;
         this.role = role;
+        this.membershipStatus = "ACTIVE";
+        this.joinedAt = Instant.now();
         this.createdAt = Instant.now();
     }
 
@@ -80,6 +88,22 @@ public class BusinessMember {
 
     public void setPermissionsJson(String permissionsJson) {
         this.permissionsJson = permissionsJson;
+    }
+
+    public String getMembershipStatus() {
+        return membershipStatus;
+    }
+
+    public void setMembershipStatus(String membershipStatus) {
+        this.membershipStatus = membershipStatus;
+    }
+
+    public Instant getJoinedAt() {
+        return joinedAt;
+    }
+
+    public void setJoinedAt(Instant joinedAt) {
+        this.joinedAt = joinedAt;
     }
 
     public Instant getCreatedAt() {

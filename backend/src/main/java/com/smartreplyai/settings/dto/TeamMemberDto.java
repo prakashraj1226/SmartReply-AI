@@ -9,17 +9,19 @@ public class TeamMemberDto {
     private String fullName;
     private String email;
     private String role;
+    private String membershipStatus = "ACTIVE";
     private Instant joinedAt;
 
     public TeamMemberDto() {
     }
 
-    public TeamMemberDto(UUID id, UUID userId, String fullName, String email, String role, Instant joinedAt) {
+    public TeamMemberDto(UUID id, UUID userId, String fullName, String email, String role, String membershipStatus, Instant joinedAt) {
         this.id = id;
         this.userId = userId;
         this.fullName = fullName;
         this.email = email;
         this.role = role;
+        this.membershipStatus = membershipStatus != null ? membershipStatus : "ACTIVE";
         this.joinedAt = joinedAt;
     }
 
@@ -61,6 +63,14 @@ public class TeamMemberDto {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getMembershipStatus() {
+        return membershipStatus;
+    }
+
+    public void setMembershipStatus(String membershipStatus) {
+        this.membershipStatus = membershipStatus;
     }
 
     public Instant getJoinedAt() {

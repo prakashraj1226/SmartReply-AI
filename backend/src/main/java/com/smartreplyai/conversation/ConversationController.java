@@ -147,4 +147,13 @@ public class ConversationController {
         List<String> suggestions = aiService.generateSuggestedReplies(businessId, msg != null ? msg : "");
         return ResponseEntity.ok(ApiResponse.ok(suggestions));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteConversation(@PathVariable("id") UUID id) {
+        UUID businessId = TenantContext.getBusinessId();
+        if (businessId == null) throw new BadRequestException("Active business tenant required");
+
+        conversationService.deleteConversation(businessId, id);
+        return ResponseEntity.ok(ApiResponse.ok("Conversation deleted successfully", null));
+    }
 }

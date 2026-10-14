@@ -107,4 +107,8 @@ export class InboxService {
     }
     return this.http.get<ApiResponse<string[]>>(`${this.apiUrl}/${conversationId}/suggestions`, { params });
   }
+
+  deleteConversation(conversationId: string): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${conversationId}`);
+  }
 }

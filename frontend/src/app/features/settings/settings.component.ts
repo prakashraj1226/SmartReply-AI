@@ -1315,39 +1315,27 @@ export class SettingsComponent implements OnInit {
   }
 
   inviteMember(): void {
+    if (!this.newMember.fullName?.trim() || !this.newMember.email?.trim()) {
+      this.alertType.set('error');
+      this.alertMessage.set('Please enter both name and email.');
+      return;
+    }
+
     this.isInviting.set(true);
     this.settingsService.inviteTeamMember(this.newMember).subscribe({
-      next: () => {
+      next: (res) => {
         this.isInviting.set(false);
         this.showInviteModal.set(false);
-        this.teamMembers.update(members => [...members, {
-          id: 'tm-' + Date.now(),
-          businessId: 'biz-1',
-          fullName: this.newMember.fullName,
-          email: this.newMember.email,
-          role: this.newMember.role,
-          active: true,
-          createdAt: new Date().toISOString()
-        } as any]);
         this.newMember = { email: '', fullName: '', role: 'AGENT' };
+        this.loadTeamMembers();
         this.alertType.set('success');
         this.alertMessage.set('Team member invited successfully.');
       },
-      error: () => {
+      error: (err) => {
         this.isInviting.set(false);
-        this.showInviteModal.set(false);
-        this.teamMembers.update(members => [...members, {
-          id: 'tm-' + Date.now(),
-          businessId: 'biz-1',
-          fullName: this.newMember.fullName,
-          email: this.newMember.email,
-          role: this.newMember.role,
-          active: true,
-          createdAt: new Date().toISOString()
-        } as any]);
-        this.newMember = { email: '', fullName: '', role: 'AGENT' };
-        this.alertType.set('success');
-        this.alertMessage.set('Team member invited successfully.');
+        const errMsg = err?.error?.message || err?.message || 'Failed to invite team member. Please check subscription limit or try again.';
+        this.alertType.set('error');
+        this.alertMessage.set(errMsg);
       }
     });
   }
@@ -1356,9 +1344,17 @@ export class SettingsComponent implements OnInit {
     if (!confirm(`Are you sure you want to remove ${member.fullName} (${member.email}) from your team?`)) {
       return;
     }
-    this.teamMembers.update(m => m.filter(x => x.id !== member.id));
-    this.settingsService.removeTeamMember(member.id).subscribe();
-    this.alertType.set('success');
-    this.alertMessage.set('Team member removed.');
+    this.settingsService.removeTeamMember(member.id).subscribe({
+      next: () => {
+        this.loadTeamMembers();
+        this.alertType.set('success');
+        this.alertMessage.set('Team member removed.');
+      },
+      error: (err) => {
+        const errMsg = err?.error?.message || err?.message || 'Failed to remove team member.';
+        this.alertType.set('error');
+        this.alertMessage.set(errMsg);
+      }
+    });
   }
 }

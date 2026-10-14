@@ -1,7 +1,11 @@
 package com.smartreplyai.appointment;
 
+import com.smartreplyai.auth.User;
+import com.smartreplyai.branch.Branch;
 import com.smartreplyai.business.Business;
 import com.smartreplyai.customer.Customer;
+import com.smartreplyai.servicecatalog.ServiceItem;
+import com.smartreplyai.staff.Staff;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
@@ -22,6 +26,18 @@ public class Appointment {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id")
+    private ServiceItem serviceItem;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "staff_id")
+    private Staff staff;
+
     @Column(name = "service_name", nullable = false)
     private String serviceName;
 
@@ -35,7 +51,14 @@ public class Appointment {
     private Instant endTime;
 
     @Column(nullable = false, length = 50)
-    private String status = "CONFIRMED"; // PENDING, CONFIRMED, CANCELLED, COMPLETED
+    private String status = "CONFIRMED"; // PENDING, CONFIRMED, CHECKED_IN, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+
+    @Column(name = "booking_source", nullable = false, length = 50)
+    private String bookingSource = "STAFF_MANUAL"; // WHATSAPP, WEB_PORTAL, STAFF_MANUAL, AI_ASSISTANT
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
@@ -139,6 +162,46 @@ public class Appointment {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public Branch getBranch() {
+        return branch;
+    }
+
+    public void setBranch(Branch branch) {
+        this.branch = branch;
+    }
+
+    public ServiceItem getServiceItem() {
+        return serviceItem;
+    }
+
+    public void setServiceItem(ServiceItem serviceItem) {
+        this.serviceItem = serviceItem;
+    }
+
+    public Staff getStaff() {
+        return staff;
+    }
+
+    public void setStaff(Staff staff) {
+        this.staff = staff;
+    }
+
+    public String getBookingSource() {
+        return bookingSource;
+    }
+
+    public void setBookingSource(String bookingSource) {
+        this.bookingSource = bookingSource;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
     }
 
     public Instant getCreatedAt() {

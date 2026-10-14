@@ -11,6 +11,10 @@ import com.smartreplyai.customer.CustomerRepository;
 import com.smartreplyai.message.Message;
 import com.smartreplyai.message.MessageRepository;
 import com.smartreplyai.security.UserPrincipal;
+import com.smartreplyai.whatsapp.IntegrationAccount;
+import com.smartreplyai.whatsapp.IntegrationAccountRepository;
+import com.smartreplyai.whatsapp.client.OfficialWhatsAppCloudApiClient;
+import com.smartreplyai.whatsapp.client.WhatsAppSendResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,6 +54,12 @@ class ConversationServiceTest {
     @Mock
     private AiService aiService;
 
+    @Mock
+    private IntegrationAccountRepository integrationAccountRepository;
+
+    @Mock
+    private OfficialWhatsAppCloudApiClient whatsAppClient;
+
     @InjectMocks
     private ConversationService conversationService;
 
@@ -69,6 +79,9 @@ class ConversationServiceTest {
 
         testConversation = new Conversation(testBusiness, testCustomer);
         testConversation.setId(UUID.randomUUID());
+
+        lenient().when(integrationAccountRepository.findByBusinessIdAndProvider(any(), any()))
+                .thenReturn(Optional.empty());
     }
 
     @Test
@@ -123,7 +136,7 @@ class ConversationServiceTest {
                 15L,
                 "RULE_BASED"
         );
-        when(aiService.processIncomingMessage(eq(businessId), anyString(), anyList()))
+        when(aiService.processIncomingMessage(eq(businessId), anyString(), anyList(), any(), any()))
                 .thenReturn(aiResponse);
 
         Message incoming = conversationService.handleCustomerMessage(
@@ -134,7 +147,7 @@ class ConversationServiceTest {
         assertEquals("wamid.123", incoming.getExternalMessageId());
         // Verify AI message was saved
         verify(messageRepository, times(2)).save(any(Message.class));
-        verify(aiService).processIncomingMessage(eq(businessId), eq("What are your business hours?"), anyList());
+        verify(aiService).processIncomingMessage(eq(businessId), eq("What are your business hours?"), anyList(), any(), any());
         assertEquals(0, testConversation.getUnreadCount()); // Cleared since AI answered confidently
     }
 
@@ -157,7 +170,7 @@ class ConversationServiceTest {
                 5L,
                 "RULE_BASED"
         );
-        when(aiService.processIncomingMessage(eq(businessId), anyString(), anyList()))
+        when(aiService.processIncomingMessage(eq(businessId), anyString(), anyList(), any(), any()))
                 .thenReturn(aiResponse);
 
         conversationService.handleCustomerMessage(
@@ -192,5 +205,16 @@ class ConversationServiceTest {
         Conversation updated = conversationService.assignAgent(businessId, testConversation.getId(), agentId);
         assertNotNull(updated.getAssignedAgent());
         assertEquals("Dr. Priya", updated.getAssignedAgent().getFullName());
+    }
+
+    @Test
+    void testDeleteConversation() {
+        when(conversationRepository.findByBusinessIdAndId(businessId, testConversation.getId()))
+                .thenReturn(Optional.of(testConversation));
+
+        conversationService.deleteConversation(businessId, testConversation.getId());
+
+        verify(messageRepository, times(1)).deleteByBusinessIdAndConversationId(businessId, testConversation.getId());
+        verify(conversationRepository, times(1)).delete(testConversation);
     }
 }

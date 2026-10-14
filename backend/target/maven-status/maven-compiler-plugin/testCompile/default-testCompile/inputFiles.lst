@@ -8,4 +8,8 @@
 /home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/knowledgebase/KnowledgeBaseServiceTest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/settings/SettingsServiceTest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/subscription/SubscriptionServiceTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/tenant/CatalogAndOnboardingTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/tenant/MultiTenantEndToEndScenarioTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/tenant/MultiTenantEntitiesTest.java
+/home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/tenant/TenantRbacTest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/test/java/com/smartreplyai/whatsapp/WhatsAppIntegrationServiceTest.java

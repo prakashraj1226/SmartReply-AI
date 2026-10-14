@@ -12,8 +12,8 @@ public class InviteMemberRequest {
     @NotBlank(message = "Full name is required")
     private String fullName;
 
-    @NotBlank(message = "Role is required (AGENT or ADMIN)")
-    private String role; // AGENT, ADMIN
+    @NotBlank(message = "Role is required")
+    private String role; // BUSINESS_ADMIN, MANAGER, RECEPTIONIST, DOCTOR, DENTIST, SALON_STAFF, AGENT
 
     public InviteMemberRequest() {
     }

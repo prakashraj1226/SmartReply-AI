@@ -1,5 +1,6 @@
 package com.smartreplyai.dashboard.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +14,13 @@ public class DashboardStatsResponse {
     private long aiHandledConversations;
     private long humanHandledConversations;
     private long upcomingAppointmentsCount;
+    private long totalAppointments;
+    private long confirmedAppointments;
+    private long completedAppointments;
+    private long cancelledAppointments;
+    private BigDecimal estimatedRevenue = BigDecimal.ZERO;
+    private List<Map<String, Object>> appointmentsByService;
+    private List<Map<String, Object>> appointmentsByStaff;
     private List<Map<String, Object>> volumeTrend;
     private List<Map<String, Object>> resolutionTrend;
     private List<Map<String, Object>> recentActivity;
@@ -106,5 +114,61 @@ public class DashboardStatsResponse {
 
     public void setRecentActivity(List<Map<String, Object>> recentActivity) {
         this.recentActivity = recentActivity;
+    }
+
+    public long getTotalAppointments() {
+        return totalAppointments;
+    }
+
+    public void setTotalAppointments(long totalAppointments) {
+        this.totalAppointments = totalAppointments;
+    }
+
+    public long getConfirmedAppointments() {
+        return confirmedAppointments;
+    }
+
+    public void setConfirmedAppointments(long confirmedAppointments) {
+        this.confirmedAppointments = confirmedAppointments;
+    }
+
+    public long getCompletedAppointments() {
+        return completedAppointments;
+    }
+
+    public void setCompletedAppointments(long completedAppointments) {
+        this.completedAppointments = completedAppointments;
+    }
+
+    public long getCancelledAppointments() {
+        return cancelledAppointments;
+    }
+
+    public void setCancelledAppointments(long cancelledAppointments) {
+        this.cancelledAppointments = cancelledAppointments;
+    }
+
+    public BigDecimal getEstimatedRevenue() {
+        return estimatedRevenue;
+    }
+
+    public void setEstimatedRevenue(BigDecimal estimatedRevenue) {
+        this.estimatedRevenue = estimatedRevenue;
+    }
+
+    public List<Map<String, Object>> getAppointmentsByService() {
+        return appointmentsByService;
+    }
+
+    public void setAppointmentsByService(List<Map<String, Object>> appointmentsByService) {
+        this.appointmentsByService = appointmentsByService;
+    }
+
+    public List<Map<String, Object>> getAppointmentsByStaff() {
+        return appointmentsByStaff;
+    }
+
+    public void setAppointmentsByStaff(List<Map<String, Object>> appointmentsByStaff) {
+        this.appointmentsByStaff = appointmentsByStaff;
     }
 }

@@ -15,6 +15,7 @@ public class UpdateBusinessProfileRequest {
     private String operatingHoursJson;
     private String preferredLanguage;
     private String description;
+    private String industryType;
     private Boolean onboardingCompleted;
 
     public UpdateBusinessProfileRequest() {
@@ -90,6 +91,14 @@ public class UpdateBusinessProfileRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getIndustryType() {
+        return industryType;
+    }
+
+    public void setIndustryType(String industryType) {
+        this.industryType = industryType;
     }
 
     public Boolean getOnboardingCompleted() {

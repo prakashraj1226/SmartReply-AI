@@ -5,14 +5,12 @@ import com.smartreplyai.auth.UserRepository;
 import com.smartreplyai.common.ApiResponse;
 import com.smartreplyai.common.BadRequestException;
 import com.smartreplyai.security.UserPrincipal;
-import com.smartreplyai.settings.dto.AiConfigDto;
-import com.smartreplyai.settings.dto.BusinessProfileDto;
-import com.smartreplyai.settings.dto.InviteMemberRequest;
-import com.smartreplyai.settings.dto.TeamMemberDto;
+import com.smartreplyai.settings.dto.*;
 import com.smartreplyai.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,6 +39,7 @@ public class SettingsController {
     }
 
     @PutMapping("/profile")
+    @PreAuthorize("@tenantSecurity.isOwnerOrAdmin()")
     public ResponseEntity<ApiResponse<BusinessProfileDto>> updateProfile(
             @Valid @RequestBody BusinessProfileDto dto,
             @AuthenticationPrincipal UserPrincipal principal,
@@ -66,6 +65,7 @@ public class SettingsController {
     }
 
     @PutMapping("/ai")
+    @PreAuthorize("@tenantSecurity.canManageAi()")
     public ResponseEntity<ApiResponse<AiConfigDto>> updateAiConfig(
             @Valid @RequestBody AiConfigDto dto,
             @AuthenticationPrincipal UserPrincipal principal,
@@ -91,6 +91,7 @@ public class SettingsController {
     }
 
     @PostMapping("/team")
+    @PreAuthorize("@tenantSecurity.canManageTeam()")
     public ResponseEntity<ApiResponse<TeamMemberDto>> inviteTeamMember(
             @Valid @RequestBody InviteMemberRequest req,
             @AuthenticationPrincipal UserPrincipal principal,
@@ -106,7 +107,44 @@ public class SettingsController {
         return ResponseEntity.ok(ApiResponse.ok("Team member added successfully", member));
     }
 
+    @PatchMapping("/team/{memberId}/role")
+    @PreAuthorize("@tenantSecurity.canManageTeam()")
+    public ResponseEntity<ApiResponse<TeamMemberDto>> updateMemberRole(
+            @PathVariable UUID memberId,
+            @Valid @RequestBody UpdateMemberRoleRequest req,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest request) {
+
+        UUID businessId = TenantContext.getBusinessId();
+        if (businessId == null) throw new BadRequestException("Active business tenant required");
+
+        User user = principal != null ? userRepository.findById(principal.getId()).orElse(null) : null;
+        String ip = extractIp(request);
+
+        TeamMemberDto member = settingsService.updateTeamMemberRole(businessId, memberId, req, user, ip);
+        return ResponseEntity.ok(ApiResponse.ok("Team member role updated successfully", member));
+    }
+
+    @PatchMapping("/team/{memberId}/status")
+    @PreAuthorize("@tenantSecurity.canManageTeam()")
+    public ResponseEntity<ApiResponse<TeamMemberDto>> updateMemberStatus(
+            @PathVariable UUID memberId,
+            @Valid @RequestBody UpdateMemberStatusRequest req,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest request) {
+
+        UUID businessId = TenantContext.getBusinessId();
+        if (businessId == null) throw new BadRequestException("Active business tenant required");
+
+        User user = principal != null ? userRepository.findById(principal.getId()).orElse(null) : null;
+        String ip = extractIp(request);
+
+        TeamMemberDto member = settingsService.updateTeamMemberStatus(businessId, memberId, req, user, ip);
+        return ResponseEntity.ok(ApiResponse.ok("Team member membership status updated successfully", member));
+    }
+
     @DeleteMapping("/team/{memberId}")
+    @PreAuthorize("@tenantSecurity.canManageTeam()")
     public ResponseEntity<ApiResponse<Void>> removeTeamMember(
             @PathVariable UUID memberId,
             @AuthenticationPrincipal UserPrincipal principal,

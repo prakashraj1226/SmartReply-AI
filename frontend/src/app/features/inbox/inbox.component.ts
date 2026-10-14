@@ -12,96 +12,59 @@ import { AuthService } from '../../core/services/auth.service';
   template: `
     <div class="inbox-page">
 
-      <!-- 1. Glowing Hero Gradient Card (Reference 4 & 5 Style) -->
-      <div class="hero-banner-card">
-        <div class="hero-banner-glow"></div>
-        <div class="hero-content">
-          <div class="hero-badge">
-            <span class="pulse-dot"></span>
-            <span>LIVE WHATSAPP COMMS & AI AUTO-PILOT</span>
-          </div>
-          <h1 class="hero-title">Live Omni-Channel Inbox</h1>
-          <p class="hero-subtitle">
-            Real-time customer WhatsApp messaging stream with AI autonomous grounding and instant staff handoff.
-          </p>
-        </div>
-        <div class="hero-actions">
-          <button type="button" class="btn-hero-primary" (click)="openSimulateModal()">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-            </svg>
-            <span>Simulate Inbound Message</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 2. Integrated 4-Column Stat Cards Row (Reference 4 Style) -->
-      <div class="kpi-grid">
-        <div class="kpi-card active-accent">
-          <div class="kpi-card-top">
-            <div class="kpi-label-box">
-              <span class="status-indicator blue"></span>
-              <span class="kpi-label">ACTIVE CHATS</span>
-            </div>
-            <div class="kpi-icon-box blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <!-- 1. Sleek Integrated Live Inbox Topbar (Dark Glowing Command Center Theme) -->
+      <div class="inbox-topbar">
+        <div class="topbar-glow"></div>
+        <div class="topbar-left">
+          <div class="topbar-title-group">
+            <div class="inbox-icon-badge">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
             </div>
+            <div>
+              <div class="title-status-line">
+                <h2 class="topbar-title">Live WhatsApp Inbox</h2>
+                <span class="live-status-pill">
+                  <span class="pulse-dot"></span>
+                  <span>Live Stream</span>
+                </span>
+              </div>
+              <p class="topbar-subtitle">Real-time patient WhatsApp communications & AI auto-reply</p>
+            </div>
           </div>
-          <div class="kpi-number">{{ conversations().length }}</div>
-          <div class="kpi-subtext">Active WhatsApp customer threads</div>
         </div>
 
-        <div class="kpi-card">
-          <div class="kpi-card-top">
-            <div class="kpi-label-box">
-              <span class="status-indicator green"></span>
-              <span class="kpi-label">AI AUTO-PILOT RATE</span>
-            </div>
-            <div class="kpi-icon-box green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-              </svg>
-            </div>
+        <div class="topbar-center">
+          <div class="metric-pill">
+            <span class="metric-dot blue"></span>
+            <span class="metric-val">{{ conversations().length }}</span>
+            <span class="metric-lbl">Active Chats</span>
           </div>
-          <div class="kpi-number">94.2%</div>
-          <div class="kpi-subtext">Resolved autonomously from FAQ</div>
+          <div class="metric-pill">
+            <span class="metric-dot green"></span>
+            <span class="metric-val">94.2%</span>
+            <span class="metric-lbl">AI Autopilot</span>
+          </div>
+          <div class="metric-pill">
+            <span class="metric-dot amber"></span>
+            <span class="metric-val">1</span>
+            <span class="metric-lbl">Escalation</span>
+          </div>
+          <div class="metric-pill">
+            <span class="metric-dot purple"></span>
+            <span class="metric-val">1.1s</span>
+            <span class="metric-lbl">Avg Latency</span>
+          </div>
         </div>
 
-        <div class="kpi-card">
-          <div class="kpi-card-top">
-            <div class="kpi-label-box">
-              <span class="status-indicator amber"></span>
-              <span class="kpi-label">NEEDS ESCALATION</span>
-            </div>
-            <div class="kpi-icon-box amber">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-            </div>
-          </div>
-          <div class="kpi-number">1 Chat</div>
-          <div class="kpi-subtext">Flagged for doctor clinical review</div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-card-top">
-            <div class="kpi-label-box">
-              <span class="status-indicator purple"></span>
-              <span class="kpi-label">AVG REPLY LATENCY</span>
-            </div>
-            <div class="kpi-icon-box purple">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-            </div>
-          </div>
-          <div class="kpi-number">1.1s</div>
-          <div class="kpi-subtext">Meta Cloud API instant webhook</div>
+        <div class="topbar-right">
+          <button type="button" class="btn-topbar-action simulate" (click)="openSimulateModal()">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>Simulate Inbound</span>
+          </button>
         </div>
       </div>
 
@@ -172,6 +135,19 @@ import { AuthService } from '../../core/services/auth.service';
                   <span *ngIf="conv.aiEnabled" class="ai-badge">✨ AI Grounded</span>
                 </div>
               </div>
+
+              <!-- Quick Delete Button on Hover -->
+              <button
+                type="button"
+                class="btn-conv-delete"
+                title="Delete Conversation"
+                (click)="confirmDelete(conv, $event)"
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
             </div>
           </div>
         </aside>
@@ -188,21 +164,22 @@ import { AuthService } from '../../core/services/auth.service';
                 <div class="header-name-row">
                   <h3>{{ selectedConversation()!.customerName }}</h3>
                   <span class="phone-chip">
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                     </svg>
                     {{ selectedConversation()!.customerPhone }}
                   </span>
+                  <span class="status-pill-small" [attr.data-status]="selectedConversation()!.status">
+                    {{ selectedConversation()!.status }}
+                  </span>
                 </div>
                 <div class="header-sub">
                   <span class="live-dot-indicator"></span>
-                  <span class="status-text">{{ selectedConversation()!.status }}</span>
-                  <span class="dot-separator">•</span>
                   <span *ngIf="selectedConversation()!.aiEnabled" class="ai-active-text">
-                    ✨ AI Assistant ON (Auto-Reply)
+                    ✨ AI Assistant ON
                   </span>
                   <span *ngIf="!selectedConversation()!.aiEnabled" class="ai-paused-text">
-                    ⏸ AI Paused (Human Takeover)
+                    ⏸ AI Paused
                   </span>
                 </div>
               </div>
@@ -210,21 +187,53 @@ import { AuthService } from '../../core/services/auth.service';
 
             <div class="chat-header-actions">
               <button
-                class="btn-hdr-action"
-                [class.resolved]="selectedConversation()!.status === 'RESOLVED'"
-                (click)="toggleResolve()"
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                {{ selectedConversation()!.status === 'RESOLVED' ? 'Reopen Conversation' : 'Mark Resolved' }}
-              </button>
-              <button
+                type="button"
                 class="btn-hdr-action ai-toggle"
                 [class.ai-off]="!selectedConversation()!.aiEnabled"
                 (click)="toggleAiMode()"
+                title="Toggle AI Auto-Reply"
               >
                 {{ selectedConversation()!.aiEnabled ? 'Pause AI' : 'Resume AI' }}
+              </button>
+
+              <button
+                type="button"
+                class="btn-hdr-action resolve"
+                [class.resolved]="selectedConversation()!.status === 'RESOLVED'"
+                (click)="toggleResolve()"
+                title="Mark conversation resolved or reopen"
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>{{ selectedConversation()!.status === 'RESOLVED' ? 'Reopen' : 'Resolve' }}</span>
+              </button>
+
+              <button
+                type="button"
+                class="btn-hdr-action delete"
+                (click)="confirmDelete()"
+                title="Delete this conversation"
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                <span>Delete</span>
+              </button>
+
+              <button
+                type="button"
+                class="btn-hdr-action info-toggle"
+                [class.active]="showRightPanel"
+                (click)="showRightPanel = !showRightPanel"
+                title="Toggle Patient Details Panel"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
               </button>
             </div>
           </header>
@@ -249,7 +258,7 @@ import { AuthService } from '../../core/services/auth.service';
 
               <!-- Human Staff Agent Bubble -->
               <div *ngIf="msg.senderType === 'AGENT'" class="bubble agent-bubble">
-                <div class="bubble-sender">Clinic Staff Agent</div>
+                <div class="bubble-sender">Staff Agent</div>
                 <div class="bubble-text">{{ msg.textContent }}</div>
                 <div class="bubble-meta">
                   <span>{{ formatTime(msg.createdAt) }}</span>
@@ -276,7 +285,7 @@ import { AuthService } from '../../core/services/auth.service';
           <!-- AI Suggested Replies Chip Bar -->
           <div class="suggestions-bar" *ngIf="suggestedReplies().length > 0">
             <div class="suggestion-label">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
               </svg>
               <span>Instant AI Suggestions:</span>
@@ -287,7 +296,7 @@ import { AuthService } from '../../core/services/auth.service';
                 class="suggestion-chip"
                 (click)="applySuggestion(suggestion)"
               >
-                {{ truncate(suggestion, 48) }}
+                {{ truncate(suggestion, 45) }}
               </button>
             </div>
           </div>
@@ -325,9 +334,13 @@ import { AuthService } from '../../core/services/auth.service';
         </ng-template>
 
         <!-- RIGHT PANEL: Patient Card & Grounding Context -->
-        <aside class="right-panel" *ngIf="selectedConversation()">
+        <aside class="right-panel" *ngIf="selectedConversation() && showRightPanel">
+          <div class="right-panel-header">
+            <h4>Patient Profile</h4>
+            <button class="close-panel-btn" (click)="showRightPanel = false" title="Close Panel">&times;</button>
+          </div>
+
           <div class="panel-section">
-            <h4 class="section-title">Patient Profile</h4>
             <div class="profile-card">
               <div class="profile-avatar" [ngStyle]="{'background-color': getAvatarColor(selectedConversation()!.customerName)}">
                 {{ getInitials(selectedConversation()!.customerName) }}
@@ -352,7 +365,7 @@ import { AuthService } from '../../core/services/auth.service';
             <h4 class="section-title">AI Grounding Autopilot</h4>
             <div class="ai-card-info">
               <p class="ai-desc">
-                When active, all customer questions matching clinic FAQs are answered instantly in 1.1s.
+                When active, questions matching business FAQs and services are answered instantly in 1.1s.
               </p>
               <button
                 class="btn-ai-control"
@@ -368,10 +381,13 @@ import { AuthService } from '../../core/services/auth.service';
             <h4 class="section-title">Quick Actions</h4>
             <div class="quick-actions-col">
               <button class="action-btn-item" (click)="loadSuggestions()">
-                <span>🔄</span> Refresh AI Reply Suggestions
+                <span>🔄</span> Refresh AI Suggestions
               </button>
               <button class="action-btn-item" (click)="openSimulateModal()">
                 <span>⚡</span> Send Simulated Inbound
+              </button>
+              <button class="action-btn-item danger" (click)="confirmDelete()">
+                <span>🗑️</span> Delete Conversation
               </button>
             </div>
           </div>
@@ -379,8 +395,8 @@ import { AuthService } from '../../core/services/auth.service';
       </div>
 
       <!-- SIMULATE INCOMING MODAL -->
-      <div *ngIf="showSimulateModal" class="modal-backdrop">
-        <div class="modal-dialog">
+      <div *ngIf="showSimulateModal" class="modal-backdrop" (click)="closeSimulateModal()">
+        <div class="modal-dialog" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <div class="modal-title-box">
               <div class="modal-icon-badge">⚡</div>
@@ -389,7 +405,7 @@ import { AuthService } from '../../core/services/auth.service';
                 <p class="modal-subtitle">Tests the Meta webhook and AI FAQ grounding engine in real time</p>
               </div>
             </div>
-            <button class="close-btn" (click)="closeSimulateModal()">✕</button>
+            <button class="close-btn" (click)="closeSimulateModal()">&times;</button>
           </div>
           <div class="modal-body">
             <div class="form-group">
@@ -437,6 +453,52 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       </div>
 
+      <!-- DELETE CONFIRMATION MODAL -->
+      <div *ngIf="showDeleteConfirmModal" class="modal-backdrop" (click)="cancelDelete()">
+        <div class="modal-dialog delete-modal-dialog" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div class="modal-title-box">
+              <div class="modal-icon-badge danger">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </div>
+              <div>
+                <h3>Delete Conversation</h3>
+                <p class="modal-subtitle">Permanent removal of conversation thread</p>
+              </div>
+            </div>
+            <button class="close-btn" (click)="cancelDelete()">&times;</button>
+          </div>
+
+          <div class="modal-body">
+            <p style="margin: 0; color: #1e293b; font-size: 0.9rem; line-height: 1.5;">
+              Are you sure you want to delete the conversation with
+              <strong>{{ conversationToDelete?.customerName || conversationToDelete?.customerPhone }}</strong>?
+            </p>
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem 0.9rem; display: flex; gap: 0.5rem; align-items: flex-start; margin-top: 0.5rem;">
+              <span style="font-size: 1rem;">⚠️</span>
+              <span style="font-size: 0.8rem; color: #991b1b; line-height: 1.4;">
+                All messages, notes, and records in this WhatsApp chat will be permanently deleted. This action cannot be undone.
+              </span>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-cancel" (click)="cancelDelete()">Cancel</button>
+            <button
+              type="button"
+              class="btn-delete-confirm"
+              [disabled]="isDeleting()"
+              (click)="executeDelete()"
+            >
+              {{ isDeleting() ? 'Deleting...' : 'Delete Conversation' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   `,
   styles: [`
@@ -452,29 +514,27 @@ import { AuthService } from '../../core/services/auth.service';
       gap: 0.6rem;
     }
 
-    /* 1. Glowing Hero Gradient Card (Sleek, Compact) */
-    .hero-banner-card {
+    /* 1. Sleek Integrated Topbar (Dark Glowing Command Center Theme - Like Last Image) */
+    .inbox-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
       background: radial-gradient(120% 140% at 88% 12%, rgba(59, 130, 246, 0.32) 0%, rgba(37, 99, 235, 0.16) 40%, transparent 70%),
                   radial-gradient(100% 100% at 12% 88%, rgba(99, 102, 241, 0.22) 0%, transparent 60%),
                   linear-gradient(135deg, #091326 0%, #0d2149 55%, #081024 100%);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 12px;
-      padding: 0.6rem 1.15rem;
-      min-height: auto;
+      padding: 0.55rem 1.15rem;
       color: #ffffff;
       box-shadow: 0 4px 16px -2px rgba(11, 19, 41, 0.35);
       position: relative;
       overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      box-sizing: border-box;
       flex-shrink: 0;
-      margin-bottom: 0;
+      box-sizing: border-box;
     }
 
-    .hero-banner-card::before {
+    .inbox-topbar::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -484,38 +544,77 @@ import { AuthService } from '../../core/services/auth.service';
       pointer-events: none;
     }
 
-    .hero-banner-glow {
+    .topbar-glow {
       position: absolute;
-      top: -50px;
-      right: -40px;
-      width: 240px;
-      height: 240px;
+      top: -40px;
+      right: -30px;
+      width: 200px;
+      height: 200px;
       background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, transparent 70%);
       border-radius: 50%;
       pointer-events: none;
-      filter: blur(10px);
+      filter: blur(12px);
     }
 
-    .hero-content {
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
       position: relative;
       z-index: 2;
-      max-width: 650px;
     }
 
-    .hero-badge {
+    .topbar-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .inbox-icon-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.22);
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 14px rgba(59, 130, 246, 0.35);
+      flex-shrink: 0;
+    }
+
+    .title-status-line {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .topbar-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #ffffff !important;
+      letter-spacing: -0.02em;
+      margin: 0;
+      line-height: 1.2;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .live-status-pill {
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      background: rgba(34, 197, 94, 0.14);
-      border: 1px solid rgba(74, 222, 128, 0.32);
-      backdrop-filter: blur(8px);
-      padding: 0.15rem 0.55rem;
-      border-radius: 9999px;
+      background: rgba(34, 197, 94, 0.16);
+      border: 1px solid rgba(74, 222, 128, 0.38);
+      color: #4ade80;
       font-size: 0.625rem;
       font-weight: 800;
+      padding: 0.15rem 0.55rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
       letter-spacing: 0.06em;
-      margin-bottom: 0.25rem;
-      color: #4ade80;
+      backdrop-filter: blur(8px);
     }
 
     .pulse-dot {
@@ -532,34 +631,72 @@ import { AuthService } from '../../core/services/auth.service';
       50% { opacity: 0.4; transform: scale(0.85); }
     }
 
-    .hero-title {
-      font-size: 1.15rem;
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      color: #ffffff !important;
-      margin: 0 0 0.15rem 0;
-      line-height: 1.2;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-    }
-
-    .hero-subtitle {
+    .topbar-subtitle {
       font-size: 0.725rem;
       color: #cbd5e1;
-      margin: 0;
-      line-height: 1.35;
-      max-width: 640px;
+      margin: 0.15rem 0 0 0;
+      line-height: 1.2;
     }
 
-    .hero-actions {
+    .topbar-center {
       display: flex;
       align-items: center;
-      gap: 0.65rem;
+      gap: 0.5rem;
+      flex-wrap: wrap;
       position: relative;
       z-index: 2;
-      flex-shrink: 0;
     }
 
-    .btn-hero-primary {
+    .metric-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.75rem;
+      color: #f1f5f9;
+      backdrop-filter: blur(8px);
+      transition: all 0.15s ease;
+    }
+
+    .metric-pill:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .metric-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+    .metric-dot.blue { background: #60a5fa; box-shadow: 0 0 6px #60a5fa; }
+    .metric-dot.green { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+    .metric-dot.amber { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
+    .metric-dot.purple { background: #c084fc; box-shadow: 0 0 6px #c084fc; }
+
+    .metric-val {
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .metric-lbl {
+      color: #94a3b8;
+      font-weight: 600;
+      font-size: 0.7rem;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 2;
+    }
+
+    .btn-topbar-action.simulate {
       display: inline-flex;
       align-items: center;
       gap: 0.45rem;
@@ -568,139 +705,17 @@ import { AuthService } from '../../core/services/auth.service';
       border: 1px solid rgba(255, 255, 255, 0.25);
       padding: 0.45rem 0.9rem;
       border-radius: 8px;
-      font-size: 0.75rem;
+      font-size: 0.775rem;
       font-weight: 700;
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .btn-hero-primary:hover {
+    .btn-topbar-action.simulate:hover {
       background: linear-gradient(135deg, #3b82f6, #2563eb);
       transform: translateY(-1px);
       box-shadow: 0 6px 18px rgba(37, 99, 235, 0.55);
-    }
-
-    /* 2. 4-Column Stat Cards Row (Compact, Sleek) */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.6rem;
-      flex-shrink: 0;
-      margin-bottom: 0;
-    }
-
-    .kpi-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 0.5rem 0.85rem;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.2s ease;
-    }
-
-    .kpi-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2.5px;
-      background: transparent;
-      transition: all 0.2s ease;
-    }
-
-    .kpi-card:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 14px -2px rgba(15, 23, 42, 0.08);
-      border-color: #cbd5e1;
-    }
-
-    .kpi-card:hover::before {
-      background: linear-gradient(90deg, #3b82f6, #93c5fd);
-    }
-
-    .kpi-card.active-accent {
-      border-color: #bfdbfe;
-      box-shadow: 0 3px 10px -2px rgba(37, 99, 235, 0.12);
-    }
-
-    .kpi-card.active-accent::before {
-      background: linear-gradient(90deg, #2563eb, #60a5fa);
-    }
-
-    .kpi-card-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.25rem;
-    }
-
-    .kpi-label-box {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-
-    .status-indicator {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-    }
-
-    .status-indicator.blue { background: #2563eb; box-shadow: 0 0 5px rgba(37, 99, 235, 0.5); }
-    .status-indicator.green { background: #10b981; box-shadow: 0 0 5px rgba(16, 185, 129, 0.5); }
-    .status-indicator.amber { background: #f59e0b; box-shadow: 0 0 5px rgba(245, 158, 11, 0.5); }
-    .status-indicator.purple { background: #8b5cf6; box-shadow: 0 0 5px rgba(139, 92, 246, 0.5); }
-
-    .kpi-label {
-      font-size: 0.625rem;
-      font-weight: 700;
-      color: #64748b;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .kpi-icon-box {
-      width: 26px;
-      height: 26px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .kpi-icon-box svg {
-      width: 13px;
-      height: 13px;
-    }
-
-    .kpi-icon-box.blue { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
-    .kpi-icon-box.green { background: #f0fdf4; color: #059669; border: 1px solid #dcfce7; }
-    .kpi-icon-box.amber { background: #fffbeb; color: #d97706; border: 1px solid #fef3c7; }
-    .kpi-icon-box.purple { background: #faf5ff; color: #7c3aed; border: 1px solid #f3e8ff; }
-
-    .kpi-number {
-      font-size: 1.15rem;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: -0.025em;
-      line-height: 1.15;
-      margin-bottom: 0.15rem;
-    }
-
-    .kpi-subtext {
-      font-size: 0.65rem;
-      color: #64748b;
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     /* 3. Modern 3-Column Chat Frame */
@@ -925,6 +940,34 @@ import { AuthService } from '../../core/services/auth.service';
       border-radius: 4px;
     }
 
+    .btn-conv-delete {
+      opacity: 0;
+      visibility: hidden;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .conversation-item:hover .btn-conv-delete {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .btn-conv-delete:hover {
+      background: #fee2e2;
+      color: #dc2626;
+      transform: scale(1.1);
+    }
+
+
     /* Middle Panel */
     .middle-panel {
       flex: 1 1 0%;
@@ -991,7 +1034,22 @@ import { AuthService } from '../../core/services/auth.service';
       background: #ecfdf5;
       padding: 0.15rem 0.5rem;
       border-radius: 4px;
+      white-space: nowrap;
     }
+
+    .status-pill-small {
+      font-size: 0.625rem;
+      font-weight: 800;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .status-pill-small[data-status="OPEN"] { background: #dcfce7; color: #15803d; }
+    .status-pill-small[data-status="PENDING"] { background: #fef3c7; color: #b45309; }
+    .status-pill-small[data-status="RESOLVED"] { background: #f1f5f9; color: #64748b; }
 
     .header-sub {
       display: flex;
@@ -1030,15 +1088,16 @@ import { AuthService } from '../../core/services/auth.service';
 
     .chat-header-actions {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.45rem;
+      align-items: center;
     }
 
     .btn-hdr-action {
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      padding: 0.45rem 0.85rem;
-      font-size: 0.775rem;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.75rem;
       font-weight: 700;
       border-radius: 8px;
       border: 1px solid #cbd5e1;
@@ -1068,6 +1127,29 @@ import { AuthService } from '../../core/services/auth.service';
       background: #fffbeb;
       border-color: #fde68a;
       color: #d97706;
+    }
+
+    .btn-hdr-action.delete {
+      border-color: #fecaca;
+      background: #fff5f5;
+      color: #dc2626;
+    }
+
+    .btn-hdr-action.delete:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #b91c1c;
+    }
+
+    .btn-hdr-action.info-toggle {
+      padding: 0.4rem 0.55rem;
+      color: #64748b;
+    }
+
+    .btn-hdr-action.info-toggle.active {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      color: #2563eb;
     }
 
     /* Messages Stream */
@@ -1343,6 +1425,37 @@ import { AuthService } from '../../core/services/auth.service';
       height: 100%;
     }
 
+    .right-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .right-panel-header h4 {
+      margin: 0;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .close-panel-btn {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      line-height: 1;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 0 4px;
+      border-radius: 4px;
+    }
+
+    .close-panel-btn:hover {
+      color: #0f172a;
+      background: #f1f5f9;
+    }
+
     .section-title {
       font-size: 0.75rem;
       font-weight: 800;
@@ -1475,6 +1588,18 @@ import { AuthService } from '../../core/services/auth.service';
       background: #eff6ff;
       color: #2563eb;
       border-color: #bfdbfe;
+    }
+
+    .action-btn-item.danger {
+      color: #dc2626;
+      background: #fff5f5;
+      border-color: #fee2e2;
+    }
+
+    .action-btn-item.danger:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #b91c1c;
     }
 
     /* Empty Selection */
@@ -1670,6 +1795,55 @@ import { AuthService } from '../../core/services/auth.service';
       cursor: pointer;
     }
 
+    .delete-modal-dialog {
+      max-width: 440px;
+    }
+
+    .modal-icon-badge.danger {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .btn-delete-confirm {
+      padding: 0.55rem 1.15rem;
+      font-size: 0.825rem;
+      font-weight: 700;
+      border: none;
+      background: #dc2626;
+      color: #ffffff;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+    }
+
+    .btn-delete-confirm:hover:not(:disabled) {
+      background: #b91c1c;
+      transform: translateY(-1px);
+    }
+
+    .btn-delete-confirm:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-cancel {
+      padding: 0.55rem 1rem;
+      font-size: 0.825rem;
+      font-weight: 600;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #475569;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-cancel:hover {
+      background: #f1f5f9;
+    }
+
     .btn-send-sim {
       padding: 0.55rem 1.25rem;
       font-size: 0.825rem;
@@ -1706,15 +1880,15 @@ import { AuthService } from '../../core/services/auth.service';
       to { transform: rotate(360deg); }
     }
 
-    @media (max-width: 1200px) {
-      .right-panel {
-        display: none !important;
+    @media (max-width: 1100px) {
+      .topbar-center {
+        display: none;
       }
     }
 
     @media (max-width: 860px) {
-      .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
+      .right-panel {
+        display: none !important;
       }
       .left-panel {
         width: 250px;
@@ -1744,6 +1918,11 @@ export class InboxComponent implements OnInit {
   showSimulateModal = false;
   simulateCustomerId = '';
   simulateMessageText = 'What are your business hours on Saturday?';
+
+  showRightPanel = true;
+  showDeleteConfirmModal = false;
+  conversationToDelete: ConversationDto | null = null;
+  isDeleting = signal(false);
 
   defaultSuggestions: string[] = [];
 
@@ -1961,6 +2140,57 @@ export class InboxComponent implements OnInit {
 
   closeSimulateModal(): void {
     this.showSimulateModal = false;
+  }
+
+  confirmDelete(conv?: ConversationDto, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.conversationToDelete = conv || this.selectedConversation();
+    if (!this.conversationToDelete) return;
+    this.showDeleteConfirmModal = true;
+  }
+
+  cancelDelete(): void {
+    this.showDeleteConfirmModal = false;
+    this.conversationToDelete = null;
+  }
+
+  executeDelete(): void {
+    const target = this.conversationToDelete;
+    if (!target) return;
+
+    this.isDeleting.set(true);
+    const targetId = target.id;
+
+    this.inboxService.deleteConversation(targetId).subscribe({
+      next: () => {
+        this.isDeleting.set(false);
+        this.showDeleteConfirmModal = false;
+        this.conversationToDelete = null;
+
+        // Remove from conversation list signal
+        const updated = this.conversations().filter(c => c.id !== targetId);
+        this.conversations.set(updated);
+
+        // If active conversation was deleted, select first available or clear
+        if (this.selectedConversation()?.id === targetId) {
+          if (updated.length > 0) {
+            this.selectConversation(updated[0]);
+          } else {
+            this.selectedConversation.set(null);
+            this.messages.set([]);
+          }
+        }
+      },
+      error: (err) => {
+        console.error('Failed to delete conversation on server:', err);
+        this.isDeleting.set(false);
+        this.showDeleteConfirmModal = false;
+        this.conversationToDelete = null;
+        alert('Failed to delete conversation on server: ' + (err?.error?.message || err?.message || 'Please check backend logs.'));
+      }
+    });
   }
 
   setSampleText(txt: string): void {

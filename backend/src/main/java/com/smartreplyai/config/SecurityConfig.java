@@ -45,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/webhooks/**",
+                                "/api/business/onboarding/templates",
                                 "/actuator/health",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**"

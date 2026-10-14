@@ -66,7 +66,9 @@ public class WhatsAppConfigController {
 
         UUID businessId = TenantContext.getBusinessId();
         WhatsAppConfigDto cfg = whatsAppIntegrationService.getOrInitAccount(businessId);
-        String phoneId = cfg.getPhoneNumberId() != null ? cfg.getPhoneNumberId() : "1029384756";
+        String phoneId = (cfg.getPhoneNumberId() != null && !cfg.getPhoneNumberId().isBlank())
+                ? cfg.getPhoneNumberId()
+                : "sandbox_" + businessId.toString().substring(0, 8);
         String wamid = "wamid.TEST_HOOK_" + System.currentTimeMillis();
 
         String payload = String.format("""

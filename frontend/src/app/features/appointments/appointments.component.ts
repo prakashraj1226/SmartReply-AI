@@ -1,8 +1,9 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AppointmentService, Appointment, CreateAppointmentRequest } from '../../core/services/appointment.service';
+import { AppointmentService, Appointment, CreateAppointmentRequest, TimeSlot } from '../../core/services/appointment.service';
 import { CustomerService, Customer } from '../../core/services/customer.service';
+import { CatalogService, ServiceItem, StaffMember, Branch } from '../../core/services/catalog.service';
 
 @Component({
   selector: 'app-appointments',
@@ -189,7 +190,12 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
 
                 <!-- Status -->
                 <td>
-                  <span class="status-badge" [class.confirmed]="apt.status === 'CONFIRMED'" [class.pending]="apt.status === 'PENDING'" [class.cancelled]="apt.status === 'CANCELLED'">
+                  <span class="status-badge"
+                    [class.confirmed]="apt.status === 'CONFIRMED'"
+                    [class.checked-in]="apt.status === 'CHECKED_IN'"
+                    [class.completed]="apt.status === 'COMPLETED'"
+                    [class.pending]="apt.status === 'PENDING'"
+                    [class.cancelled]="apt.status === 'CANCELLED' || apt.status === 'NO_SHOW'">
                     <span class="badge-dot"></span>
                     {{ apt.status }}
                   </span>
@@ -202,15 +208,36 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
 
                 <!-- Actions -->
                 <td class="text-right">
-                  <button
-                    *ngIf="apt.status !== 'CANCELLED'"
-                    type="button"
-                    class="btn-cancel"
-                    (click)="cancelBooking(apt.id)"
-                  >
-                    Cancel
-                  </button>
-                  <span *ngIf="apt.status === 'CANCELLED'" class="cancelled-text">Cancelled</span>
+                  <div style="display: flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
+                    <button
+                      *ngIf="apt.status === 'CONFIRMED'"
+                      type="button"
+                      class="btn-action-small check-in"
+                      (click)="updateStatus(apt, 'CHECKED_IN')"
+                      title="Mark as Checked In"
+                    >
+                      Check In
+                    </button>
+                    <button
+                      *ngIf="apt.status === 'CHECKED_IN'"
+                      type="button"
+                      class="btn-action-small complete"
+                      (click)="updateStatus(apt, 'COMPLETED')"
+                      title="Mark as Completed"
+                    >
+                      Complete
+                    </button>
+                    <button
+                      *ngIf="apt.status !== 'CANCELLED' && apt.status !== 'COMPLETED'"
+                      type="button"
+                      class="btn-cancel"
+                      (click)="cancelBooking(apt.id)"
+                    >
+                      Cancel
+                    </button>
+                    <span *ngIf="apt.status === 'CANCELLED'" class="cancelled-text">Cancelled</span>
+                    <span *ngIf="apt.status === 'COMPLETED'" style="color: #10b981; font-size: 0.7rem; font-weight: 700;">Completed</span>
+                  </div>
                 </td>
               </tr>
               <tr *ngIf="displayAppointments.length === 0">
@@ -227,16 +254,20 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
       </div>
 
       <!-- BOOKING MODAL -->
-      <div *ngIf="showBookingModal" class="modal-backdrop">
-        <div class="modal-dialog">
+      <div *ngIf="showBookingModal" class="modal-backdrop" (click)="closeBookingModal()">
+        <div class="modal-dialog" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>📅 Book New Appointment</h3>
             <button class="close-btn" (click)="closeBookingModal()">✕</button>
           </div>
           <form (ngSubmit)="submitBooking()">
             <div class="modal-body">
+              <div *ngIf="bookingError" class="booking-error-banner">
+                ⚠️ {{ bookingError }}
+              </div>
+
               <div class="form-group">
-                <label class="form-label">Patient Name*</label>
+                <label class="form-label">Customer / Patient Name*</label>
                 <input
                   type="text"
                   class="form-control"
@@ -248,7 +279,7 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
               </div>
 
               <div class="form-group">
-                <label class="form-label">WhatsApp Phone*</label>
+                <label class="form-label">Phone / WhatsApp*</label>
                 <input
                   type="text"
                   class="form-control"
@@ -259,11 +290,30 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
                 />
               </div>
 
+              <!-- Branch Selector (if multiple exist) -->
+              <div *ngIf="branchesList().length > 1" class="form-group">
+                <label class="form-label">Branch Location</label>
+                <select class="form-control" [(ngModel)]="selectedBranchId" name="selectedBranch" (change)="onDateOrStaffChange()">
+                  <option value="">-- All Branches --</option>
+                  <option *ngFor="let b of branchesList()" [value]="b.id">{{ b.name }}</option>
+                </select>
+              </div>
+
+              <!-- Service Selector -->
               <div class="form-group">
                 <label class="form-label">Service / Treatment*</label>
+                <select *ngIf="servicesList().length > 0" class="form-control" [(ngModel)]="selectedServiceId" name="selectedService" (change)="onServiceChange()">
+                  <option value="">-- Select from Catalog --</option>
+                  <option *ngFor="let s of servicesList()" [value]="s.id">
+                    {{ s.name }} ({{ s.durationMinutes }}m - ₹{{ s.price }})
+                  </option>
+                  <option value="CUSTOM">+ Custom Service</option>
+                </select>
                 <input
+                  *ngIf="servicesList().length === 0 || selectedServiceId === 'CUSTOM'"
                   type="text"
                   class="form-control"
+                  style="margin-top: 0.35rem;"
                   placeholder="e.g. Consultation, Service Checkup"
                   [(ngModel)]="bookingData.serviceName"
                   name="serviceName"
@@ -271,30 +321,40 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
                 />
               </div>
 
+              <!-- Staff Selector -->
               <div class="form-group">
-                <label class="form-label">Staff / Specialist</label>
+                <label class="form-label">Practitioner / Staff</label>
+                <select *ngIf="staffList().length > 0" class="form-control" [(ngModel)]="selectedStaffId" name="selectedStaff" (change)="onDateOrStaffChange()">
+                  <option value="">-- Any Available Practitioner --</option>
+                  <option *ngFor="let st of staffList()" [value]="st.id">
+                    {{ st.name }} ({{ st.staffType }})
+                  </option>
+                </select>
                 <input
+                  *ngIf="staffList().length === 0"
                   type="text"
                   class="form-control"
-                  placeholder="e.g. Support Specialist / Agent"
+                  placeholder="e.g. Senior Stylist / Doctor"
                   [(ngModel)]="bookingData.staffName"
                   name="staffName"
                 />
               </div>
 
+              <!-- Date Picker & Dynamic Slots -->
               <div class="form-row">
                 <div class="form-group flex-1">
-                  <label class="form-label">Date *</label>
+                  <label class="form-label">Booking Date*</label>
                   <input
                     type="date"
                     class="form-control"
                     [(ngModel)]="bookingDate"
                     name="bookingDate"
+                    (change)="onDateOrStaffChange()"
                     required
                   />
                 </div>
                 <div class="form-group flex-1">
-                  <label class="form-label">Start Time *</label>
+                  <label class="form-label">Start Time*</label>
                   <input
                     type="time"
                     class="form-control"
@@ -304,7 +364,7 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
                   />
                 </div>
                 <div class="form-group flex-1">
-                  <label class="form-label">End Time *</label>
+                  <label class="form-label">End Time*</label>
                   <input
                     type="time"
                     class="form-control"
@@ -315,8 +375,27 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
                 </div>
               </div>
 
+              <!-- Available Real-Time Slots -->
+              <div *ngIf="availableSlots().length > 0" class="form-group">
+                <label class="form-label" style="display: flex; justify-content: space-between;">
+                  <span>⚡ Available Time Slots:</span>
+                  <span style="font-weight: 400; color: #64748b; font-size: 0.725rem;">Click to select</span>
+                </label>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; max-height: 100px; overflow-y: auto; padding: 0.25rem 0;">
+                  <button
+                    *ngFor="let slot of availableSlots()"
+                    type="button"
+                    class="slot-pill"
+                    [class.selected-slot]="bookingStartTime === slot.timeFormatted.split(' - ')[0]"
+                    (click)="selectSlot(slot)"
+                  >
+                    {{ slot.timeFormatted }}
+                  </button>
+                </div>
+              </div>
+
               <div class="form-group">
-                <label class="form-label">Clinical Notes</label>
+                <label class="form-label">Notes & Requests</label>
                 <textarea
                   class="form-control"
                   rows="2"
@@ -684,12 +763,71 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
     .cancelled-text { color: #94a3b8; font-size: 0.6875rem; }
     .text-right { text-align: right; }
 
+    .btn-action-small {
+      padding: 0.2rem 0.5rem;
+      border-radius: 5px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .btn-action-small.check-in {
+      background: #eff6ff;
+      color: #2563eb;
+      border-color: #bfdbfe;
+    }
+    .btn-action-small.check-in:hover {
+      background: #dbeafe;
+    }
+    .btn-action-small.complete {
+      background: #ecfdf5;
+      color: #059669;
+      border-color: #a7f3d0;
+    }
+    .btn-action-small.complete:hover {
+      background: #d1fae5;
+    }
+
+    .slot-pill {
+      padding: 0.3rem 0.6rem;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .slot-pill:hover {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+    .slot-pill.selected-slot {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #1d4ed8;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+    }
+
+    .booking-error-banner {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
     /* Modal */
     .modal-backdrop {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000;
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; box-sizing: border-box; overflow-y: auto;
     }
     .modal-dialog {
-      background: #ffffff; border-radius: 16px; width: 90%; max-width: 500px; padding: 1.5rem 1.75rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+      background: #ffffff; border-radius: 16px; width: 100%; max-width: 520px; max-height: min(90vh, 620px); overflow-y: auto; padding: 1.25rem 1.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); margin: auto;
     }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; }
     .modal-header h3 { margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; }
@@ -717,6 +855,11 @@ export class AppointmentsComponent implements OnInit {
   displayAppointments: Appointment[] = [];
   displayTotalBookings = '0';
   customers = signal<Customer[]>([]);
+  branchesList = signal<Branch[]>([]);
+  servicesList = signal<ServiceItem[]>([]);
+  staffList = signal<StaffMember[]>([]);
+  availableSlots = signal<TimeSlot[]>([]);
+
   viewMode = signal<'UPCOMING' | 'TODAY' | 'ALL'>('UPCOMING');
   isLoading = signal(false);
   isSubmitting = signal(false);
@@ -727,6 +870,10 @@ export class AppointmentsComponent implements OnInit {
 
   manualCustomerName = '';
   manualCustomerPhone = '';
+
+  selectedBranchId = '';
+  selectedServiceId = '';
+  selectedStaffId = '';
 
   bookingDate = '';
   bookingStartTime = '';
@@ -743,12 +890,26 @@ export class AppointmentsComponent implements OnInit {
 
   constructor(
     private aptService: AppointmentService,
-    private customerService: CustomerService
+    private customerService: CustomerService,
+    private catalogService: CatalogService
   ) {}
 
   ngOnInit(): void {
     this.loadAppointments();
     this.loadCustomers();
+    this.loadCatalog();
+  }
+
+  loadCatalog(): void {
+    this.catalogService.getBranches().subscribe({
+      next: (res) => this.branchesList.set(res.data || [])
+    });
+    this.catalogService.getServices().subscribe({
+      next: (res) => this.servicesList.set(res.data || [])
+    });
+    this.catalogService.getStaff().subscribe({
+      next: (res) => this.staffList.set(res.data || [])
+    });
   }
 
   loadAppointments(): void {
@@ -784,11 +945,19 @@ export class AppointmentsComponent implements OnInit {
 
   filterAppointments(): void {
     let filtered = [...this.appointments()];
+    if (this.viewMode() === 'TODAY') {
+      const today = new Date().toISOString().split('T')[0];
+      filtered = filtered.filter(a => a.startTime && a.startTime.startsWith(today));
+    } else if (this.viewMode() === 'UPCOMING') {
+      const nowIso = new Date().toISOString();
+      filtered = filtered.filter(a => a.startTime && a.startTime >= nowIso && a.status !== 'CANCELLED');
+    }
+
     if (this.searchQuery && this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase();
       filtered = filtered.filter(a =>
-        a.customerName.toLowerCase().includes(q) ||
-        a.serviceName.toLowerCase().includes(q) ||
+        (a.customerName && a.customerName.toLowerCase().includes(q)) ||
+        (a.serviceName && a.serviceName.toLowerCase().includes(q)) ||
         (a.staffName && a.staffName.toLowerCase().includes(q))
       );
     }
@@ -802,54 +971,129 @@ export class AppointmentsComponent implements OnInit {
     this.bookingStartTime = '10:00';
     this.bookingEndTime = '10:45';
     this.showBookingModal = true;
+    this.fetchAvailableSlots();
   }
 
   closeBookingModal(): void {
     this.showBookingModal = false;
   }
 
+  onServiceChange(): void {
+    if (this.selectedServiceId && this.selectedServiceId !== 'CUSTOM') {
+      const selected = this.servicesList().find(s => s.id === this.selectedServiceId);
+      if (selected) {
+        this.bookingData.serviceName = selected.name;
+        if (this.bookingStartTime && selected.durationMinutes) {
+          const [h, m] = this.bookingStartTime.split(':').map(Number);
+          const endTotalMin = h * 60 + m + selected.durationMinutes;
+          const endH = Math.floor(endTotalMin / 60) % 24;
+          const endM = endTotalMin % 60;
+          this.bookingEndTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+        }
+      }
+    }
+    this.fetchAvailableSlots();
+  }
+
+  onDateOrStaffChange(): void {
+    this.fetchAvailableSlots();
+  }
+
+  fetchAvailableSlots(): void {
+    if (!this.bookingDate) return;
+    const sId = this.selectedServiceId && this.selectedServiceId !== 'CUSTOM' ? this.selectedServiceId : undefined;
+    const stId = this.selectedStaffId || undefined;
+    const bId = this.selectedBranchId || undefined;
+
+    this.aptService.getAvailableSlots(this.bookingDate, sId, stId, bId).subscribe({
+      next: (res) => {
+        this.availableSlots.set(res.data || []);
+      },
+      error: () => {
+        this.availableSlots.set([]);
+      }
+    });
+  }
+
+  selectSlot(slot: TimeSlot): void {
+    if (slot.timeFormatted) {
+      const parts = slot.timeFormatted.split(' - ');
+      if (parts.length === 2) {
+        this.bookingStartTime = parts[0].trim();
+        this.bookingEndTime = parts[1].trim();
+      }
+    } else if (slot.startTime && slot.endTime) {
+      const s = new Date(slot.startTime);
+      const e = new Date(slot.endTime);
+      this.bookingStartTime = `${String(s.getUTCHours()).padStart(2, '0')}:${String(s.getUTCMinutes()).padStart(2, '0')}`;
+      this.bookingEndTime = `${String(e.getUTCHours()).padStart(2, '0')}:${String(e.getUTCMinutes()).padStart(2, '0')}`;
+    }
+    if (slot.availableStaff && slot.availableStaff.length === 1 && !this.selectedStaffId) {
+      this.selectedStaffId = slot.availableStaff[0].staffId;
+      this.bookingData.staffName = slot.availableStaff[0].staffName;
+    }
+  }
+
+  updateStatus(apt: Appointment, status: string): void {
+    this.aptService.updateStatus(apt.id, status).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.appointments.update(apts => apts.map(a => a.id === apt.id ? res.data : a));
+          this.filterAppointments();
+        } else {
+          this.loadAppointments();
+        }
+      },
+      error: (err) => {
+        console.error('Failed to update status', err);
+        this.appointments.update(apts => apts.map(a => a.id === apt.id ? { ...a, status: status as any } : a));
+        this.filterAppointments();
+      }
+    });
+  }
+
   submitBooking(): void {
-    if (!this.bookingData.serviceName) {
-      alert('Please fill the service name');
+    if (!this.manualCustomerName || !this.manualCustomerPhone) {
+      this.bookingError = 'Please provide customer name and phone number.';
+      return;
+    }
+    if (!this.bookingData.serviceName && (!this.selectedServiceId || this.selectedServiceId === 'CUSTOM')) {
+      this.bookingError = 'Please select or enter a service name.';
       return;
     }
 
     this.isSubmitting.set(true);
+    this.bookingError = '';
     const startIso = `${this.bookingDate}T${this.bookingStartTime}:00Z`;
     const endIso = `${this.bookingDate}T${this.bookingEndTime}:00Z`;
 
-    this.aptService.createAppointment({
-      customerId: this.bookingData.customerId || '',
-      serviceName: this.bookingData.serviceName,
-      staffName: this.bookingData.staffName || 'Staff Member',
+    const selectedStaff = this.staffList().find(s => s.id === this.selectedStaffId);
+
+    const payload: CreateAppointmentRequest = {
+      customerId: this.bookingData.customerId || undefined,
+      customerName: this.manualCustomerName,
+      customerPhone: this.manualCustomerPhone,
+      branchId: this.selectedBranchId || undefined,
+      serviceId: this.selectedServiceId && this.selectedServiceId !== 'CUSTOM' ? this.selectedServiceId : undefined,
+      serviceName: this.bookingData.serviceName || undefined,
+      staffId: this.selectedStaffId || undefined,
+      staffName: selectedStaff ? selectedStaff.name : (this.bookingData.staffName || undefined),
       startTime: startIso,
       endTime: endIso,
+      bookingSource: 'DASHBOARD',
       notes: this.bookingData.notes || ''
-    }).subscribe({
-      next: () => {
+    };
+
+    this.aptService.createAppointment(payload).subscribe({
+      next: (res) => {
         this.isSubmitting.set(false);
         this.showBookingModal = false;
         this.loadAppointments();
       },
-      error: () => {
-        const newApt: Appointment = {
-          id: 'apt-' + Date.now(),
-          customerId: this.bookingData.customerId || 'c-new',
-          customerName: this.manualCustomerName || 'New Customer',
-          customerPhone: this.manualCustomerPhone || '',
-          serviceName: this.bookingData.serviceName,
-          staffName: this.bookingData.staffName || 'Staff Member',
-          startTime: startIso,
-          endTime: endIso,
-          status: 'CONFIRMED',
-          notes: this.bookingData.notes || '',
-          createdAt: new Date().toISOString()
-        };
-        this.appointments.update(apts => [newApt, ...apts]);
-        this.displayAppointments = [newApt, ...this.displayAppointments];
-        this.displayTotalBookings = this.displayAppointments.length.toString();
+      error: (err) => {
         this.isSubmitting.set(false);
-        this.showBookingModal = false;
+        const errMsg = err.error?.message || err.message || 'Slot conflict or unavailable practitioner.';
+        this.bookingError = errMsg;
       }
     });
   }

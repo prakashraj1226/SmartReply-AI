@@ -179,4 +179,46 @@ class WhatsAppIntegrationServiceTest {
         verify(whatsAppClient).sendTextMessage(eq(account), eq("+919876500111"), contains("unsubscribed"));
         verify(conversationService, never()).handleCustomerMessage(any(), any(), any(), any());
     }
+
+    @Test
+    void testProcessIncomingWebhook_ResolvesCorrectTenantAndSetsTenantContext() {
+        when(webhookEventRepository.existsByEventId("wamid.INCOMING_MSG")).thenReturn(false);
+        when(integrationAccountRepository.findByPhoneNumberId("10987654321")).thenReturn(Optional.of(account));
+
+        Customer customer = new Customer(business, "+919876500111", "Meera", null);
+        UUID customerId = UUID.randomUUID();
+        customer.setId(customerId);
+        customer.setOptInStatus("OPTED_IN");
+
+        when(customerRepository.findByBusinessIdAndPhoneNumber(businessId, "+919876500111"))
+                .thenReturn(Optional.of(customer));
+
+        String payload = """
+        {
+          "entry": [{
+            "changes": [{
+              "value": {
+                "metadata": {
+                  "phone_number_id": "10987654321",
+                  "display_phone_number": "1555123456"
+                },
+                "contacts": [{ "profile": { "name": "Meera" } }],
+                "messages": [{
+                  "id": "wamid.INCOMING_MSG",
+                  "from": "919876500111",
+                  "text": { "body": "I would like to book a dental checkup tomorrow" }
+                }]
+              }
+            }]
+          }]
+        }
+        """;
+
+        service.processIncomingWebhook(payload, null);
+
+        // Verify conversationService handled the message scoped to businessId
+        verify(conversationService).handleCustomerMessage(eq(businessId), eq(customerId), eq("I would like to book a dental checkup tomorrow"), eq("wamid.INCOMING_MSG"));
+        // Verify TenantContext was properly cleared after webhook processing
+        assertNull(com.smartreplyai.tenant.TenantContext.getBusinessId());
+    }
 }

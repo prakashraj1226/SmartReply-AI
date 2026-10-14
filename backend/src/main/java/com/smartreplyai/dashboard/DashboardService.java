@@ -51,11 +51,71 @@ public class DashboardService {
                 "SELECT COUNT(*) FROM conversations WHERE business_id = ? AND ai_enabled = false", Long.class, businessId);
         res.setHumanHandledConversations(humanHandled != null ? humanHandled : 0L);
 
-        // 6. Upcoming Appointments
+        // 6. Appointments Breakdown
+        Long totalApts = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM appointments WHERE business_id = ?", Long.class, businessId);
+        res.setTotalAppointments(totalApts != null ? totalApts : 0L);
+
+        Long confirmedApts = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM appointments WHERE business_id = ? AND status = 'CONFIRMED'", Long.class, businessId);
+        res.setConfirmedAppointments(confirmedApts != null ? confirmedApts : 0L);
+
+        Long completedApts = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM appointments WHERE business_id = ? AND status = 'COMPLETED'", Long.class, businessId);
+        res.setCompletedAppointments(completedApts != null ? completedApts : 0L);
+
+        Long cancelledApts = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM appointments WHERE business_id = ? AND status IN ('CANCELLED', 'NO_SHOW')", Long.class, businessId);
+        res.setCancelledAppointments(cancelledApts != null ? cancelledApts : 0L);
+
         Long appointments = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM appointments WHERE business_id = ? AND start_time >= CURRENT_TIMESTAMP AND status != 'CANCELLED'",
                 Long.class, businessId);
         res.setUpcomingAppointmentsCount(appointments != null ? appointments : 0L);
+
+        // Revenue from confirmed/completed appointments
+        java.math.BigDecimal estRev = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(s.price), 0) FROM appointments a " +
+                        "JOIN service_items s ON a.service_id = s.id " +
+                        "WHERE a.business_id = ? AND a.status IN ('CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS', 'COMPLETED')",
+                java.math.BigDecimal.class, businessId);
+        res.setEstimatedRevenue(estRev != null ? estRev : java.math.BigDecimal.ZERO);
+
+        // Appointments by Top Services
+        List<Map<String, Object>> byService = jdbcTemplate.query(
+                "SELECT COALESCE(s.name, a.service_name, 'Other') as service_name, COUNT(a.id) as count " +
+                        "FROM appointments a " +
+                        "LEFT JOIN service_items s ON a.service_id = s.id " +
+                        "WHERE a.business_id = ? " +
+                        "GROUP BY COALESCE(s.name, a.service_name, 'Other') " +
+                        "ORDER BY count DESC LIMIT 5",
+                (rs, rowNum) -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("serviceName", rs.getString("service_name"));
+                    map.put("count", rs.getLong("count"));
+                    return map;
+                },
+                businessId
+        );
+        res.setAppointmentsByService(byService);
+
+        // Appointments by Staff
+        List<Map<String, Object>> byStaff = jdbcTemplate.query(
+                "SELECT COALESCE(st.name, a.staff_name, 'Unassigned') as staff_name, COUNT(a.id) as count " +
+                        "FROM appointments a " +
+                        "LEFT JOIN staff st ON a.staff_id = st.id " +
+                        "WHERE a.business_id = ? " +
+                        "GROUP BY COALESCE(st.name, a.staff_name, 'Unassigned') " +
+                        "ORDER BY count DESC LIMIT 5",
+                (rs, rowNum) -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("staffName", rs.getString("staff_name"));
+                    map.put("count", rs.getLong("count"));
+                    return map;
+                },
+                businessId
+        );
+        res.setAppointmentsByStaff(byStaff);
 
         res.setAverageResponseTime("1.4s (AI) / 4.2m (Human)");
 

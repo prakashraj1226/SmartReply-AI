@@ -51,6 +51,8 @@ class SettingsServiceTest {
     private SubscriptionService subscriptionService;
     @Mock
     private AuditLogService auditLogService;
+    @Mock
+    private com.smartreplyai.staff.StaffRepository staffRepository;
 
     private SettingsService settingsService;
 
@@ -63,7 +65,8 @@ class SettingsServiceTest {
                 userRepository,
                 passwordEncoder,
                 subscriptionService,
-                auditLogService
+                auditLogService,
+                staffRepository
         );
     }
 
@@ -144,13 +147,13 @@ class SettingsServiceTest {
         when(businessRepository.findById(bId)).thenReturn(Optional.of(business));
         when(subscriptionService.getOrInitSubscription(bId)).thenReturn(subscription);
 
-        User existingOwner = new User("owner@smilecare.com", "hash", "Owner", "BUSINESS_OWNER");
-        BusinessMember member1 = new BusinessMember(business, existingOwner, "OWNER");
+        User existingAgent = new User("agent1@smilecare.com", "hash", "Agent One", "BUSINESS_AGENT");
+        BusinessMember member1 = new BusinessMember(business, existingAgent, "AGENT");
         when(businessMemberRepository.findByBusinessId(bId)).thenReturn(List.of(member1));
 
         InviteMemberRequest req = new InviteMemberRequest();
-        req.setEmail("agent@smilecare.com");
-        req.setFullName("Staff Member");
+        req.setEmail("agent2@smilecare.com");
+        req.setFullName("Agent Two");
         req.setRole("AGENT");
 
         User user = new User("owner@smilecare.com", "hash", "Owner", "BUSINESS_OWNER");
@@ -159,6 +162,53 @@ class SettingsServiceTest {
                 settingsService.inviteTeamMember(bId, req, user, "127.0.0.1"));
 
         assertTrue(ex.getMessage().contains("limit reached"));
+    }
+
+    @Test
+    @DisplayName("inviteTeamMember should create user, member, sync staff and log audit")
+    void testInviteTeamMember_Success() {
+        UUID bId = UUID.randomUUID();
+        Business business = new Business("SmileCare", "smilecare", "Healthcare", "info@smilecare.com", "+919876543210");
+        business.setId(bId);
+
+        SubscriptionPlan starterPlan = new SubscriptionPlan();
+        starterPlan.setCode("STARTER");
+        starterPlan.setName("Starter Plan");
+        starterPlan.setMaxAgents(5);
+
+        Subscription subscription = new Subscription(business, starterPlan, Instant.now(), Instant.now().plusSeconds(86400));
+
+        when(businessRepository.findById(bId)).thenReturn(Optional.of(business));
+        when(subscriptionService.getOrInitSubscription(bId)).thenReturn(subscription);
+        when(businessMemberRepository.findByBusinessId(bId)).thenReturn(List.of());
+
+        InviteMemberRequest req = new InviteMemberRequest();
+        req.setEmail("john@gmail.com");
+        req.setFullName("John Doe");
+        req.setRole("AGENT");
+
+        when(userRepository.findByEmail("john@gmail.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(any())).thenReturn("hashedPassword");
+        User savedUser = new User("john@gmail.com", "hashedPassword", "John Doe", "BUSINESS_AGENT");
+        savedUser.setId(UUID.randomUUID());
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        when(businessMemberRepository.existsByBusinessIdAndUserId(eq(bId), any())).thenReturn(false);
+        when(businessMemberRepository.save(any(BusinessMember.class))).thenAnswer(i -> {
+            BusinessMember bm = i.getArgument(0);
+            bm.setId(UUID.randomUUID());
+            return bm;
+        });
+
+        User owner = new User("owner@smilecare.com", "hash", "Owner", "BUSINESS_OWNER");
+        com.smartreplyai.settings.dto.TeamMemberDto result = settingsService.inviteTeamMember(bId, req, owner, "127.0.0.1");
+
+        assertNotNull(result);
+        assertEquals("john@gmail.com", result.getEmail());
+        assertEquals("John Doe", result.getFullName());
+        assertEquals("AGENT", result.getRole());
+        verify(staffRepository, times(1)).save(any());
+        verify(auditLogService, times(1)).logAction(any(), eq(owner), eq("TEAM_MEMBER_ADDED"), any(), any(), any(), eq("127.0.0.1"));
     }
 
     @Test

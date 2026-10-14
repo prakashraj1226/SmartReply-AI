@@ -13,5 +13,9 @@ public interface IntegrationAccountRepository extends JpaRepository<IntegrationA
 
     Optional<IntegrationAccount> findByPhoneNumberId(String phoneNumberId);
 
+    Optional<IntegrationAccount> findByPhoneNumber(String phoneNumber);
+
     Optional<IntegrationAccount> findByWebhookVerifyToken(String webhookVerifyToken);
+
+    java.util.List<IntegrationAccount> findByBusinessId(UUID businessId);
 }

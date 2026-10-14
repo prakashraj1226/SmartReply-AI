@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterModule } from '@angular/router';
 import { BusinessService } from '../../core/services/business.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CatalogService } from '../../core/services/catalog.service';
 
 @Component({
   selector: 'app-onboarding',
@@ -153,6 +154,39 @@ import { AuthService } from '../../core/services/auth.service';
             <div class="card-title-box">
               <h2>Setup & Activation Checklist</h2>
               <p>Review the milestones to get the most out of SmartReply AI for your WhatsApp business operations.</p>
+            </div>
+
+            <!-- One-Click Industry Preset Seed Card -->
+            <div class="template-selector-box" style="margin-bottom: 1.5rem; padding: 1.25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+                <div>
+                  <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">⚡ One-Click Industry Catalog Preset</h4>
+                  <p style="margin: 0.2rem 0 0; font-size: 0.78rem; color: #64748b;">Instantly seed standard services, staff members, and working shifts into your account.</p>
+                </div>
+                <span *ngIf="templateSuccess" style="color: #16a34a; font-weight: 700; font-size: 0.8rem;">✓ {{ templateSuccess }}</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem;">
+                <button type="button" class="btn btn-outline" [disabled]="isApplyingTemplate" (click)="applyIndustryTemplate('SALON')" style="text-align: left; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff;">
+                  <div style="font-size: 1.2rem; margin-bottom: 0.2rem;">💇‍♀️</div>
+                  <div style="font-weight: 700; font-size: 0.8rem; color: #1e293b;">Salon & Spa</div>
+                  <div style="font-size: 0.68rem; color: #64748b;">Styling, Facial, Spa</div>
+                </button>
+                <button type="button" class="btn btn-outline" [disabled]="isApplyingTemplate" (click)="applyIndustryTemplate('DENTAL_CLINIC')" style="text-align: left; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff;">
+                  <div style="font-size: 1.2rem; margin-bottom: 0.2rem;">🦷</div>
+                  <div style="font-weight: 700; font-size: 0.8rem; color: #1e293b;">Dental Clinic</div>
+                  <div style="font-size: 0.68rem; color: #64748b;">Consult, Cleaning, Root</div>
+                </button>
+                <button type="button" class="btn btn-outline" [disabled]="isApplyingTemplate" (click)="applyIndustryTemplate('HOSPITAL')" style="text-align: left; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff;">
+                  <div style="font-size: 1.2rem; margin-bottom: 0.2rem;">🏥</div>
+                  <div style="font-weight: 700; font-size: 0.8rem; color: #1e293b;">Hospital / Clinic</div>
+                  <div style="font-size: 0.68rem; color: #64748b;">OPD, Specialists, Lab</div>
+                </button>
+                <button type="button" class="btn btn-outline" [disabled]="isApplyingTemplate" (click)="applyIndustryTemplate('GENERAL')" style="text-align: left; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff;">
+                  <div style="font-size: 1.2rem; margin-bottom: 0.2rem;">📅</div>
+                  <div style="font-weight: 700; font-size: 0.8rem; color: #1e293b;">General Booking</div>
+                  <div style="font-size: 0.68rem; color: #64748b;">Standard Appointments</div>
+                </button>
+              </div>
             </div>
 
             <div class="checklist-grid">
@@ -383,10 +417,13 @@ export class OnboardingComponent implements OnInit {
   private fb = inject(FormBuilder);
   private businessService = inject(BusinessService);
   private authService = inject(AuthService);
+  private catalogService = inject(CatalogService);
   private router = inject(Router);
 
   currentStep = 1;
   isSaving = false;
+  isApplyingTemplate = false;
+  templateSuccess = '';
 
   profileForm: FormGroup = this.fb.group({
     name: ['', Validators.required],
@@ -435,6 +472,21 @@ export class OnboardingComponent implements OnInit {
       error: () => {
         this.isSaving = false;
         this.currentStep = 3;
+      }
+    });
+  }
+
+  applyIndustryTemplate(type: string): void {
+    this.isApplyingTemplate = true;
+    this.templateSuccess = '';
+    this.catalogService.applyTemplate(type).subscribe({
+      next: (res) => {
+        this.isApplyingTemplate = false;
+        this.templateSuccess = `${type} starter services & staff catalog generated!`;
+      },
+      error: (err) => {
+        this.isApplyingTemplate = false;
+        this.templateSuccess = 'Catalog updated.';
       }
     });
   }

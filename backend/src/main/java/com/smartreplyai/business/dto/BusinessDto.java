@@ -17,6 +17,8 @@ public class BusinessDto {
     private String operatingHoursJson;
     private String preferredLanguage;
     private String description;
+    private String industryType;
+    private String accountStatus;
     private boolean onboardingCompleted;
     private boolean isActive;
     private Instant createdAt;
@@ -37,6 +39,8 @@ public class BusinessDto {
         dto.setOperatingHoursJson(b.getOperatingHoursJson());
         dto.setPreferredLanguage(b.getPreferredLanguage());
         dto.setDescription(b.getDescription());
+        dto.setIndustryType(b.getIndustryType());
+        dto.setAccountStatus(b.getAccountStatus());
         dto.setOnboardingCompleted(b.isOnboardingCompleted());
         dto.setActive(b.isActive());
         dto.setCreatedAt(b.getCreatedAt());
@@ -145,6 +149,22 @@ public class BusinessDto {
 
     public void setActive(boolean active) {
         isActive = active;
+    }
+
+    public String getIndustryType() {
+        return industryType;
+    }
+
+    public void setIndustryType(String industryType) {
+        this.industryType = industryType;
+    }
+
+    public String getAccountStatus() {
+        return accountStatus;
+    }
+
+    public void setAccountStatus(String accountStatus) {
+        this.accountStatus = accountStatus;
     }
 
     public Instant getCreatedAt() {

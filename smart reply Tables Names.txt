@@ -1,4 +1,10 @@
 
+
+Admin Users
+---------------
+admin@smartreply.ai
+Admin@123
+
 Tables Names
 ----------
 
@@ -58,3 +64,10 @@ SPRING_DATASOURCE_PASSWORD="npg_N7BLEG3HIneF" \
 SERVER_PORT=8081 \
 mvn spring-boot:run
 
+rajesh@smilecare.com
+
+
+Login Page: http://localhost:4201/auth/login
+Register Page: http://localhost:4201/auth/register
+Dashboard: http://localhost:4201/dashboard
+Unified Live Inbox: http://localhost:4201/inbox

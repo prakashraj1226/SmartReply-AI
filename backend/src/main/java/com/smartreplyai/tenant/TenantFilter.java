@@ -1,11 +1,16 @@
 package com.smartreplyai.tenant;
 
+import com.smartreplyai.business.BusinessMember;
 import com.smartreplyai.business.BusinessMemberRepository;
 import com.smartreplyai.security.UserPrincipal;
+import com.smartreplyai.staff.Staff;
+import com.smartreplyai.staff.StaffRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -13,15 +18,18 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
 public class TenantFilter extends OncePerRequestFilter {
 
     private final BusinessMemberRepository businessMemberRepository;
+    private final StaffRepository staffRepository;
 
-    public TenantFilter(BusinessMemberRepository businessMemberRepository) {
+    public TenantFilter(BusinessMemberRepository businessMemberRepository, StaffRepository staffRepository) {
         this.businessMemberRepository = businessMemberRepository;
+        this.staffRepository = staffRepository;
     }
 
     @Override
@@ -36,23 +44,46 @@ public class TenantFilter extends OncePerRequestFilter {
 
                 if (StringUtils.hasText(headerBusinessId)) {
                     try {
-                        UUID parsedId = UUID.fromString(headerBusinessId.trim());
-                        // Verify user belongs to this business or is SUPER_ADMIN
-                        if ("SUPER_ADMIN".equals(principal.getRole()) ||
-                                businessMemberRepository.existsByBusinessIdAndUserId(parsedId, principal.getId())) {
-                            targetBusinessId = parsedId;
-                        }
+                        targetBusinessId = UUID.fromString(headerBusinessId.trim());
                     } catch (IllegalArgumentException ignored) {
-                        // Invalid UUID format
+                        sendForbiddenResponse(response, "Invalid X-Business-Id header format");
+                        return;
                     }
-                }
-
-                if (targetBusinessId == null) {
+                } else {
                     targetBusinessId = principal.getDefaultBusinessId();
                 }
 
                 if (targetBusinessId != null) {
-                    TenantContext.setBusinessId(targetBusinessId);
+                    TenantContext.setUserId(principal.getId());
+                    if ("SUPER_ADMIN".equalsIgnoreCase(principal.getRole())) {
+                        TenantContext.setBusinessId(targetBusinessId);
+                        TenantContext.setRole("SUPER_ADMIN");
+                        TenantContext.setMembershipStatus("ACTIVE");
+                    } else {
+                        Optional<BusinessMember> memberOpt = businessMemberRepository.findByBusinessIdAndUserId(targetBusinessId, principal.getId());
+
+                        if (memberOpt.isEmpty()) {
+                            // User does not belong to this business!
+                            sendForbiddenResponse(response, "Access Denied: You are not an authorized member of this business tenant");
+                            return;
+                        }
+
+                        BusinessMember member = memberOpt.get();
+                        String status = member.getMembershipStatus() != null ? member.getMembershipStatus() : "ACTIVE";
+
+                        if ("SUSPENDED".equalsIgnoreCase(status)) {
+                            sendForbiddenResponse(response, "Access Denied: Your membership in this business is currently suspended");
+                            return;
+                        }
+
+                        TenantContext.setBusinessId(targetBusinessId);
+                        TenantContext.setRole(member.getRole());
+                        TenantContext.setMembershipStatus(status);
+
+                        // If user is linked to a staff record in this business, bind staffId
+                        staffRepository.findByBusinessIdAndUserId(targetBusinessId, principal.getId())
+                                .ifPresent(staff -> TenantContext.setStaffId(staff.getId()));
+                    }
                 }
             }
 
@@ -60,5 +91,12 @@ public class TenantFilter extends OncePerRequestFilter {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    private void sendForbiddenResponse(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpStatus.FORBIDDEN.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        String body = String.format("{\"success\":false,\"message\":\"%s\",\"status\":403}", message);
+        response.getWriter().write(body);
     }
 }

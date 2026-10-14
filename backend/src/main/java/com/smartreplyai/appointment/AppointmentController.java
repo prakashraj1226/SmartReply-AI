@@ -1,8 +1,6 @@
 package com.smartreplyai.appointment;
 
-import com.smartreplyai.appointment.dto.AppointmentDto;
-import com.smartreplyai.appointment.dto.CreateAppointmentRequest;
-import com.smartreplyai.appointment.dto.UpdateAppointmentRequest;
+import com.smartreplyai.appointment.dto.*;
 import com.smartreplyai.common.ApiResponse;
 import com.smartreplyai.common.BadRequestException;
 import com.smartreplyai.tenant.TenantContext;
@@ -12,9 +10,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,7 +28,21 @@ public class AppointmentController {
         this.appointmentService = appointmentService;
     }
 
+    @GetMapping("/available-slots")
+    public ResponseEntity<ApiResponse<List<TimeSlotDto>>> getAvailableSlots(
+            @RequestParam(required = false) UUID branchId,
+            @RequestParam(required = false) UUID serviceId,
+            @RequestParam(required = false) UUID staffId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        UUID businessId = TenantContext.getBusinessId();
+        if (businessId == null) throw new BadRequestException("Active business tenant required");
+
+        List<TimeSlotDto> slots = appointmentService.getAvailableSlots(businessId, branchId, serviceId, staffId, date);
+        return ResponseEntity.ok(ApiResponse.ok(slots));
+    }
+
     @GetMapping
+    @PreAuthorize("@tenantSecurity.canViewAppointments()")
     public ResponseEntity<ApiResponse<Page<AppointmentDto>>> getAppointments(
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
@@ -40,6 +54,7 @@ public class AppointmentController {
     }
 
     @GetMapping("/calendar")
+    @PreAuthorize("@tenantSecurity.canViewAppointments()")
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAppointmentsCalendar(
             @RequestParam(name = "start") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant start,
             @RequestParam(name = "end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant end) {
@@ -51,6 +66,7 @@ public class AppointmentController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@tenantSecurity.canViewAppointments()")
     public ResponseEntity<ApiResponse<AppointmentDto>> getAppointmentById(@PathVariable("id") UUID id) {
         UUID businessId = TenantContext.getBusinessId();
         if (businessId == null) throw new BadRequestException("Active business tenant required");
@@ -60,6 +76,7 @@ public class AppointmentController {
     }
 
     @PostMapping
+    @PreAuthorize("@tenantSecurity.canManageAppointments()")
     public ResponseEntity<ApiResponse<AppointmentDto>> createAppointment(
             @Valid @RequestBody CreateAppointmentRequest req) {
         UUID businessId = TenantContext.getBusinessId();
@@ -70,6 +87,7 @@ public class AppointmentController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@tenantSecurity.canManageAppointments()")
     public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointment(
             @PathVariable("id") UUID id,
             @Valid @RequestBody UpdateAppointmentRequest req) {
@@ -80,7 +98,20 @@ public class AppointmentController {
         return ResponseEntity.ok(ApiResponse.ok("Appointment updated successfully", dto));
     }
 
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("@tenantSecurity.canManageAppointments()")
+    public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointmentStatus(
+            @PathVariable("id") UUID id,
+            @Valid @RequestBody UpdateAppointmentStatusRequest req) {
+        UUID businessId = TenantContext.getBusinessId();
+        if (businessId == null) throw new BadRequestException("Active business tenant required");
+
+        AppointmentDto dto = appointmentService.updateAppointmentStatus(businessId, id, req);
+        return ResponseEntity.ok(ApiResponse.ok("Appointment status updated to " + dto.getStatus(), dto));
+    }
+
     @DeleteMapping("/{id}")
+    @PreAuthorize("@tenantSecurity.canManageAppointments()")
     public ResponseEntity<ApiResponse<Void>> cancelAppointment(@PathVariable("id") UUID id) {
         UUID businessId = TenantContext.getBusinessId();
         if (businessId == null) throw new BadRequestException("Active business tenant required");

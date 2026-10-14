@@ -49,6 +49,8 @@ class AdminServiceTest {
     private AuditLogRepository auditLogRepository;
     @Mock
     private AuditLogService auditLogService;
+    @Mock
+    private com.smartreplyai.appointment.AppointmentRepository appointmentRepository;
 
     private AdminService adminService;
 
@@ -63,7 +65,8 @@ class AdminServiceTest {
                 subscriptionRepository,
                 integrationAccountRepository,
                 auditLogRepository,
-                auditLogService
+                auditLogService,
+                appointmentRepository
         );
     }
 
@@ -81,6 +84,8 @@ class AdminServiceTest {
         when(messageRepository.count()).thenReturn(150L);
         when(subscriptionRepository.findAll()).thenReturn(Collections.emptyList());
         when(integrationAccountRepository.count()).thenReturn(2L);
+        when(appointmentRepository.count()).thenReturn(10L);
+        when(appointmentRepository.countByStatus("COMPLETED")).thenReturn(7L);
 
         AdminOverviewDto overview = adminService.getPlatformOverview();
 
@@ -91,6 +96,11 @@ class AdminServiceTest {
         assertEquals(42, overview.getTotalConversations());
         assertEquals(150, overview.getTotalMessages());
         assertEquals(2, overview.getActiveIntegrations());
+        assertEquals(10, overview.getTotalAppointments());
+        assertEquals(7, overview.getCompletedAppointments());
+        assertNotNull(overview.getBusinessesByIndustry());
+        assertEquals(1L, overview.getBusinessesByIndustry().get("Healthcare"));
+        assertEquals(1L, overview.getBusinessesByIndustry().get("Salon"));
     }
 
     @Test

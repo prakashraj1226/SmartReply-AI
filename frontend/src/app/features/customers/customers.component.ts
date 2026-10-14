@@ -242,8 +242,8 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
       </div>
 
       <!-- Add Customer Modal -->
-      <div class="modal-backdrop" *ngIf="showAddModal">
-        <div class="modal-dialog">
+      <div class="modal-backdrop" *ngIf="showAddModal" (click)="showAddModal = false">
+        <div class="modal-dialog" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <div class="modal-title-box">
               <div class="modal-icon-badge">
@@ -259,34 +259,38 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
                 <p class="modal-subtitle">Register patient contact for WhatsApp automation</p>
               </div>
             </div>
-            <button class="close-btn" (click)="showAddModal = false">&times;</button>
+            <button class="close-btn" (click)="showAddModal = false" aria-label="Close modal">&times;</button>
           </div>
 
           <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()">
             <div class="modal-body">
-              <div class="form-group">
-                <label class="form-label">WhatsApp Phone Number *</label>
-                <input type="text" class="form-input" formControlName="phoneNumber" placeholder="+91 98401 23456" />
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label class="form-label">WhatsApp Phone Number *</label>
+                  <input type="text" class="form-input" formControlName="phoneNumber" placeholder="+91 98401 23456" />
+                </div>
+
+                <div class="form-group flex-1">
+                  <label class="form-label">Full Name *</label>
+                  <input type="text" class="form-input" formControlName="name" placeholder="Ananya Sharma" />
+                </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Full Name *</label>
-                <input type="text" class="form-input" formControlName="name" placeholder="Ananya Sharma" />
-              </div>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label class="form-label">Email Address</label>
+                  <input type="email" class="form-input" formControlName="email" placeholder="ananya.sharma@example.com" />
+                </div>
 
-              <div class="form-group">
-                <label class="form-label">Email Address</label>
-                <input type="email" class="form-input" formControlName="email" placeholder="ananya.sharma@example.com" />
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Tags (comma separated)</label>
-                <input type="text" class="form-input" formControlName="tagsInput" placeholder="VIP, High Priority, Inbound" />
+                <div class="form-group flex-1">
+                  <label class="form-label">Tags (comma separated)</label>
+                  <input type="text" class="form-input" formControlName="tagsInput" placeholder="VIP, High Priority" />
+                </div>
               </div>
 
               <div class="form-group">
                 <label class="form-label">Internal Contact Notes</label>
-                <textarea class="form-textarea" rows="3" formControlName="notes" placeholder="Preferred contact times, inquiry notes..."></textarea>
+                <textarea class="form-textarea" rows="2" formControlName="notes" placeholder="Preferred contact times, inquiry notes..."></textarea>
               </div>
             </div>
 
@@ -301,8 +305,8 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
       </div>
 
       <!-- Customer Detail / Notes Drawer -->
-      <div class="modal-backdrop" *ngIf="selectedCustomer">
-        <div class="drawer-dialog">
+      <div class="modal-backdrop" *ngIf="selectedCustomer" (click)="selectedCustomer = null">
+        <div class="drawer-dialog" (click)="$event.stopPropagation()">
           <div class="drawer-header">
             <div class="drawer-title-row">
               <div class="drawer-avatar" [ngStyle]="{'background-color': getAvatarColor(selectedCustomer.name || selectedCustomer.phoneNumber)}">
@@ -987,26 +991,45 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      padding: 1rem;
+      box-sizing: border-box;
+      overflow-y: auto;
     }
 
     .modal-dialog {
       background: #ffffff;
       border-radius: 16px;
-      width: 90%;
+      width: 100%;
       max-width: 520px;
+      max-height: min(90vh, 520px);
+      display: flex;
+      flex-direction: column;
       box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
       overflow: hidden;
       animation: modalSlideUp 0.2s ease-out;
+      margin: auto;
+    }
+
+    .modal-dialog form {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex: 1;
+      min-height: 0;
     }
 
     .drawer-dialog {
       background: #ffffff;
       border-radius: 16px;
-      width: 90%;
+      width: 100%;
       max-width: 480px;
+      max-height: min(90vh, 580px);
+      display: flex;
+      flex-direction: column;
       box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
       overflow: hidden;
       animation: modalSlideUp 0.2s ease-out;
+      margin: auto;
     }
 
     @keyframes modalSlideUp {
@@ -1016,11 +1039,12 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
 
     .modal-header,
     .drawer-header {
-      padding: 1.25rem 1.5rem;
+      padding: 0.9rem 1.25rem;
       border-bottom: 1px solid #e2e8f0;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-shrink: 0;
     }
 
     .modal-title-box {
@@ -1030,14 +1054,15 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
     }
 
     .modal-icon-badge {
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       background: #eff6ff;
       color: #2563eb;
-      border-radius: 10px;
+      border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
 
     .drawer-title-row {
@@ -1047,20 +1072,21 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
     }
 
     .drawer-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
       color: #ffffff;
       font-weight: 800;
-      font-size: 1rem;
+      font-size: 0.95rem;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
 
     .drawer-header h3,
     .modal-title-box h3 {
-      font-size: 1.05rem;
+      font-size: 1rem;
       font-weight: 800;
       color: #0f172a;
       margin: 0;
@@ -1068,9 +1094,9 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
 
     .phone-subtitle,
     .modal-subtitle {
-      font-size: 0.75rem;
+      font-size: 0.725rem;
       color: #64748b;
-      margin: 0.15rem 0 0;
+      margin: 0.1rem 0 0;
     }
 
     .close-btn {
@@ -1079,26 +1105,55 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
       font-size: 1.25rem;
       color: #94a3b8;
       cursor: pointer;
+      line-height: 1;
+      padding: 0.2rem 0.4rem;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .close-btn:hover {
+      color: #0f172a;
+      background: #f1f5f9;
     }
 
     .modal-body,
     .drawer-body {
-      padding: 1.25rem 1.5rem;
+      padding: 1rem 1.25rem;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.75rem;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .flex-1 {
+      flex: 1;
+      min-width: 0;
+    }
+
+    @media (max-width: 520px) {
+      .form-row {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
     }
 
     .form-group,
     .detail-section {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.3rem;
     }
 
     .form-label,
     .section-label {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
       color: #334155;
       text-transform: uppercase;
@@ -1108,31 +1163,34 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
     .form-input,
     .form-textarea {
       width: 100%;
-      padding: 0.65rem 0.85rem;
+      padding: 0.5rem 0.75rem;
       border: 1px solid #cbd5e1;
       border-radius: 8px;
-      font-size: 0.875rem;
+      font-size: 0.85rem;
       box-sizing: border-box;
       outline: none;
       font-family: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
 
     .form-input:focus,
     .form-textarea:focus {
       border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
     }
 
     .modal-footer {
-      padding: 1rem 1.5rem;
+      padding: 0.75rem 1.25rem;
       background: #f8fafc;
       border-top: 1px solid #e2e8f0;
       display: flex;
       justify-content: flex-end;
       gap: 0.75rem;
+      flex-shrink: 0;
     }
 
     .btn-cancel {
-      padding: 0.55rem 1rem;
+      padding: 0.5rem 0.95rem;
       font-size: 0.825rem;
       font-weight: 700;
       border: 1px solid #cbd5e1;
@@ -1140,10 +1198,16 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
       color: #475569;
       border-radius: 8px;
       cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-cancel:hover {
+      background: #f1f5f9;
+      color: #1e293b;
     }
 
     .btn-save {
-      padding: 0.55rem 1.25rem;
+      padding: 0.5rem 1.25rem;
       font-size: 0.825rem;
       font-weight: 700;
       border: none;
@@ -1151,7 +1215,18 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
       color: #ffffff;
       border-radius: 8px;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+      transition: all 0.15s;
+    }
+
+    .btn-save:hover:not(:disabled) {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+
+    .btn-save:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .opt-in-toggle {

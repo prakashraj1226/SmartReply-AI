@@ -27,6 +27,12 @@ public class Business {
     @Column
     private String phone;
 
+    @Column(name = "industry_type", length = 50)
+    private String industryType = "GENERAL"; // SALON, DENTAL_CLINIC, HOSPITAL, GENERAL
+
+    @Column(name = "account_status", nullable = false, length = 50)
+    private String accountStatus = "ACTIVE"; // ACTIVE, SUSPENDED, PENDING_VERIFICATION
+
     @Column(columnDefinition = "TEXT")
     private String address;
 
@@ -176,6 +182,22 @@ public class Business {
 
     public void setActive(boolean active) {
         isActive = active;
+    }
+
+    public String getIndustryType() {
+        return industryType;
+    }
+
+    public void setIndustryType(String industryType) {
+        this.industryType = industryType;
+    }
+
+    public String getAccountStatus() {
+        return accountStatus;
+    }
+
+    public void setAccountStatus(String accountStatus) {
+        this.accountStatus = accountStatus;
     }
 
     public Instant getCreatedAt() {

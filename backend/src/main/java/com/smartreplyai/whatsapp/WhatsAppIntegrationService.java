@@ -11,6 +11,7 @@ import com.smartreplyai.customer.Customer;
 import com.smartreplyai.customer.CustomerRepository;
 import com.smartreplyai.message.Message;
 import com.smartreplyai.message.MessageRepository;
+import com.smartreplyai.tenant.TenantContext;
 import com.smartreplyai.whatsapp.client.OfficialWhatsAppCloudApiClient;
 import com.smartreplyai.whatsapp.client.WhatsAppSendResult;
 import com.smartreplyai.whatsapp.dto.UpdateWhatsAppConfigRequest;
@@ -71,8 +72,14 @@ public class WhatsAppIntegrationService {
                     Business biz = businessRepository.findById(businessId)
                             .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
                     IntegrationAccount newAcc = new IntegrationAccount(biz, "WHATSAPP_CLOUD");
+                    newAcc.setPhoneNumberId("sandbox_" + biz.getId().toString().substring(0, 8));
                     return integrationAccountRepository.save(newAcc);
                 });
+
+        if (account.getPhoneNumberId() == null || account.getPhoneNumberId().isBlank()) {
+            account.setPhoneNumberId("sandbox_" + businessId.toString().substring(0, 8));
+            account = integrationAccountRepository.save(account);
+        }
 
         return toDto(account);
     }
@@ -160,6 +167,7 @@ public class WhatsAppIntegrationService {
                 for (JsonNode change : changesArray) {
                     JsonNode value = change.path("value");
                     String phoneNumberId = value.path("metadata").path("phone_number_id").asText();
+                    String displayPhone = value.path("metadata").path("display_phone_number").asText();
 
                     // 1. Process delivery statuses (SENT, DELIVERED, READ, FAILED)
                     JsonNode statusesArray = value.path("statuses");
@@ -180,7 +188,7 @@ public class WhatsAppIntegrationService {
                             String textBody = msgNode.path("text").path("body").asText();
                             String senderName = value.path("contacts").path(0).path("profile").path("name").asText("Customer");
 
-                            handleIncomingMessage(phoneNumberId, wamid, fromPhone, textBody, senderName, rawPayload, signatureHeader);
+                            handleIncomingMessage(phoneNumberId, displayPhone, wamid, fromPhone, textBody, senderName, rawPayload, signatureHeader);
                         }
                     }
                 }
@@ -199,7 +207,7 @@ public class WhatsAppIntegrationService {
         });
     }
 
-    private void handleIncomingMessage(String phoneNumberId, String wamid, String fromPhone,
+    private void handleIncomingMessage(String phoneNumberId, String displayPhone, String wamid, String fromPhone,
                                        String textBody, String senderName, String rawPayload, String signatureHeader) {
         // Idempotency: Prevent duplicate webhook processing
         if (wamid != null && webhookEventRepository.existsByEventId(wamid)) {
@@ -211,18 +219,23 @@ public class WhatsAppIntegrationService {
         WebhookEvent event = new WebhookEvent("WHATSAPP_CLOUD", wamid != null ? wamid : UUID.randomUUID().toString(), null);
         webhookEventRepository.save(event);
 
-        // Find business owning this phone_number_id
+        // Find business owning this phone_number_id or display_phone_number
         IntegrationAccount account = null;
         if (phoneNumberId != null && !phoneNumberId.isBlank()) {
             account = integrationAccountRepository.findByPhoneNumberId(phoneNumberId).orElse(null);
         }
-        if (account == null) {
-            // Fallback to first active account
-            account = integrationAccountRepository.findAll().stream().findFirst().orElse(null);
+        if (account == null && displayPhone != null && !displayPhone.isBlank()) {
+            account = integrationAccountRepository.findByPhoneNumber(displayPhone).orElse(null);
+            if (account == null && !displayPhone.startsWith("+")) {
+                account = integrationAccountRepository.findByPhoneNumber("+" + displayPhone).orElse(null);
+            }
+        }
+        if (account == null && TenantContext.getBusinessId() != null) {
+            account = integrationAccountRepository.findByBusinessIdAndProvider(TenantContext.getBusinessId(), "WHATSAPP_CLOUD").orElse(null);
         }
 
         if (account == null) {
-            logger.warn("No integration account registered for WhatsApp phone number ID {}", phoneNumberId);
+            logger.warn("No integration account registered for WhatsApp phone number ID {} / display phone {}", phoneNumberId, displayPhone);
             return;
         }
 
@@ -235,38 +248,50 @@ public class WhatsAppIntegrationService {
         }
 
         UUID businessId = finalAccount.getBusiness().getId();
-        String formattedPhone = fromPhone.startsWith("+") ? fromPhone : "+" + fromPhone;
+        UUID prevTenant = TenantContext.getBusinessId();
+        try {
+            // Set TenantContext for strict multi-tenant isolation during inbound webhook processing
+            TenantContext.setCurrentTenant(businessId);
 
-        // Find or create customer
-        Customer customer = customerRepository.findByBusinessIdAndPhoneNumber(businessId, formattedPhone)
-                .orElseGet(() -> {
-                    Customer newCust = new Customer(finalAccount.getBusiness(), formattedPhone, senderName, null);
-                    return customerRepository.save(newCust);
-                });
+            String formattedPhone = fromPhone.startsWith("+") ? fromPhone : "+" + fromPhone;
 
-        // Opt-in / Opt-out WhatsApp compliance logic
-        String cleanText = textBody != null ? textBody.trim().toUpperCase() : "";
-        if ("STOP".equals(cleanText) || "UNSUBSCRIBE".equals(cleanText) || "CANCEL".equals(cleanText)) {
-            customer.setOptInStatus("OPTED_OUT");
-            customerRepository.save(customer);
-            whatsAppClient.sendTextMessage(account, formattedPhone,
-                    "You have been successfully unsubscribed from automated messages. Reply START at any time to resume.");
-            return;
-        } else if ("START".equals(cleanText) || "UNSTOP".equals(cleanText)) {
-            customer.setOptInStatus("OPTED_IN");
-            customerRepository.save(customer);
-            whatsAppClient.sendTextMessage(account, formattedPhone,
-                    "You have successfully subscribed to messages from " + account.getBusiness().getName() + ".");
-            return;
+            // Find or create customer
+            Customer customer = customerRepository.findByBusinessIdAndPhoneNumber(businessId, formattedPhone)
+                    .orElseGet(() -> {
+                        Customer newCust = new Customer(finalAccount.getBusiness(), formattedPhone, senderName, null);
+                        return customerRepository.save(newCust);
+                    });
+
+            // Opt-in / Opt-out WhatsApp compliance logic
+            String cleanText = textBody != null ? textBody.trim().toUpperCase() : "";
+            if ("STOP".equals(cleanText) || "UNSUBSCRIBE".equals(cleanText) || "CANCEL".equals(cleanText)) {
+                customer.setOptInStatus("OPTED_OUT");
+                customerRepository.save(customer);
+                whatsAppClient.sendTextMessage(finalAccount, formattedPhone,
+                        "You have been successfully unsubscribed from automated messages. Reply START at any time to resume.");
+                return;
+            } else if ("START".equals(cleanText) || "UNSTOP".equals(cleanText)) {
+                customer.setOptInStatus("OPTED_IN");
+                customerRepository.save(customer);
+                whatsAppClient.sendTextMessage(finalAccount, formattedPhone,
+                        "You have successfully subscribed to messages from " + finalAccount.getBusiness().getName() + ".");
+                return;
+            }
+
+            if (!"OPTED_IN".equals(customer.getOptInStatus())) {
+                logger.info("Customer {} is opted out. Ignoring inbound message.", customer.getPhoneNumber());
+                return;
+            }
+
+            // Delegate to ConversationService for thread management & AI autonomous answering
+            conversationService.handleCustomerMessage(businessId, customer.getId(), textBody, wamid);
+        } finally {
+            if (prevTenant != null) {
+                TenantContext.setCurrentTenant(prevTenant);
+            } else {
+                TenantContext.clear();
+            }
         }
-
-        if (!"OPTED_IN".equals(customer.getOptInStatus())) {
-            logger.info("Customer {} is opted out. Ignoring inbound message.", customer.getPhoneNumber());
-            return;
-        }
-
-        // Delegate to ConversationService for thread management & AI autonomous answering
-        conversationService.handleCustomerMessage(businessId, customer.getId(), textBody, wamid);
     }
 
     @Transactional

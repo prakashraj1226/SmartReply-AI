@@ -20,20 +20,32 @@ public class AiService {
     private final AiConfigurationRepository aiConfigurationRepository;
     private final KnowledgeArticleRepository knowledgeArticleRepository;
     private final BusinessRepository businessRepository;
+    private final com.smartreplyai.servicecatalog.ServiceItemRepository serviceItemRepository;
+    private final com.smartreplyai.staff.StaffRepository staffRepository;
     private final AiProvider aiProvider;
 
     public AiService(AiConfigurationRepository aiConfigurationRepository,
                      KnowledgeArticleRepository knowledgeArticleRepository,
                      BusinessRepository businessRepository,
+                     com.smartreplyai.servicecatalog.ServiceItemRepository serviceItemRepository,
+                     com.smartreplyai.staff.StaffRepository staffRepository,
                      AiProvider aiProvider) {
         this.aiConfigurationRepository = aiConfigurationRepository;
         this.knowledgeArticleRepository = knowledgeArticleRepository;
         this.businessRepository = businessRepository;
+        this.serviceItemRepository = serviceItemRepository;
+        this.staffRepository = staffRepository;
         this.aiProvider = aiProvider;
     }
 
     @Transactional(readOnly = true)
     public AiGenerationResponse processIncomingMessage(UUID businessId, String customerMessage, List<String> history) {
+        return processIncomingMessage(businessId, customerMessage, history, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public AiGenerationResponse processIncomingMessage(UUID businessId, String customerMessage, List<String> history,
+                                                       String customerPhone, String customerName) {
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
@@ -45,6 +57,8 @@ public class AiService {
         }
 
         List<KnowledgeArticle> approvedKnowledge = knowledgeArticleRepository.findByBusinessIdAndIsActiveTrue(businessId);
+        List<com.smartreplyai.servicecatalog.ServiceItem> services = serviceItemRepository.findByBusinessIdAndIsActiveTrue(businessId);
+        List<com.smartreplyai.staff.Staff> staffMembers = staffRepository.findByBusinessIdAndIsActiveTrue(businessId);
 
         AiGenerationRequest req = new AiGenerationRequest();
         req.setBusinessId(businessId);
@@ -55,8 +69,12 @@ public class AiService {
         req.setAssistantName(config.getAssistantName());
         req.setTone(config.getTone());
         req.setCustomerMessage(customerMessage);
+        req.setCustomerPhoneNumber(customerPhone);
+        req.setCustomerName(customerName);
         req.setConversationHistory(history);
         req.setApprovedKnowledge(approvedKnowledge);
+        req.setServices(services);
+        req.setStaffMembers(staffMembers);
         req.setConfidenceThreshold(config.getConfidenceThreshold().doubleValue());
         req.setFallbackMessage(config.getFallbackMessage());
 

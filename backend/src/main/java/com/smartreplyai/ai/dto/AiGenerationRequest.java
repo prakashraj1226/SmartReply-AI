@@ -1,6 +1,8 @@
 package com.smartreplyai.ai.dto;
 
 import com.smartreplyai.knowledgebase.KnowledgeArticle;
+import com.smartreplyai.servicecatalog.ServiceItem;
+import com.smartreplyai.staff.Staff;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,8 +16,12 @@ public class AiGenerationRequest {
     private String assistantName;
     private String tone;
     private String customerMessage;
+    private String customerPhoneNumber;
+    private String customerName;
     private List<String> conversationHistory;
     private List<KnowledgeArticle> approvedKnowledge;
+    private List<ServiceItem> services;
+    private List<Staff> staffMembers;
     private double confidenceThreshold = 0.70;
     private String fallbackMessage;
 
@@ -108,6 +114,38 @@ public class AiGenerationRequest {
 
     public void setConfidenceThreshold(double confidenceThreshold) {
         this.confidenceThreshold = confidenceThreshold;
+    }
+
+    public String getCustomerPhoneNumber() {
+        return customerPhoneNumber;
+    }
+
+    public void setCustomerPhoneNumber(String customerPhoneNumber) {
+        this.customerPhoneNumber = customerPhoneNumber;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
+    public List<ServiceItem> getServices() {
+        return services;
+    }
+
+    public void setServices(List<ServiceItem> services) {
+        this.services = services;
+    }
+
+    public List<Staff> getStaffMembers() {
+        return staffMembers;
+    }
+
+    public void setStaffMembers(List<Staff> staffMembers) {
+        this.staffMembers = staffMembers;
     }
 
     public String getFallbackMessage() {

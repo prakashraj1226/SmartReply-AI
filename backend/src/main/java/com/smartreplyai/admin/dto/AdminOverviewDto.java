@@ -1,6 +1,7 @@
 package com.smartreplyai.admin.dto;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 public class AdminOverviewDto {
     private long totalBusinesses;
@@ -10,6 +11,9 @@ public class AdminOverviewDto {
     private long totalMessages;
     private BigDecimal estimatedMrrInr;
     private long activeIntegrations;
+    private long totalAppointments;
+    private long completedAppointments;
+    private Map<String, Long> businessesByIndustry;
 
     public AdminOverviewDto() {
     }
@@ -80,5 +84,29 @@ public class AdminOverviewDto {
 
     public void setActiveIntegrations(long activeIntegrations) {
         this.activeIntegrations = activeIntegrations;
+    }
+
+    public long getTotalAppointments() {
+        return totalAppointments;
+    }
+
+    public void setTotalAppointments(long totalAppointments) {
+        this.totalAppointments = totalAppointments;
+    }
+
+    public long getCompletedAppointments() {
+        return completedAppointments;
+    }
+
+    public void setCompletedAppointments(long completedAppointments) {
+        this.completedAppointments = completedAppointments;
+    }
+
+    public Map<String, Long> getBusinessesByIndustry() {
+        return businessesByIndustry;
+    }
+
+    public void setBusinessesByIndustry(Map<String, Long> businessesByIndustry) {
+        this.businessesByIndustry = businessesByIndustry;
     }
 }

@@ -15,11 +15,20 @@ public class BusinessService {
 
     private final BusinessRepository businessRepository;
     private final com.smartreplyai.knowledgebase.KnowledgeArticleRepository articleRepository;
+    private final com.smartreplyai.branch.BranchRepository branchRepository;
+    private final com.smartreplyai.servicecatalog.ServiceItemRepository serviceItemRepository;
+    private final com.smartreplyai.staff.StaffRepository staffRepository;
 
     public BusinessService(BusinessRepository businessRepository,
-                           com.smartreplyai.knowledgebase.KnowledgeArticleRepository articleRepository) {
+                           com.smartreplyai.knowledgebase.KnowledgeArticleRepository articleRepository,
+                           com.smartreplyai.branch.BranchRepository branchRepository,
+                           com.smartreplyai.servicecatalog.ServiceItemRepository serviceItemRepository,
+                           com.smartreplyai.staff.StaffRepository staffRepository) {
         this.businessRepository = businessRepository;
         this.articleRepository = articleRepository;
+        this.branchRepository = branchRepository;
+        this.serviceItemRepository = serviceItemRepository;
+        this.staffRepository = staffRepository;
     }
 
     @Transactional(readOnly = true)
@@ -45,6 +54,9 @@ public class BusinessService {
         if (request.getOperatingHoursJson() != null) business.setOperatingHoursJson(request.getOperatingHoursJson());
         if (request.getPreferredLanguage() != null) business.setPreferredLanguage(request.getPreferredLanguage());
         if (request.getDescription() != null) business.setDescription(request.getDescription());
+        if (request.getIndustryType() != null && !request.getIndustryType().isBlank()) {
+            business.setIndustryType(request.getIndustryType().trim().toUpperCase());
+        }
         if (request.getOnboardingCompleted() != null) business.setOnboardingCompleted(request.getOnboardingCompleted());
 
         business = businessRepository.save(business);
@@ -60,14 +72,22 @@ public class BusinessService {
                 business.getPhone() != null && !business.getPhone().isBlank();
 
         boolean faqAdded = articleRepository.countByBusinessId(businessId) > 0;
+        boolean branchAdded = branchRepository.countByBusinessId(businessId) > 0;
+        boolean serviceAdded = serviceItemRepository.countByBusinessId(businessId) > 0;
+        boolean staffAdded = staffRepository.countByBusinessId(businessId) > 0;
 
         Map<String, Object> checklist = new HashMap<>();
         checklist.put("profileCompleted", profileComplete);
         checklist.put("faqAdded", faqAdded);
+        checklist.put("branchAdded", branchAdded);
+        checklist.put("serviceAdded", serviceAdded);
+        checklist.put("staffAdded", staffAdded);
+        checklist.put("industryType", business.getIndustryType());
         checklist.put("whatsappConnected", false);
         checklist.put("aiTuned", true);
         checklist.put("assistantTested", false);
-        checklist.put("allCompleted", business.isOnboardingCompleted());
+        checklist.put("allCompleted", business.isOnboardingCompleted() ||
+                (profileComplete && branchAdded && serviceAdded && staffAdded));
 
         return checklist;
     }
