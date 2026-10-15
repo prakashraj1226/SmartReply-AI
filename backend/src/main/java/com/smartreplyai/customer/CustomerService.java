@@ -4,8 +4,10 @@ import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessRepository;
 import com.smartreplyai.common.BadRequestException;
 import com.smartreplyai.common.ResourceNotFoundException;
+import com.smartreplyai.conversation.ConversationRepository;
 import com.smartreplyai.customer.dto.CreateCustomerRequest;
 import com.smartreplyai.customer.dto.CustomerDto;
+import com.smartreplyai.customer.dto.CustomerStatsDto;
 import com.smartreplyai.customer.dto.UpdateCustomerRequest;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -15,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.StringWriter;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,10 +27,30 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final BusinessRepository businessRepository;
+    private final ConversationRepository conversationRepository;
 
-    public CustomerService(CustomerRepository customerRepository, BusinessRepository businessRepository) {
+    public CustomerService(CustomerRepository customerRepository,
+                           BusinessRepository businessRepository,
+                           ConversationRepository conversationRepository) {
         this.customerRepository = customerRepository;
         this.businessRepository = businessRepository;
+        this.conversationRepository = conversationRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public CustomerStatsDto getStats(UUID businessId) {
+        long total = customerRepository.countByBusinessId(businessId);
+        long optedIn = customerRepository.countByBusinessIdAndOptInStatus(businessId, "OPTED_IN");
+        double optedInPercentage = total > 0 ? Math.round((optedIn * 1000.0) / total) / 10.0 : 0.0;
+
+        CustomerStatsDto stats = new CustomerStatsDto();
+        stats.setTotalCustomers(total);
+        stats.setOptedInCustomers(optedIn);
+        stats.setOptedInPercentage(optedInPercentage);
+        stats.setVipCustomers(customerRepository.countVipByBusinessId(businessId));
+        stats.setRecentEnquiries(conversationRepository.countRecentByBusinessId(
+                businessId, Instant.now().minus(7, ChronoUnit.DAYS)));
+        return stats;
     }
 
     @Transactional(readOnly = true)

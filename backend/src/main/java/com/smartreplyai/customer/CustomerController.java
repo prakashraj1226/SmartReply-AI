@@ -4,6 +4,7 @@ import com.smartreplyai.common.ApiResponse;
 import com.smartreplyai.common.BadRequestException;
 import com.smartreplyai.customer.dto.CreateCustomerRequest;
 import com.smartreplyai.customer.dto.CustomerDto;
+import com.smartreplyai.customer.dto.CustomerStatsDto;
 import com.smartreplyai.customer.dto.UpdateCustomerRequest;
 import com.smartreplyai.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -39,6 +40,13 @@ public class CustomerController {
         Page<CustomerDto> customers = customerService.getCustomers(
                 businessId, query, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         return ResponseEntity.ok(ApiResponse.ok(customers));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<CustomerStatsDto>> getStats() {
+        UUID businessId = TenantContext.getBusinessId();
+        if (businessId == null) throw new BadRequestException("Active business tenant required");
+        return ResponseEntity.ok(ApiResponse.ok(customerService.getStats(businessId)));
     }
 
     @GetMapping("/{id}")

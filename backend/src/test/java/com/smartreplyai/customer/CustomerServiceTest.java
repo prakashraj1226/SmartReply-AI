@@ -3,6 +3,7 @@ package com.smartreplyai.customer;
 import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessRepository;
 import com.smartreplyai.common.BadRequestException;
+import com.smartreplyai.conversation.ConversationRepository;
 import com.smartreplyai.customer.dto.CreateCustomerRequest;
 import com.smartreplyai.customer.dto.CustomerDto;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,9 @@ class CustomerServiceTest {
 
     @Mock
     private BusinessRepository businessRepository;
+
+    @Mock
+    private ConversationRepository conversationRepository;
 
     @InjectMocks
     private CustomerService customerService;

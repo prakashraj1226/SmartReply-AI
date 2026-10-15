@@ -63,7 +63,7 @@ interface IntentBreakdownRow {
               </svg>
             </div>
           </div>
-          <div class="kpi-number">1,420</div>
+          <div class="kpi-number">{{ total() | number }}</div>
           <div class="kpi-subtext">Customer enquiries processed</div>
         </div>
 
@@ -79,8 +79,8 @@ interface IntentBreakdownRow {
               </svg>
             </div>
           </div>
-          <div class="kpi-number">94.2%</div>
-          <div class="kpi-subtext">1,338 resolved autonomously</div>
+          <div class="kpi-number">{{ aiRate() | number:'1.0-1' }}%</div>
+          <div class="kpi-subtext">{{ aiHandled() | number }} resolved autonomously</div>
         </div>
 
         <div class="kpi-card">
@@ -95,15 +95,15 @@ interface IntentBreakdownRow {
               </svg>
             </div>
           </div>
-          <div class="kpi-number">1.2s</div>
-          <div class="kpi-subtext">Instant WhatsApp reply speed</div>
+          <div class="kpi-number">{{ (summary()?.avgResponseTimeSeconds || 0) | number:'1.0-1' }}s</div>
+          <div class="kpi-subtext">Average reply time</div>
         </div>
 
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-label-box">
               <span class="status-indicator purple"></span>
-              <span class="kpi-label">EST. VALUE SAVED</span>
+              <span class="kpi-label">APPOINTMENTS</span>
             </div>
             <div class="kpi-icon-box purple">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -112,8 +112,8 @@ interface IntentBreakdownRow {
               </svg>
             </div>
           </div>
-          <div class="kpi-number">₹28,500</div>
-          <div class="kpi-subtext">Saved in staff overhead hours</div>
+          <div class="kpi-number">{{ (summary()?.totalAppointments || 0) | number }}</div>
+          <div class="kpi-subtext">Booked for this business</div>
         </div>
       </div>
 
@@ -124,8 +124,8 @@ interface IntentBreakdownRow {
         <div class="chart-card-large">
           <div class="chart-card-header">
             <div>
-              <div class="chart-title">Inbound Queries & Automated Resolution By Date</div>
-              <p class="chart-subtitle">Daily traffic distribution and AI completion rates</p>
+              <div class="chart-title">Enquiry volume</div>
+              <p class="chart-subtitle">Live counts for this business</p>
             </div>
             <div class="time-pill-group">
               <button type="button" class="time-btn" [class.active]="selectedTimeframe === 'day'" (click)="setTimeframe('day')">By Day</button>
@@ -138,12 +138,12 @@ interface IntentBreakdownRow {
             <div class="summary-metric">
               <span class="summary-dot blue"></span>
               <span class="summary-label">Total Messages:</span>
-              <span class="summary-val">1,420</span>
+              <span class="summary-val">{{ total() | number }}</span>
             </div>
             <div class="summary-metric">
               <span class="summary-dot green"></span>
               <span class="summary-label">AI Resolved:</span>
-              <span class="summary-val">1,338 (94.2%)</span>
+              <span class="summary-val">{{ aiHandled() | number }} ({{ aiRate() | number:'1.0-1' }}%)</span>
             </div>
           </div>
 
@@ -163,7 +163,7 @@ interface IntentBreakdownRow {
 
           <div class="donut-canvas-wrap">
             <div class="donut-center-stat">
-              <span class="donut-total">1,420</span>
+              <span class="donut-total">{{ total() | number }}</span>
               <span class="donut-sub">total enquiries</span>
             </div>
             <canvas #donutChartCanvas></canvas>
@@ -175,11 +175,11 @@ interface IntentBreakdownRow {
               <div class="legend-item-header">
                 <div class="legend-dot green"></div>
                 <span class="legend-name">AI Auto-Resolved</span>
-                <span class="legend-val">1,338</span>
-                <span class="legend-pct">94.2%</span>
+                <span class="legend-val">{{ aiHandled() | number }}</span>
+                <span class="legend-pct">{{ share(aiHandled()) | number:'1.0-1' }}%</span>
               </div>
               <div class="legend-progress-bar">
-                <div class="progress-fill green" style="width: 94.2%"></div>
+                <div class="progress-fill green" [style.width.%]="share(aiHandled())"></div>
               </div>
             </div>
 
@@ -187,11 +187,11 @@ interface IntentBreakdownRow {
               <div class="legend-item-header">
                 <div class="legend-dot blue"></div>
                 <span class="legend-name">Human Escalated</span>
-                <span class="legend-val">64</span>
-                <span class="legend-pct">4.5%</span>
+                <span class="legend-val">{{ human() | number }}</span>
+                <span class="legend-pct">{{ share(human()) | number:'1.0-1' }}%</span>
               </div>
               <div class="legend-progress-bar">
-                <div class="progress-fill blue" style="width: 4.5%"></div>
+                <div class="progress-fill blue" [style.width.%]="share(human())"></div>
               </div>
             </div>
 
@@ -199,11 +199,11 @@ interface IntentBreakdownRow {
               <div class="legend-item-header">
                 <div class="legend-dot amber"></div>
                 <span class="legend-name">Pending Action</span>
-                <span class="legend-val">18</span>
-                <span class="legend-pct">1.3%</span>
+                <span class="legend-val">{{ pending() | number }}</span>
+                <span class="legend-pct">{{ share(pending()) | number:'1.0-1' }}%</span>
               </div>
               <div class="legend-progress-bar">
-                <div class="progress-fill amber" style="width: 1.3%"></div>
+                <div class="progress-fill amber" [style.width.%]="share(pending())"></div>
               </div>
             </div>
           </div>
@@ -233,6 +233,9 @@ interface IntentBreakdownRow {
               </tr>
             </thead>
             <tbody>
+              <tr *ngIf="breakdownRows.length === 0">
+                <td colspan="7">No recorded enquiries for this business yet.</td>
+              </tr>
               <tr *ngFor="let row of breakdownRows" class="table-row">
                 <td>
                   <strong>{{ row.intent }}</strong>
@@ -603,53 +606,7 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
   private volumeChart: Chart | null = null;
   private donutChart: Chart | null = null;
 
-  breakdownRows: IntentBreakdownRow[] = [
-    {
-      intent: 'Appointment Booking & Reschedule',
-      totalQueries: 420,
-      aiHandled: 408,
-      escalated: 12,
-      avgTime: '1.2s',
-      appointments: '28 bookings',
-      valueSaved: '₹14,000'
-    },
-    {
-      intent: 'Treatments & Pricing Inquiries',
-      totalQueries: 385,
-      aiHandled: 368,
-      escalated: 17,
-      avgTime: '1.1s',
-      appointments: '14 bookings',
-      valueSaved: '₹7,000'
-    },
-    {
-      intent: 'Clinic Hours & Location Questions',
-      totalQueries: 290,
-      aiHandled: 288,
-      escalated: 2,
-      avgTime: '0.9s',
-      appointments: '—',
-      valueSaved: '₹3,500'
-    },
-    {
-      intent: 'Insurance Coverage & Cashless EMI',
-      totalQueries: 185,
-      aiHandled: 172,
-      escalated: 13,
-      avgTime: '1.4s',
-      appointments: '6 bookings',
-      valueSaved: '₹2,500'
-    },
-    {
-      intent: 'Medical Emergency & Acute Pain',
-      totalQueries: 140,
-      aiHandled: 102,
-      escalated: 38,
-      avgTime: '0.8s',
-      appointments: '8 priority',
-      valueSaved: '₹1,500'
-    }
-  ];
+  breakdownRows: IntentBreakdownRow[] = [];
 
   constructor(private reportsService: ReportsService) {}
 
@@ -673,9 +630,43 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   loadSummary(): void {
     this.reportsService.getSummary(this.selectedPeriod()).subscribe({
-      next: (res) => this.summary.set(res.data),
-      error: () => {}
+      next: (res) => {
+        this.summary.set(res.data);
+        this.renderCharts();
+      },
+      error: () => {
+        this.summary.set(null);
+        this.renderCharts();
+      }
     });
+  }
+
+  total(): number {
+    return this.summary()?.totalConversations || 0;
+  }
+
+  aiHandled(): number {
+    return this.summary()?.aiHandledConversations || 0;
+  }
+
+  human(): number {
+    return this.summary()?.humanHandledConversations || 0;
+  }
+
+  pending(): number {
+    return this.summary()?.pendingConversations || 0;
+  }
+
+  aiRate(): number {
+    return this.summary()?.aiAutomationRatePercentage || 0;
+  }
+
+  share(count: number): number {
+    const total = this.total();
+    if (!total) {
+      return 0;
+    }
+    return Math.round((count / total) * 1000) / 10;
   }
 
   exportCsv(): void {
@@ -692,7 +683,7 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: () => {
         this.isExporting.set(false);
-        alert('CSV report downloaded successfully.');
+        alert('Could not download the report.');
       }
     });
   }
@@ -709,31 +700,17 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
       this.volumeChart = new Chart(vCtx, {
         type: 'bar',
         data: {
-          labels: ['01 Oct', '03 Oct', '05 Oct', '07 Oct', '09 Oct', '11 Oct', '12 Oct'],
+          labels: ['Messages', 'AI resolved', 'Escalated', 'Pending'],
           datasets: [
             {
               type: 'bar',
-              label: 'Total Queries',
-              data: [120, 180, 160, 240, 280, 210, 230],
+              label: 'Count',
+              data: [this.total(), this.aiHandled(), this.human(), this.pending()],
               backgroundColor: 'rgba(37, 99, 235, 0.75)',
               hoverBackgroundColor: '#2563eb',
               borderRadius: 6,
               barThickness: 24,
               order: 2
-            },
-            {
-              type: 'line',
-              label: 'AI Resolved',
-              data: [114, 172, 150, 226, 264, 198, 214],
-              borderColor: '#10b981',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              borderWidth: 2.5,
-              tension: 0.35,
-              pointBackgroundColor: '#10b981',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 4,
-              order: 1
             }
           ]
         },
@@ -758,7 +735,7 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
           labels: ['AI Auto-Resolved', 'Human Escalated', 'Pending Action'],
           datasets: [
             {
-              data: [1338, 64, 18],
+              data: [this.aiHandled(), this.human(), this.pending()],
               backgroundColor: ['#10b981', '#2563eb', '#f59e0b'],
               borderWidth: 3,
               borderColor: '#ffffff'

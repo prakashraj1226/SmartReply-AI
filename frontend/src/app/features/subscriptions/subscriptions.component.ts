@@ -1,12 +1,11 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrder, VerifyPaymentRequest } from '../../core/services/subscription.service';
 
 @Component({
   selector: 'app-subscriptions',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   template: `
     <div class="subscriptions-page">
 
@@ -46,8 +45,8 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               </svg>
             </div>
           </div>
-          <div class="kpi-number">{{ subscription()?.planName || 'Growth Tier' }}</div>
-          <div class="kpi-subtext">₹{{ subscription()?.priceInr || '2,499' }} / month billing</div>
+          <div class="kpi-number">{{ subscription()?.planName || 'No plan' }}</div>
+          <div class="kpi-subtext">₹{{ priceInr() | number }} / month billing</div>
         </div>
 
         <div class="kpi-card">
@@ -62,8 +61,8 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               </svg>
             </div>
           </div>
-          <div class="kpi-number">{{ subscription()?.currentMonthConversations || 420 }} / {{ subscription()?.maxConversationsMonthly || 2500 }}</div>
-          <div class="kpi-subtext">{{ subscription()?.remainingConversations || 2080 }} remaining this cycle</div>
+          <div class="kpi-number">{{ conversationsUsed() | number }} / {{ conversationLimit() | number }}</div>
+          <div class="kpi-subtext">{{ conversationsRemaining() | number }} remaining this cycle</div>
         </div>
 
         <div class="kpi-card">
@@ -79,15 +78,15 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               </svg>
             </div>
           </div>
-          <div class="kpi-number">18 Days</div>
-          <div class="kpi-subtext">Next invoice on Nov 1, 2026</div>
+          <div class="kpi-number">{{ renewalDays() }} Days</div>
+          <div class="kpi-subtext">{{ renewalLabel() }}</div>
         </div>
 
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-label-box">
               <span class="status-indicator purple"></span>
-              <span class="kpi-label">ESTIMATED SAVINGS</span>
+              <span class="kpi-label">AMOUNT PAID</span>
             </div>
             <div class="kpi-icon-box purple">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -96,8 +95,8 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               </svg>
             </div>
           </div>
-          <div class="kpi-number">₹34,200</div>
-          <div class="kpi-subtext">Saved vs dedicated receptionist desk</div>
+          <div class="kpi-number">₹{{ amountPaid() | number }}</div>
+          <div class="kpi-subtext">Payments recorded for this business</div>
         </div>
       </div>
 
@@ -111,7 +110,7 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
       </div>
 
       <!-- 3. Current Usage Progress Card -->
-      <div class="usage-overview-card" *ngIf="subscription() || defaultSubscription as sub">
+      <div class="usage-overview-card" *ngIf="subscription()">
         <div class="usage-header-row">
           <div>
             <h3 class="usage-title">Monthly WhatsApp Message Quota</h3>
@@ -125,9 +124,9 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
         </div>
 
         <div class="usage-footer-row">
-          <span><strong>{{ subscription()?.currentMonthConversations || 420 }}</strong> used</span>
-          <span><strong>{{ subscription()?.remainingConversations || 2080 }}</strong> conversations remaining</span>
-          <span>Max <strong>{{ subscription()?.maxConversationsMonthly || 2500 }}</strong> conversations</span>
+          <span><strong>{{ conversationsUsed() | number }}</strong> used</span>
+          <span><strong>{{ conversationsRemaining() | number }}</strong> conversations remaining</span>
+          <span>Max <strong>{{ conversationLimit() | number }}</strong> conversations</span>
         </div>
       </div>
 
@@ -140,10 +139,10 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
 
         <div class="plans-grid">
           <div
-            *ngFor="let p of (plans().length > 0 ? plans() : seedPlans)"
+            *ngFor="let p of plans()"
             class="plan-card"
             [class.highlighted]="p.code === 'GROWTH'"
-            [class.current-active]="p.code === (subscription()?.planCode || 'GROWTH')"
+            [class.current-active]="p.code === subscription()?.planCode"
           >
             <div class="plan-card-header">
               <span *ngIf="p.code === 'GROWTH'" class="popular-badge">★ Most Popular</span>
@@ -189,14 +188,14 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
 
             <div class="plan-card-footer">
               <button
-                *ngIf="p.code !== (subscription()?.planCode || 'GROWTH')"
+                *ngIf="p.code !== subscription()?.planCode"
                 class="btn-plan-action"
                 [class.btn-popular]="p.code === 'GROWTH'"
                 (click)="startCheckout(p.code)"
               >
                 Upgrade to {{ p.name }}
               </button>
-              <button *ngIf="p.code === (subscription()?.planCode || 'GROWTH')" class="btn-current-plan" disabled>
+              <button *ngIf="p.code === subscription()?.planCode" class="btn-current-plan" disabled>
                 ✓ Current Active Plan
               </button>
             </div>
@@ -235,29 +234,16 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td><strong>INV-2026-1001</strong></td>
-                <td>Oct 1, 2026</td>
-                <td>Growth Plan</td>
-                <td>₹2,499</td>
-                <td>Razorpay (UPI / NetBanking)</td>
-                <td><span class="status-pill-green">✓ Paid</span></td>
+              <tr *ngIf="!subscription()?.transactions?.length">
+                <td colspan="6">No payments recorded yet.</td>
               </tr>
-              <tr>
-                <td><strong>INV-2026-0901</strong></td>
-                <td>Sep 1, 2026</td>
-                <td>Growth Plan</td>
-                <td>₹2,499</td>
-                <td>Razorpay (UPI / NetBanking)</td>
-                <td><span class="status-pill-green">✓ Paid</span></td>
-              </tr>
-              <tr>
-                <td><strong>INV-2026-0801</strong></td>
-                <td>Aug 1, 2026</td>
-                <td>Starter Plan</td>
-                <td>₹999</td>
-                <td>Razorpay (Credit Card)</td>
-                <td><span class="status-pill-green">✓ Paid</span></td>
+              <tr *ngFor="let tx of subscription()?.transactions || []">
+                <td><strong>{{ tx.paymentId || tx.id }}</strong></td>
+                <td>{{ tx.createdAt | date:'mediumDate' }}</td>
+                <td>{{ tx.planName || '—' }}</td>
+                <td>₹{{ tx.amountInr | number }}</td>
+                <td>{{ tx.gateway || '—' }}</td>
+                <td><span class="status-pill-green">{{ tx.status }}</span></td>
               </tr>
             </tbody>
           </table>
@@ -271,8 +257,8 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
             <div class="modal-title-box">
               <div class="modal-icon-badge">💳</div>
               <div>
-                <h3>Confirm Subscription Upgrade</h3>
-                <p class="modal-subtitle">Secure Razorpay / Stripe gateway checkout</p>
+                <h3>Pay with UPI</h3>
+                <p class="modal-subtitle">GPay or PhonePe. Money goes to this account.</p>
               </div>
             </div>
             <button class="close-btn" (click)="closeCheckoutModal()">&times;</button>
@@ -298,16 +284,27 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               </div>
             </div>
 
-            <div class="gateway-notice">
-              <span class="notice-icon">🔒</span>
-              <p>Sandbox Simulator Mode: Instant verification without debiting real card or UPI credentials.</p>
+            <div class="pay-methods">
+              <button type="button" class="pay-method" *ngFor="let account of upiAccounts; let i = index" [class.active]="selectedUpiIndex === i" (click)="selectUpi(i)">
+                {{ account.label }}
+              </button>
             </div>
+
+            <div class="upi-pay-box">
+              <img *ngIf="upiQrUrl" [src]="upiQrUrl" alt="UPI QR code" class="upi-qr" />
+              <div class="upi-id">{{ upiAccounts[selectedUpiIndex].upiId }}</div>
+              <div class="upi-amount">Pay ₹{{ totalDue() }}</div>
+              <a class="upi-open" [href]="upiPayLink()">Open in UPI app</a>
+              <p class="upi-note">Scan the QR or open the UPI app and pay this exact amount. After the money is received, click I have paid.</p>
+            </div>
+
+            <p class="checkout-error" *ngIf="checkoutError">{{ checkoutError }}</p>
           </div>
 
           <div class="modal-footer">
             <button class="btn-cancel" (click)="closeCheckoutModal()">Cancel</button>
             <button class="btn-checkout-confirm" [disabled]="isProcessingPayment()" (click)="confirmPayment()">
-              <span *ngIf="!isProcessingPayment()">Pay ₹{{ (checkoutOrder.amountInr * 1.18).toFixed(0) }} Now</span>
+              <span *ngIf="!isProcessingPayment()">I have paid ₹{{ totalDue() }}</span>
               <span *ngIf="isProcessingPayment()" class="spinner-sm"></span>
             </button>
           </div>
@@ -900,22 +897,26 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
     /* Modal Backdrop */
     .modal-backdrop {
       position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
+      inset: 0;
       background: rgba(9, 19, 40, 0.65);
       backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      padding: 16px;
+      box-sizing: border-box;
     }
 
     .modal-dialog {
       background: #ffffff;
       border-radius: 16px;
-      width: 90%;
-      max-width: 480px;
+      width: min(480px, 100%);
+      max-height: calc(100vh - 32px);
       box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
       animation: modalSlideUp 0.2s ease-out;
     }
 
@@ -925,11 +926,12 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
     }
 
     .modal-header {
-      padding: 1.25rem 1.5rem;
+      padding: 0.85rem 1.15rem;
       border-bottom: 1px solid #e2e8f0;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-shrink: 0;
     }
 
     .modal-title-box {
@@ -972,17 +974,19 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
     }
 
     .modal-body {
-      padding: 1.25rem 1.5rem;
+      padding: 0.75rem 1.15rem;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.65rem;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     .order-summary-box {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
-      padding: 1rem;
+      padding: 0.7rem 0.85rem;
     }
 
     .summary-line {
@@ -1001,6 +1005,79 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
       color: #0f172a;
     }
 
+    .pay-methods {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0;
+    }
+
+    .pay-method {
+      flex: 1;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+    }
+
+    .pay-method.active {
+      border-color: #2563eb;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .upi-pay-box {
+      margin-top: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+      text-align: center;
+    }
+
+    .upi-qr {
+      width: 132px;
+      height: 132px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .upi-id {
+      font-weight: 800;
+      font-size: 0.82rem;
+      color: #0f172a;
+      word-break: break-all;
+    }
+
+    .upi-amount {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #1d4ed8;
+    }
+
+    .upi-open {
+      color: #2563eb;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+
+    .upi-note {
+      margin: 0.35rem 0 0;
+      color: #64748b;
+      font-size: 0.75rem;
+      line-height: 1.4;
+    }
+
+    .checkout-error {
+      margin: 0.75rem 0 0;
+      color: #b91c1c;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
     .gateway-notice {
       display: flex;
       align-items: flex-start;
@@ -1015,12 +1092,13 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
     }
 
     .modal-footer {
-      padding: 1rem 1.5rem;
+      padding: 0.75rem 1.15rem;
       background: #f8fafc;
       border-top: 1px solid #e2e8f0;
       display: flex;
       justify-content: flex-end;
       gap: 0.75rem;
+      flex-shrink: 0;
     }
 
     .btn-cancel {
@@ -1044,6 +1122,12 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
       border-radius: 8px;
       cursor: pointer;
       box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+
+    .alert-banner.error {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
     }
 
     .alert-banner {
@@ -1091,49 +1175,13 @@ export class SubscriptionsComponent implements OnInit {
 
   alertMsg = '';
   alertType = 'success';
-
-  defaultSubscription: any = {
-    planCode: 'GROWTH',
-    planName: 'Growth Plan',
-    priceInr: 2499,
-    status: 'ACTIVE',
-    currentMonthConversations: 420,
-    maxConversationsMonthly: 2500,
-    remainingConversations: 2080
-  };
-
-  seedPlans: SubscriptionPlan[] = [
-    {
-      id: 'plan-1',
-      code: 'STARTER',
-      name: 'Starter Plan',
-      priceInr: 999,
-      billingInterval: 'MONTHLY',
-      maxConversationsMonthly: 1000,
-      maxAgents: 2,
-      aiFeaturesEnabled: true
-    },
-    {
-      id: 'plan-2',
-      code: 'GROWTH',
-      name: 'Growth Plan',
-      priceInr: 2499,
-      billingInterval: 'MONTHLY',
-      maxConversationsMonthly: 2500,
-      maxAgents: 5,
-      aiFeaturesEnabled: true
-    },
-    {
-      id: 'plan-3',
-      code: 'PRO',
-      name: 'Enterprise Pro',
-      priceInr: 5999,
-      billingInterval: 'MONTHLY',
-      maxConversationsMonthly: 10000,
-      maxAgents: 15,
-      aiFeaturesEnabled: true
-    }
+  checkoutError = '';
+  upiAccounts = [
+    { label: 'GPay', upiId: 'prakashrajkalamathavan@okicici' },
+    { label: 'PhonePe', upiId: '9094460709@ybl' }
   ];
+  selectedUpiIndex = 0;
+  upiQrUrl = '';
 
   constructor(private subscriptionService: SubscriptionService) {}
 
@@ -1145,53 +1193,80 @@ export class SubscriptionsComponent implements OnInit {
   loadSubscription(): void {
     this.subscriptionService.getCurrentSubscription().subscribe({
       next: (res) => {
-        if (res.data) {
-          this.subscription.set(res.data);
-        } else {
-          this.subscription.set(this.defaultSubscription);
-        }
+        this.subscription.set(res.data || null);
       },
       error: () => {
-        this.subscription.set(this.defaultSubscription);
+        this.subscription.set(null);
       }
     });
   }
 
   loadPlans(): void {
     this.subscriptionService.getPlans().subscribe({
-      next: (res) => {
-        const list = res.data || [];
-        this.plans.set(list.length > 0 ? list : this.seedPlans);
-      },
-      error: () => {
-        this.plans.set(this.seedPlans);
-      }
+      next: (res) => this.plans.set(res.data || []),
+      error: () => this.plans.set([])
     });
   }
 
+  priceInr(): number {
+    return this.subscription()?.priceInr ?? 0;
+  }
+
+  conversationsUsed(): number {
+    return this.subscription()?.currentMonthConversations ?? 0;
+  }
+
+  conversationLimit(): number {
+    return this.subscription()?.maxConversationsMonthly ?? 0;
+  }
+
+  conversationsRemaining(): number {
+    return this.subscription()?.remainingConversations ?? 0;
+  }
+
+  renewalDays(): number {
+    const end = this.subscription()?.currentPeriodEnd;
+    if (!end) {
+      return 0;
+    }
+    const remainingMs = new Date(end).getTime() - Date.now();
+    return Math.max(0, Math.ceil(remainingMs / 86_400_000));
+  }
+
+  renewalLabel(): string {
+    const end = this.subscription()?.currentPeriodEnd;
+    if (!end) {
+      return 'No renewal date';
+    }
+    return `Next invoice on ${this.formatDate(end)}`;
+  }
+
+  amountPaid(): number {
+    return (this.subscription()?.transactions || [])
+      .filter(tx => (tx.status || '').toUpperCase() === 'SUCCESS')
+      .reduce((sum, tx) => sum + Number(tx.amountInr || 0), 0);
+  }
+
   getUsagePercentage(): number {
-    const sub = this.subscription() || this.defaultSubscription;
-    if (!sub || sub.maxConversationsMonthly === 0) return 17;
+    const sub = this.subscription();
+    if (!sub || !sub.maxConversationsMonthly) {
+      return 0;
+    }
     return Math.min(100, Math.round((sub.currentMonthConversations / sub.maxConversationsMonthly) * 100));
   }
 
   startCheckout(planCode: string): void {
     this.subscriptionService.createCheckoutOrder(planCode).subscribe({
       next: (res) => {
+        this.checkoutError = '';
+        this.resetPaymentForm();
         this.checkoutOrder = res.data;
         this.showCheckoutModal = true;
+        this.refreshUpiQr();
       },
       error: () => {
-        // Fallback checkout order
-        const matched = this.seedPlans.find(p => p.code === planCode);
-        this.checkoutOrder = {
-          orderId: 'order_' + Date.now(),
-          planCode: planCode,
-          amountInr: matched ? matched.priceInr : 2499,
-          keyId: 'rzp_test_demo_key',
-          simulated: true
-        };
-        this.showCheckoutModal = true;
+        this.alertType = 'error';
+        this.alertMsg = 'Could not start checkout for this plan.';
       }
     });
   }
@@ -1199,18 +1274,61 @@ export class SubscriptionsComponent implements OnInit {
   closeCheckoutModal(): void {
     this.showCheckoutModal = false;
     this.checkoutOrder = null;
+    this.checkoutError = '';
+    this.resetPaymentForm();
+  }
+
+  resetPaymentForm(): void {
+    this.selectedUpiIndex = 0;
+    this.upiQrUrl = '';
+  }
+
+  totalDue(): number {
+    return Math.round(Number(this.checkoutOrder?.amountInr || 0) * 1.18);
+  }
+
+  upiPayLink(): string {
+    const account = this.upiAccounts[this.selectedUpiIndex];
+    const params = new URLSearchParams({
+      pa: account.upiId,
+      pn: 'SmartReply',
+      am: this.totalDue().toFixed(2),
+      cu: 'INR',
+      tn: `SmartReply ${this.checkoutOrder?.planCode || ''}`.trim()
+    });
+    return `upi://pay?${params.toString()}`;
+  }
+
+  selectUpi(index: number): void {
+    this.selectedUpiIndex = index;
+    this.refreshUpiQr();
+  }
+
+  refreshUpiQr(): void {
+    import('qrcode').then((mod: { default?: { toDataURL: (text: string, options: object) => Promise<string> }; toDataURL?: (text: string, options: object) => Promise<string> }) => {
+      const QRCode = mod.default || mod;
+      QRCode.toDataURL?.(this.upiPayLink(), { width: 180, margin: 1 }).then(url => {
+        this.upiQrUrl = url;
+      }).catch(() => {
+        this.upiQrUrl = '';
+      });
+    }).catch(() => {
+      this.upiQrUrl = '';
+    });
   }
 
   confirmPayment(): void {
     if (!this.checkoutOrder) return;
 
     this.isProcessingPayment.set(true);
+    this.checkoutError = '';
+    const account = this.upiAccounts[this.selectedUpiIndex];
     const req: VerifyPaymentRequest = {
       planCode: this.checkoutOrder.planCode,
       orderId: this.checkoutOrder.orderId,
-      paymentId: 'pay_' + Math.random().toString(36).substring(2, 12),
-      signature: 'simulated_signature_ok',
-      isSimulated: this.checkoutOrder.simulated
+      paymentId: `${account.label.toLowerCase()}_${account.upiId}`,
+      paymentMethod: 'UPI',
+      isSimulated: true
     };
 
     this.subscriptionService.verifyPayment(req).subscribe({
@@ -1219,22 +1337,11 @@ export class SubscriptionsComponent implements OnInit {
         this.subscription.set(res.data);
         this.closeCheckoutModal();
         this.alertType = 'success';
-        this.alertMsg = `Congratulations! Upgraded successfully to ${res.data.planName}.`;
+        this.alertMsg = `UPI payment recorded on ${account.label}. ${res.data.planName} is now active.`;
       },
       error: () => {
-        // Optimistic upgrade for demo
         this.isProcessingPayment.set(false);
-        const matched = this.seedPlans.find(p => p.code === this.checkoutOrder!.planCode);
-        const upgradedSub: any = {
-          ...this.defaultSubscription,
-          planCode: this.checkoutOrder!.planCode,
-          planName: matched ? matched.name : this.checkoutOrder!.planCode,
-          priceInr: this.checkoutOrder!.amountInr
-        };
-        this.subscription.set(upgradedSub);
-        this.closeCheckoutModal();
-        this.alertType = 'success';
-        this.alertMsg = `Congratulations! Upgraded successfully to ${upgradedSub.planName}.`;
+        this.checkoutError = 'Payment could not be recorded.';
       }
     });
   }

@@ -86,6 +86,7 @@
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/customer/CustomerService.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/customer/dto/CreateCustomerRequest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/customer/dto/CustomerDto.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/customer/dto/CustomerStatsDto.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/customer/dto/UpdateCustomerRequest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/dashboard/DashboardService.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/dashboard/DashboardStatsController.java

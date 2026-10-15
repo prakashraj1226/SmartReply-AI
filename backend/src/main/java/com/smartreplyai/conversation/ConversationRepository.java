@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,5 +32,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
 
     long countByBusinessId(UUID businessId);
 
-    long countByBusinessIdAndCreatedAtBetween(UUID businessId, java.time.Instant start, java.time.Instant end);
+    long countByBusinessIdAndCreatedAtBetween(UUID businessId, Instant start, Instant end);
+
+    @Query("SELECT COUNT(c) FROM Conversation c WHERE c.business.id = :businessId AND " +
+            "((c.lastMessageAt IS NOT NULL AND c.lastMessageAt >= :since) OR (c.lastMessageAt IS NULL AND c.createdAt >= :since))")
+    long countRecentByBusinessId(@Param("businessId") UUID businessId, @Param("since") Instant since);
 }

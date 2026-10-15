@@ -59,7 +59,7 @@ public class ReportsService {
         dto.setAiHandledConversations(aiHandled);
         dto.setHumanHandledConversations(humanHandled);
         dto.setAiAutomationRatePercentage(Math.round(aiAutomationRate * 10.0) / 10.0);
-        dto.setAvgResponseTimeSeconds(4.2); // AI automated response sub-5-seconds benchmark
+        dto.setAvgResponseTimeSeconds(0);
         dto.setTotalCustomers(customers);
         dto.setTotalAppointments(appointments);
         dto.setConfirmedAppointments(appointments);

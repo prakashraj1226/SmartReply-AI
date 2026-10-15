@@ -17,6 +17,14 @@ export interface Customer {
   updatedAt: string;
 }
 
+export interface CustomerStats {
+  totalCustomers: number;
+  optedInCustomers: number;
+  optedInPercentage: number;
+  vipCustomers: number;
+  recentEnquiries: number;
+}
+
 export interface PagedResult<T> {
   content: T[];
   totalElements: number;
@@ -39,6 +47,10 @@ export class CustomerService {
       params = params.set('query', query.trim());
     }
     return this.http.get<ApiResponse<PagedResult<Customer>>>(this.baseUrl, { params });
+  }
+
+  getStats(): Observable<ApiResponse<CustomerStats>> {
+    return this.http.get<ApiResponse<CustomerStats>>(`${this.baseUrl}/stats`);
   }
 
   getCustomer(id: string): Observable<ApiResponse<Customer>> {

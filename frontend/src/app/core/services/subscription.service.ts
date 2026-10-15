@@ -63,6 +63,7 @@ export interface VerifyPaymentRequest {
   paymentId: string;
   signature?: string;
   isSimulated?: boolean;
+  paymentMethod?: string;
 }
 
 @Injectable({

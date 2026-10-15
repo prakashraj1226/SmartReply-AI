@@ -70,7 +70,7 @@ import { CatalogService, ServiceItem, StaffMember, Branch } from '../../core/ser
               </svg>
             </div>
           </div>
-          <div class="kpi-number">6</div>
+          <div class="kpi-number">{{ scheduledTodayCount() }}</div>
           <div class="kpi-subtext">Slots filled for today</div>
         </div>
 
@@ -88,7 +88,7 @@ import { CatalogService, ServiceItem, StaffMember, Branch } from '../../core/ser
               </svg>
             </div>
           </div>
-          <div class="kpi-number">2</div>
+          <div class="kpi-number">{{ awaitingConfirmationCount() }}</div>
           <div class="kpi-subtext">Pending patient reply</div>
         </div>
 
@@ -105,8 +105,8 @@ import { CatalogService, ServiceItem, StaffMember, Branch } from '../../core/ser
               </svg>
             </div>
           </div>
-          <div class="kpi-number">45m</div>
-          <div class="kpi-subtext">Standard clinical consultation</div>
+          <div class="kpi-number">{{ averageDurationLabel() }}</div>
+          <div class="kpi-subtext">Average booked length</div>
         </div>
       </div>
 
@@ -936,6 +936,38 @@ export class AppointmentsComponent implements OnInit {
     this.customerService.getCustomers('', 0, 50).subscribe({
       next: (res) => this.customers.set(res.data?.content || [])
     });
+  }
+
+  scheduledTodayCount(): number {
+    const today = new Date();
+    return this.appointments().filter(appointment =>
+      appointment.startTime
+      && appointment.status !== 'CANCELLED'
+      && this.isSameLocalDay(appointment.startTime, today)
+    ).length;
+  }
+
+  awaitingConfirmationCount(): number {
+    return this.appointments().filter(appointment => appointment.status === 'PENDING').length;
+  }
+
+  averageDurationLabel(): string {
+    const minutes = this.appointments()
+      .filter(appointment => appointment.startTime && appointment.endTime && appointment.status !== 'CANCELLED')
+      .map(appointment => (new Date(appointment.endTime).getTime() - new Date(appointment.startTime).getTime()) / 60000)
+      .filter(value => value > 0);
+    if (!minutes.length) {
+      return '0m';
+    }
+    const average = Math.round(minutes.reduce((sum, value) => sum + value, 0) / minutes.length);
+    return `${average}m`;
+  }
+
+  private isSameLocalDay(isoTime: string, day: Date): boolean {
+    const value = new Date(isoTime);
+    return value.getFullYear() === day.getFullYear()
+      && value.getMonth() === day.getMonth()
+      && value.getDate() === day.getDate();
   }
 
   setViewMode(mode: 'UPCOMING' | 'TODAY' | 'ALL'): void {

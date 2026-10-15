@@ -99,6 +99,7 @@ com/smartreplyai/subscription/dto/VerifyPaymentRequest.class
 com/smartreplyai/auth/dto/RegisterRequest.class
 com/smartreplyai/customer/CustomerService.class
 com/smartreplyai/customer/CustomerController.class
+com/smartreplyai/customer/dto/CustomerStatsDto.class
 com/smartreplyai/common/GlobalExceptionHandler.class
 com/smartreplyai/auth/dto/AuthResponse.class
 com/smartreplyai/assistant/dto/AssistantChatRequest.class

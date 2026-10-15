@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -127,9 +128,12 @@ public class SubscriptionService {
         SubscriptionPlan plan = planRepository.findByCode(req.getPlanCode().toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found: " + req.getPlanCode()));
 
-        boolean isSimulated = Boolean.TRUE.equals(req.getIsSimulated()) || "rzp_test_mock_key".equals(razorpayKeyId);
+        String method = req.getPaymentMethod() == null ? "" : req.getPaymentMethod().trim().toUpperCase();
+        boolean collectedPayment = "UPI".equals(method) || "CARD".equals(method) || "CASH".equals(method);
+        boolean isSimulated = collectedPayment
+                || Boolean.TRUE.equals(req.getIsSimulated())
+                || "rzp_test_mock_key".equals(razorpayKeyId);
 
-        // Verify Razorpay HMAC signature if real keys are used
         if (!isSimulated && req.getSignature() != null && !req.getSignature().isBlank()) {
             boolean valid = verifyRazorpaySignature(req.getOrderId(), req.getPaymentId(), req.getSignature(), razorpayKeySecret);
             if (!valid) {
@@ -137,15 +141,19 @@ public class SubscriptionService {
             }
         }
 
-        // Record Payment Transaction
+        BigDecimal amount = plan.getPriceInr() == null ? BigDecimal.ZERO : plan.getPriceInr();
+        if (collectedPayment) {
+            amount = amount.multiply(new BigDecimal("1.18")).setScale(0, java.math.RoundingMode.HALF_UP);
+        }
+
         PaymentTransaction tx = new PaymentTransaction(
                 business,
                 plan,
-                isSimulated ? "SIMULATED" : "RAZORPAY",
+                collectedPayment ? method : (isSimulated ? "SIMULATED" : "RAZORPAY"),
                 req.getOrderId(),
                 req.getPaymentId(),
                 req.getSignature(),
-                plan.getPriceInr(),
+                amount,
                 "SUCCESS"
         );
         paymentTransactionRepository.save(tx);

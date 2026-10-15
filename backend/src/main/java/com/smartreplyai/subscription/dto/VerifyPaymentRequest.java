@@ -15,6 +15,7 @@ public class VerifyPaymentRequest {
 
     private String signature;
     private Boolean isSimulated = false;
+    private String paymentMethod;
 
     public VerifyPaymentRequest() {
     }
@@ -65,5 +66,13 @@ public class VerifyPaymentRequest {
 
     public void setIsSimulated(Boolean simulated) {
         isSimulated = simulated;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 }

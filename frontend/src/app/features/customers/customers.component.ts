@@ -76,8 +76,8 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
               </svg>
             </div>
           </div>
-          <div class="kpi-number">{{ totalCustomers > 0 ? '100%' : '0%' }}</div>
-          <div class="kpi-subtext">Verified WhatsApp opt-ins</div>
+          <div class="kpi-number">{{ optedInPercent }}%</div>
+          <div class="kpi-subtext">{{ optedInCount }} verified WhatsApp opt-ins</div>
         </div>
 
         <div class="kpi-card">
@@ -92,7 +92,7 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
               </svg>
             </div>
           </div>
-          <div class="kpi-number">18</div>
+          <div class="kpi-number">{{ recentEnquiries }}</div>
           <div class="kpi-subtext">Active inbound chats this week</div>
         </div>
 
@@ -108,8 +108,8 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
               </svg>
             </div>
           </div>
-          <div class="kpi-number">12</div>
-          <div class="kpi-subtext">High priority & recurring consultations</div>
+          <div class="kpi-number">{{ vipPatients }}</div>
+          <div class="kpi-subtext">Contacts tagged VIP</div>
         </div>
       </div>
 
@@ -1293,6 +1293,10 @@ export class CustomersComponent implements OnInit {
 
   customers: Customer[] = [];
   totalCustomers: number = 0;
+  optedInCount: number = 0;
+  optedInPercent: number = 0;
+  recentEnquiries: number = 0;
+  vipPatients: number = 0;
   isLoading: boolean = false;
   isSaving: boolean = false;
   isExporting: boolean = false;
@@ -1323,6 +1327,27 @@ export class CustomersComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCustomers();
+    this.loadStats();
+  }
+
+  loadStats(): void {
+    this.customerService.getStats().subscribe({
+      next: (res) => {
+        if (!res.success || !res.data) {
+          return;
+        }
+        this.optedInCount = res.data.optedInCustomers || 0;
+        this.optedInPercent = res.data.optedInPercentage || 0;
+        this.recentEnquiries = res.data.recentEnquiries || 0;
+        this.vipPatients = res.data.vipCustomers || 0;
+      },
+      error: () => {
+        this.optedInCount = 0;
+        this.optedInPercent = 0;
+        this.recentEnquiries = 0;
+        this.vipPatients = 0;
+      }
+    });
   }
 
   setFilter(filter: string): void {
@@ -1383,6 +1408,7 @@ export class CustomersComponent implements OnInit {
         this.isSaving = false;
         this.showAddModal = false;
         this.loadCustomers();
+        this.loadStats();
       },
       error: () => {
         // Optimistic addition for demo
@@ -1416,7 +1442,9 @@ export class CustomersComponent implements OnInit {
     const match = this.customers.find(c => c.id === this.selectedCustomer!.id);
     if (match) match.optInStatus = status;
 
-    this.customerService.updateCustomer(this.selectedCustomer.id, { optInStatus: status }).subscribe();
+    this.customerService.updateCustomer(this.selectedCustomer.id, { optInStatus: status }).subscribe({
+      next: () => this.loadStats()
+    });
   }
 
   saveCustomerNotes(): void {
@@ -1438,7 +1466,9 @@ export class CustomersComponent implements OnInit {
     if (confirm(`Are you sure you want to delete ${c.name || c.phoneNumber}?`)) {
       this.customers = this.customers.filter(item => item.id !== c.id);
       this.totalCustomers = Math.max(0, this.totalCustomers - 1);
-      this.customerService.deleteCustomer(c.id).subscribe();
+      this.customerService.deleteCustomer(c.id).subscribe({
+        next: () => this.loadStats()
+      });
     }
   }
 

@@ -26,6 +26,11 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
 
     long countByBusinessId(UUID businessId);
 
+    long countByBusinessIdAndOptInStatus(UUID businessId, String optInStatus);
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.business.id = :businessId AND LOWER(c.tagsJson) LIKE '%vip%'")
+    long countVipByBusinessId(@Param("businessId") UUID businessId);
+
     @Query("SELECT c FROM Customer c WHERE c.business.id = :businessId AND " +
             "(LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(c.phoneNumber) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
