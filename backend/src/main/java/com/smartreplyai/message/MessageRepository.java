@@ -15,6 +15,8 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
     long countByBusinessIdAndConversationId(UUID businessId, UUID conversationId);
     java.util.Optional<Message> findByExternalMessageId(String externalMessageId);
 
+    long countByBusinessIdAndSenderType(UUID businessId, String senderType);
+
     @Modifying
     @Query("DELETE FROM Message m WHERE m.business.id = :businessId AND m.conversation.id = :conversationId")
     void deleteByBusinessIdAndConversationId(@Param("businessId") UUID businessId, @Param("conversationId") UUID conversationId);

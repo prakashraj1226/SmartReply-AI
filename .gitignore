@@ -1,0 +1,80 @@
+# ==============================================================================
+# SmartReply AI - Git Ignore
+# ==============================================================================
+
+# Compiled Java Class Files
+*.class
+**/*.class
+
+# Maven build outputs
+target/
+**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Log files & runtime logs
+*.log
+**/*.log
+logs/
+**/logs/
+*.pid
+**/*.pid
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# BlueJ and package files
+*.ctxt
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Node / Angular Frontend
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.angular/
+**/.angular/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs & Code Editors
+.idea/
+**/.idea/
+*.iml
+**/*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+**/.settings/
+.vscode/
+**/.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -13,6 +13,7 @@ public class WhatsAppConfigDto {
     private boolean isSandbox;
     private boolean hasAccessToken;
     private String webhookCallbackUrl;
+    private long autoReplyCount;
 
     public WhatsAppConfigDto() {
     }
@@ -101,5 +102,13 @@ public class WhatsAppConfigDto {
 
     public void setWebhookCallbackUrl(String webhookCallbackUrl) {
         this.webhookCallbackUrl = webhookCallbackUrl;
+    }
+
+    public long getAutoReplyCount() {
+        return autoReplyCount;
+    }
+
+    public void setAutoReplyCount(long autoReplyCount) {
+        this.autoReplyCount = autoReplyCount;
     }
 }

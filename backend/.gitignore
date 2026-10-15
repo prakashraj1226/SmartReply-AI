@@ -1,0 +1,9 @@
+# Maven target directory & compiled classes
+target/
+*.class
+*.jar
+*.war
+*.log
+.env
+.idea/
+*.iml

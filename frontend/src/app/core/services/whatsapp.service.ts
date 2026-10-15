@@ -20,6 +20,13 @@ export interface WhatsAppConfig {
   sandbox: boolean;
   hasAccessToken: boolean;
   webhookCallbackUrl: string;
+  autoReplyCount?: number;
+}
+
+export interface AutoReplyResult {
+  customerMessage: string;
+  replyText: string;
+  simulated: boolean;
 }
 
 export interface UpdateWhatsAppConfigRequest {
@@ -63,8 +70,8 @@ export class WhatsAppService {
     });
   }
 
-  simulateWebhook(fromPhone: string, text: string, senderName: string): Observable<ApiResponse<string>> {
-    return this.http.post<ApiResponse<string>>(`${this.apiUrl}/simulate-webhook`, {
+  simulateWebhook(fromPhone: string, text: string, senderName: string): Observable<ApiResponse<AutoReplyResult>> {
+    return this.http.post<ApiResponse<AutoReplyResult>>(`${this.apiUrl}/simulate-webhook`, {
       fromPhone,
       text,
       senderName

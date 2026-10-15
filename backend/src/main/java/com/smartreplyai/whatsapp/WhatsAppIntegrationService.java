@@ -6,14 +6,16 @@ import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessRepository;
 import com.smartreplyai.common.BadRequestException;
 import com.smartreplyai.common.ResourceNotFoundException;
+import com.smartreplyai.conversation.Conversation;
+import com.smartreplyai.conversation.ConversationRepository;
 import com.smartreplyai.conversation.ConversationService;
 import com.smartreplyai.customer.Customer;
 import com.smartreplyai.customer.CustomerRepository;
-import com.smartreplyai.message.Message;
 import com.smartreplyai.message.MessageRepository;
 import com.smartreplyai.tenant.TenantContext;
 import com.smartreplyai.whatsapp.client.OfficialWhatsAppCloudApiClient;
 import com.smartreplyai.whatsapp.client.WhatsAppSendResult;
+import com.smartreplyai.whatsapp.dto.AutoReplyResult;
 import com.smartreplyai.whatsapp.dto.UpdateWhatsAppConfigRequest;
 import com.smartreplyai.whatsapp.dto.WhatsAppConfigDto;
 import org.slf4j.Logger;
@@ -22,7 +24,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -41,11 +45,15 @@ public class WhatsAppIntegrationService {
     private final CustomerRepository customerRepository;
     private final MessageRepository messageRepository;
     private final ConversationService conversationService;
+    private final ConversationRepository conversationRepository;
     private final OfficialWhatsAppCloudApiClient whatsAppClient;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.backend-base-url:http://localhost:8080}")
+    @Value("${app.backend-base-url:}")
     private String backendBaseUrl;
+
+    @Value("${server.port:8080}")
+    private int serverPort;
 
     public WhatsAppIntegrationService(IntegrationAccountRepository integrationAccountRepository,
                                       WebhookEventRepository webhookEventRepository,
@@ -53,6 +61,7 @@ public class WhatsAppIntegrationService {
                                       CustomerRepository customerRepository,
                                       MessageRepository messageRepository,
                                       ConversationService conversationService,
+                                      ConversationRepository conversationRepository,
                                       OfficialWhatsAppCloudApiClient whatsAppClient,
                                       ObjectMapper objectMapper) {
         this.integrationAccountRepository = integrationAccountRepository;
@@ -61,6 +70,7 @@ public class WhatsAppIntegrationService {
         this.customerRepository = customerRepository;
         this.messageRepository = messageRepository;
         this.conversationService = conversationService;
+        this.conversationRepository = conversationRepository;
         this.whatsAppClient = whatsAppClient;
         this.objectMapper = objectMapper;
     }
@@ -295,6 +305,69 @@ public class WhatsAppIntegrationService {
     }
 
     @Transactional
+    public AutoReplyResult simulateCustomerMessage(UUID businessId, String fromPhone, String text, String senderName) {
+        if (text == null || text.isBlank()) {
+            throw new BadRequestException("Customer message is required");
+        }
+        String digits = fromPhone == null ? "" : fromPhone.replaceAll("[^0-9]", "");
+        if (digits.length() < 8) {
+            throw new BadRequestException("Customer phone number is required");
+        }
+        String name = (senderName == null || senderName.isBlank()) ? "Customer" : senderName.trim();
+        IntegrationAccount account = integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
+                .orElseGet(() -> {
+                    getOrInitAccount(businessId);
+                    return integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
+                            .orElseThrow(() -> new BadRequestException("WhatsApp is not set up for this business"));
+                });
+
+        String wamid = "wamid.TEST_HOOK_" + System.currentTimeMillis();
+        Map<String, Object> message = new HashMap<>();
+        message.put("from", digits);
+        message.put("id", wamid);
+        message.put("timestamp", String.valueOf(System.currentTimeMillis() / 1000));
+        message.put("type", "text");
+        message.put("text", Map.of("body", text.trim()));
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("display_phone_number", account.getPhoneNumber() == null ? "" : account.getPhoneNumber());
+        metadata.put("phone_number_id", account.getPhoneNumberId() == null ? "" : account.getPhoneNumberId());
+
+        Map<String, Object> value = new HashMap<>();
+        value.put("messaging_product", "whatsapp");
+        value.put("metadata", metadata);
+        value.put("contacts", List.of(Map.of(
+                "profile", Map.of("name", name),
+                "wa_id", digits
+        )));
+        value.put("messages", List.of(message));
+
+        Map<String, Object> payload = Map.of(
+                "object", "whatsapp_business_account",
+                "entry", List.of(Map.of(
+                        "id", "WHATSAPP_BUSINESS_ACCOUNT_ID",
+                        "changes", List.of(Map.of("field", "messages", "value", value))
+                ))
+        );
+
+        try {
+            processIncomingWebhook(objectMapper.writeValueAsString(payload), null);
+        } catch (Exception e) {
+            throw new BadRequestException("The automatic reply could not be created");
+        }
+
+        String formattedPhone = "+" + digits;
+        String reply = customerRepository.findByBusinessIdAndPhoneNumber(businessId, formattedPhone)
+                .flatMap(customer -> conversationRepository.findByBusinessIdAndCustomerId(businessId, customer.getId()))
+                .map(Conversation::getLastMessageSnippet)
+                .filter(snippet -> snippet != null && !snippet.equals(text.trim()))
+                .orElse("The automatic reply is turned off for this chat.");
+
+        boolean simulated = account.isSandbox() || account.getAccessToken() == null || account.getAccessToken().isBlank();
+        return new AutoReplyResult(text.trim(), reply, simulated);
+    }
+
+    @Transactional
     public WhatsAppSendResult testSendMessage(UUID businessId, String recipientPhone, String text) {
         IntegrationAccount account = integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
                 .orElseThrow(() -> new BadRequestException("WhatsApp integration not configured"));
@@ -308,10 +381,13 @@ public class WhatsAppIntegrationService {
     }
 
     private WhatsAppConfigDto toDto(IntegrationAccount account) {
-        String callbackUrl = backendBaseUrl + "/api/webhooks/whatsapp";
+        String base = (backendBaseUrl == null || backendBaseUrl.isBlank())
+                ? "http://localhost:" + serverPort
+                : backendBaseUrl.replaceAll("/$", "");
+        String callbackUrl = base + "/api/webhooks/whatsapp";
         boolean hasToken = account.getAccessToken() != null && !account.getAccessToken().isBlank();
 
-        return new WhatsAppConfigDto(
+        WhatsAppConfigDto dto = new WhatsAppConfigDto(
                 account.getId(),
                 account.getAccountId(),
                 account.getPhoneNumberId(),
@@ -322,5 +398,9 @@ public class WhatsAppIntegrationService {
                 hasToken,
                 callbackUrl
         );
+        if (account.getBusiness() != null && account.getBusiness().getId() != null) {
+            dto.setAutoReplyCount(messageRepository.countByBusinessIdAndSenderType(account.getBusiness().getId(), "AI"));
+        }
+        return dto;
     }
 }

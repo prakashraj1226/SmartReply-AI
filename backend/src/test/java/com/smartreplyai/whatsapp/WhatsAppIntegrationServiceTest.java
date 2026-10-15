@@ -3,6 +3,7 @@ package com.smartreplyai.whatsapp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessRepository;
+import com.smartreplyai.conversation.ConversationRepository;
 import com.smartreplyai.conversation.ConversationService;
 import com.smartreplyai.customer.Customer;
 import com.smartreplyai.customer.CustomerRepository;
@@ -46,6 +47,9 @@ class WhatsAppIntegrationServiceTest {
 
     @Mock
     private ConversationService conversationService;
+
+    @Mock
+    private ConversationRepository conversationRepository;
 
     @Mock
     private OfficialWhatsAppCloudApiClient whatsAppClient;

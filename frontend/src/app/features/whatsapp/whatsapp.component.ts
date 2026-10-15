@@ -1,12 +1,13 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { WhatsAppService, WhatsAppConfig, UpdateWhatsAppConfigRequest, WhatsAppSendResult } from '../../core/services/whatsapp.service';
+import { RouterLink } from '@angular/router';
+import { WhatsAppService, WhatsAppConfig, UpdateWhatsAppConfigRequest, WhatsAppSendResult, AutoReplyResult } from '../../core/services/whatsapp.service';
 
 @Component({
   selector: 'app-whatsapp-integration',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="whatsapp-page">
 
@@ -78,15 +79,15 @@ import { WhatsAppService, WhatsAppConfig, UpdateWhatsAppConfigRequest, WhatsAppS
               </svg>
             </div>
           </div>
-          <div class="kpi-number">1,420</div>
-          <div class="kpi-subtext">100% Meta delivery confirmation</div>
+          <div class="kpi-number">{{ config()?.autoReplyCount ?? 0 }}</div>
+          <div class="kpi-subtext">Automatic replies for this business</div>
         </div>
 
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-label-box">
               <span class="status-indicator purple"></span>
-              <span class="kpi-label">WEBHOOK LATENCY</span>
+              <span class="kpi-label">AUTOMATIC REPLY</span>
             </div>
             <div class="kpi-icon-box purple">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -95,8 +96,8 @@ import { WhatsAppService, WhatsAppConfig, UpdateWhatsAppConfigRequest, WhatsAppS
               </svg>
             </div>
           </div>
-          <div class="kpi-number">42ms</div>
-          <div class="kpi-subtext">Instant HMAC verified webhook</div>
+          <div class="kpi-number">On</div>
+          <div class="kpi-subtext">Uses this business's services and appointments</div>
         </div>
       </div>
 
@@ -207,10 +208,10 @@ import { WhatsAppService, WhatsAppConfig, UpdateWhatsAppConfigRequest, WhatsAppS
                   <input
                     type="text"
                     class="form-control code-font"
-                    [value]="config()?.webhookCallbackUrl || 'http://localhost:8081/api/v1/whatsapp/webhook'"
+                    [value]="config()?.webhookCallbackUrl || ''"
                     readonly
                   />
-                  <button type="button" class="btn-input-addon" (click)="copyToClipboard(config()?.webhookCallbackUrl || 'http://localhost:8081/api/v1/whatsapp/webhook')">
+                  <button type="button" class="btn-input-addon" (click)="copyToClipboard(config()?.webhookCallbackUrl || '')">
                     {{ copiedUrl ? 'Copied!' : 'Copy' }}
                   </button>
                 </div>
@@ -332,8 +333,8 @@ import { WhatsAppService, WhatsAppConfig, UpdateWhatsAppConfigRequest, WhatsAppS
                   </svg>
                 </div>
                 <div>
-                  <h3 class="card-main-title">Simulate Inbound Webhook</h3>
-                  <p class="card-sub-title">Test AI auto-reply grounding via Meta webhook payload</p>
+                  <h3 class="card-main-title">Automatic reply</h3>
+                  <p class="card-sub-title">Send a customer message. The bot answers from this business.</p>
                 </div>
               </div>
             </div>
@@ -376,13 +377,17 @@ import { WhatsAppService, WhatsAppConfig, UpdateWhatsAppConfigRequest, WhatsAppS
                 [disabled]="isSimulatingHook() || !simText.trim()"
                 (click)="simulateInboundWebhook()"
               >
-                <span *ngIf="!isSimulatingHook()">Simulate Webhook Event ⚡</span>
+                <span *ngIf="!isSimulatingHook()">Get automatic reply</span>
                 <span *ngIf="isSimulatingHook()" class="spinner-sm"></span>
               </button>
 
-              <div *ngIf="webhookResultMsg" class="webhook-success-box">
-                <div class="wb-icon">✓</div>
-                <p>{{ webhookResultMsg }}</p>
+              <div *ngIf="autoReply" class="webhook-success-box">
+                <div>
+                  <p><strong>Customer:</strong> {{ autoReply.customerMessage }}</p>
+                  <p><strong>Bot:</strong> {{ autoReply.replyText }}</p>
+                  <p class="sim-notice" *ngIf="autoReply.simulated">This reply is saved in Live Inbox. A real WhatsApp phone receives it after the Meta number is connected.</p>
+                  <a routerLink="/inbox">Open Live Inbox</a>
+                </div>
               </div>
             </div>
           </div>
@@ -1063,10 +1068,10 @@ export class WhatsAppIntegrationComponent implements OnInit {
   testMessageText = 'Hello! This is a test verification message via SmartReply AI.';
   testResult: WhatsAppSendResult | null = null;
 
-  simPhone = '';
+  simPhone = '+919000000001';
   simName = 'Customer';
-  simText = 'What are your business operating hours?';
-  webhookResultMsg = '';
+  simText = 'What services do you offer?';
+  autoReply: AutoReplyResult | null = null;
 
   isSaving = signal(false);
   isTestingSend = signal(false);
@@ -1090,22 +1095,22 @@ export class WhatsAppIntegrationComponent implements OnInit {
         const c = res.data;
         this.config.set(c);
         this.formData = {
-          accountId: c.accountId || '1976776156330460',
-          phoneNumberId: c.phoneNumberId || '1378873838639112',
-          phoneNumber: c.phoneNumber || '+91 90944 60709',
+          accountId: c.accountId || '',
+          phoneNumberId: c.phoneNumberId || '',
+          phoneNumber: c.phoneNumber || '',
           accessToken: '',
-          webhookVerifyToken: c.webhookVerifyToken || 'smartreply_verify_token_secure_2026',
+          webhookVerifyToken: c.webhookVerifyToken || '',
           appSecret: '',
-          isSandbox: true
+          isSandbox: c.sandbox
         };
       },
       error: () => {
         this.formData = {
-          accountId: '1976776156330460',
-          phoneNumberId: '1378873838639112',
-          phoneNumber: '+91 90944 60709',
+          accountId: '',
+          phoneNumberId: '',
+          phoneNumber: '',
           accessToken: '',
-          webhookVerifyToken: 'smartreply_verify_token_secure_2026',
+          webhookVerifyToken: '',
           appSecret: '',
           isSandbox: true
         };
@@ -1123,12 +1128,14 @@ export class WhatsAppIntegrationComponent implements OnInit {
         this.isSaving.set(false);
         this.config.set(res.data);
         this.alertType = 'success';
-        this.alertMessage = '✓ WhatsApp Free Sandbox Gateway connected and verified with Meta webhook endpoint!';
+        this.alertMessage = res.data?.sandbox
+          ? 'Saved. Automatic replies stay in this app until a Meta number is connected.'
+          : 'WhatsApp number connected. Customer messages are answered automatically.';
       },
       error: () => {
         this.isSaving.set(false);
-        this.alertType = 'success';
-        this.alertMessage = '✓ WhatsApp Free Sandbox Gateway connected and verified with Meta webhook endpoint!';
+        this.alertType = 'error';
+        this.alertMessage = 'Could not save the WhatsApp connection.';
       }
     });
   }
@@ -1144,10 +1151,10 @@ export class WhatsAppIntegrationComponent implements OnInit {
       error: () => {
         this.isTestingSend.set(false);
         this.testResult = {
-          success: true,
-          status: 'DELIVERED',
-          messageId: 'wam_free_' + Date.now(),
-          simulated: true
+          success: false,
+          status: 'FAILED',
+          simulated: false,
+          errorMessage: 'The message could not be sent.'
         };
       }
     });
@@ -1155,15 +1162,17 @@ export class WhatsAppIntegrationComponent implements OnInit {
 
   simulateInboundWebhook(): void {
     this.isSimulatingHook.set(true);
-    this.webhookResultMsg = '';
+    this.autoReply = null;
     this.whatsAppService.simulateWebhook(this.simPhone, this.simText, this.simName).subscribe({
       next: (res) => {
         this.isSimulatingHook.set(false);
-        this.webhookResultMsg = `✓ Meta Webhook processed! Patient "${this.simName}" sent "${this.simText}". AI Grounded auto-reply generated in 1.1s (Free Conversation).`;
+        this.autoReply = res.data;
+        this.loadConfig();
       },
       error: () => {
         this.isSimulatingHook.set(false);
-        this.webhookResultMsg = `✓ Meta Webhook processed! Patient "${this.simName}" sent "${this.simText}". AI Grounded auto-reply generated in 1.1s (Free Conversation).`;
+        this.alertType = 'error';
+        this.alertMessage = 'The automatic reply could not be created.';
       }
     });
   }
