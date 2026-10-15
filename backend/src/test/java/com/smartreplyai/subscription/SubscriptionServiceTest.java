@@ -3,7 +3,9 @@ package com.smartreplyai.subscription;
 import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessRepository;
 import com.smartreplyai.conversation.ConversationRepository;
+import com.smartreplyai.common.BadRequestException;
 import com.smartreplyai.subscription.dto.CheckoutOrderDto;
+import com.smartreplyai.subscription.dto.PendingPaymentDto;
 import com.smartreplyai.subscription.dto.SubscriptionDetailsDto;
 import com.smartreplyai.subscription.dto.VerifyPaymentRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,34 +98,85 @@ class SubscriptionServiceTest {
 
     @Test
     void testCreateCheckoutOrder() {
+        when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
         when(planRepository.findByCode("GROWTH")).thenReturn(Optional.of(growthPlan));
+        when(paymentTransactionRepository.findByReferenceCode(any())).thenReturn(Optional.empty());
+        when(paymentTransactionRepository.save(any(PaymentTransaction.class))).thenAnswer(i -> i.getArgument(0));
 
         CheckoutOrderDto order = subscriptionService.createCheckoutOrder(businessId, "GROWTH");
 
         assertNotNull(order);
         assertEquals("GROWTH", order.getPlanCode());
         assertEquals(new BigDecimal("999.00"), order.getAmountInr());
+        assertEquals(new BigDecimal("1179"), order.getAmountDueInr());
+        assertTrue(order.getReferenceCode().startsWith("SR-"));
         assertNotNull(order.getOrderId());
     }
 
     @Test
-    void testVerifyAndActivateSubscription() {
-        when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
-        when(planRepository.findByCode("GROWTH")).thenReturn(Optional.of(growthPlan));
-        when(subscriptionRepository.findByBusinessId(businessId)).thenReturn(Optional.of(subscription));
-        when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(i -> i.getArgument(0));
+    void testSubmitUpiPaymentWaitsForOwner() {
+        PaymentTransaction awaiting = new PaymentTransaction(
+                business, growthPlan, "UPI", "order_123", null, null, new BigDecimal("1179"), "AWAITING_PAYMENT");
+        awaiting.setReferenceCode("SR-7K2M");
+        when(paymentTransactionRepository.findByBusinessIdAndOrderId(businessId, "order_123")).thenReturn(Optional.of(awaiting));
         when(paymentTransactionRepository.save(any(PaymentTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(subscriptionRepository.findByBusinessId(businessId)).thenReturn(Optional.of(subscription));
         when(conversationRepository.countByBusinessIdAndCreatedAtBetween(eq(businessId), any(), any())).thenReturn(0L);
+        when(paymentTransactionRepository.findByBusinessIdOrderByCreatedAtDesc(businessId)).thenReturn(List.of(awaiting));
 
-        VerifyPaymentRequest req = new VerifyPaymentRequest("GROWTH", "order_123", "pay_456", "sig_789", true);
+        VerifyPaymentRequest req = new VerifyPaymentRequest("GROWTH", "order_123", "123456789012", null, false);
+        req.setPaymentMethod("UPI");
+        req.setUpiId("prakashrajkalamathavan@okicici");
 
         SubscriptionDetailsDto updated = subscriptionService.verifyAndActivateSubscription(businessId, req);
 
-        assertNotNull(updated);
-        assertEquals("GROWTH", updated.getPlanCode());
-        assertEquals("ACTIVE", updated.getStatus());
-        verify(paymentTransactionRepository).save(any(PaymentTransaction.class));
+        assertEquals("STARTER", updated.getPlanCode());
+        assertEquals("PENDING_REVIEW", awaiting.getStatus());
+        assertEquals("123456789012", awaiting.getUtr());
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void testOwnerConfirmActivatesPlan() {
+        PaymentTransaction waiting = new PaymentTransaction(
+                business, growthPlan, "UPI", "order_123", "123456789012", null, new BigDecimal("1179"), "PENDING_REVIEW");
+        waiting.setId(UUID.randomUUID());
+        waiting.setReferenceCode("SR-7K2M");
+        when(paymentTransactionRepository.findById(waiting.getId())).thenReturn(Optional.of(waiting));
+        when(paymentTransactionRepository.save(any(PaymentTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(subscriptionRepository.findByBusinessId(businessId)).thenReturn(Optional.of(subscription));
+        when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(i -> i.getArgument(0));
+
+        PendingPaymentDto confirmed = subscriptionService.confirmReceivedPayment(waiting.getId());
+
+        assertEquals("SUCCESS", confirmed.getStatus());
+        assertEquals("GROWTH", subscription.getPlan().getCode());
+        assertEquals("ACTIVE", subscription.getStatus());
         verify(subscriptionRepository).save(subscription);
+    }
+
+    @Test
+    void testOwnerRejectLeavesPlanUnchanged() {
+        PaymentTransaction waiting = new PaymentTransaction(
+                business, growthPlan, "UPI", "order_123", "123456789012", null, new BigDecimal("1179"), "PENDING_REVIEW");
+        waiting.setId(UUID.randomUUID());
+        when(paymentTransactionRepository.findById(waiting.getId())).thenReturn(Optional.of(waiting));
+        when(paymentTransactionRepository.save(any(PaymentTransaction.class))).thenAnswer(i -> i.getArgument(0));
+
+        PendingPaymentDto rejected = subscriptionService.rejectPayment(waiting.getId());
+
+        assertEquals("REJECTED", rejected.getStatus());
+        assertEquals("STARTER", subscription.getPlan().getCode());
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void testSubmitWithoutUtrIsRejected() {
+        VerifyPaymentRequest req = new VerifyPaymentRequest("GROWTH", "order_123", "12", null, false);
+        req.setPaymentMethod("UPI");
+
+        assertThrows(BadRequestException.class, () -> subscriptionService.verifyAndActivateSubscription(businessId, req));
+        verify(subscriptionRepository, never()).save(any());
     }
 
     @Test

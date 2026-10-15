@@ -9,6 +9,8 @@ public class CheckoutOrderDto {
     private BigDecimal amountInr;
     private String keyId;
     private boolean isSimulated;
+    private String referenceCode;
+    private BigDecimal amountDueInr;
 
     public CheckoutOrderDto() {
     }
@@ -59,5 +61,21 @@ public class CheckoutOrderDto {
 
     public void setSimulated(boolean simulated) {
         isSimulated = simulated;
+    }
+
+    public String getReferenceCode() {
+        return referenceCode;
+    }
+
+    public void setReferenceCode(String referenceCode) {
+        this.referenceCode = referenceCode;
+    }
+
+    public BigDecimal getAmountDueInr() {
+        return amountDueInr;
+    }
+
+    public void setAmountDueInr(BigDecimal amountDueInr) {
+        this.amountDueInr = amountDueInr;
     }
 }

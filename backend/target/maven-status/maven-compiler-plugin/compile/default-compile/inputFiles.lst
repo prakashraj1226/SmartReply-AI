@@ -163,6 +163,7 @@
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/subscription/SubscriptionService.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/subscription/dto/CheckoutOrderDto.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/subscription/dto/PaymentTransactionDto.java
+/home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/subscription/dto/PendingPaymentDto.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/subscription/dto/SubscriptionDetailsDto.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/subscription/dto/VerifyPaymentRequest.java
 /home/maintwiz/Music/smartreply-ai/backend/src/main/java/com/smartreplyai/tenant/TenantContext.java

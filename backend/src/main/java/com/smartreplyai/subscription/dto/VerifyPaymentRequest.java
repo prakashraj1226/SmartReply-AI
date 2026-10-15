@@ -16,6 +16,7 @@ public class VerifyPaymentRequest {
     private String signature;
     private Boolean isSimulated = false;
     private String paymentMethod;
+    private String upiId;
 
     public VerifyPaymentRequest() {
     }
@@ -74,5 +75,13 @@ public class VerifyPaymentRequest {
 
     public void setPaymentMethod(String paymentMethod) {
         this.paymentMethod = paymentMethod;
+    }
+
+    public String getUpiId() {
+        return upiId;
+    }
+
+    public void setUpiId(String upiId) {
+        this.upiId = upiId;
     }
 }

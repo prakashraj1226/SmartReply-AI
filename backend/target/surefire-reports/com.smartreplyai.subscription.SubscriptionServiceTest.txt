@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.smartreplyai.subscription.SubscriptionServiceTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.075 s -- in com.smartreplyai.subscription.SubscriptionServiceTest
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.495 s -- in com.smartreplyai.subscription.SubscriptionServiceTest

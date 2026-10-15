@@ -29,6 +29,8 @@ export interface PaymentTransaction {
   paymentId?: string;
   amountInr: number;
   status: string;
+  referenceCode?: string;
+  utr?: string;
   createdAt: string;
 }
 
@@ -55,6 +57,8 @@ export interface CheckoutOrder {
   amountInr: number;
   keyId: string;
   simulated: boolean;
+  referenceCode: string;
+  amountDueInr: number;
 }
 
 export interface VerifyPaymentRequest {
@@ -64,6 +68,7 @@ export interface VerifyPaymentRequest {
   signature?: string;
   isSimulated?: boolean;
   paymentMethod?: string;
+  upiId?: string;
 }
 
 @Injectable({

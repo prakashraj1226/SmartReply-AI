@@ -37,7 +37,16 @@ public class PaymentTransaction {
     private BigDecimal amountInr;
 
     @Column(nullable = false, length = 50)
-    private String status = "SUCCESS"; // SUCCESS, FAILED, REFUNDED
+    private String status = "SUCCESS"; // AWAITING_PAYMENT, PENDING_REVIEW, SUCCESS, REJECTED, FAILED, REFUNDED
+
+    @Column(name = "reference_code", length = 20)
+    private String referenceCode;
+
+    @Column(length = 64)
+    private String utr;
+
+    @Column(name = "upi_id", length = 120)
+    private String upiId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
@@ -130,6 +139,30 @@ public class PaymentTransaction {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getReferenceCode() {
+        return referenceCode;
+    }
+
+    public void setReferenceCode(String referenceCode) {
+        this.referenceCode = referenceCode;
+    }
+
+    public String getUtr() {
+        return utr;
+    }
+
+    public void setUtr(String utr) {
+        this.utr = utr;
+    }
+
+    public String getUpiId() {
+        return upiId;
+    }
+
+    public void setUpiId(String upiId) {
+        this.upiId = upiId;
     }
 
     public Instant getCreatedAt() {

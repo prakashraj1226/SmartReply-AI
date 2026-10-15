@@ -1,11 +1,12 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrder, VerifyPaymentRequest } from '../../core/services/subscription.service';
 
 @Component({
   selector: 'app-subscriptions',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="subscriptions-page">
 
@@ -101,6 +102,12 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
       </div>
 
       <!-- ALERTS -->
+      <div *ngIf="pendingReview() as waiting" class="alert-banner warning">
+        <div class="alert-content">
+          <span>Payment {{ waiting.referenceCode || waiting.utr }} for ₹{{ waiting.amountInr | number:'1.0-0' }} is waiting. {{ waiting.planName }} turns on only after the owner confirms the money in GPay or PhonePe.</span>
+        </div>
+      </div>
+
       <div *ngIf="alertMsg" class="alert-banner" [ngClass]="alertType">
         <div class="alert-content">
           <span class="alert-icon">✓</span>
@@ -234,16 +241,16 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               </tr>
             </thead>
             <tbody>
-              <tr *ngIf="!subscription()?.transactions?.length">
+              <tr *ngIf="!visibleTransactions().length">
                 <td colspan="6">No payments recorded yet.</td>
               </tr>
-              <tr *ngFor="let tx of subscription()?.transactions || []">
-                <td><strong>{{ tx.paymentId || tx.id }}</strong></td>
+              <tr *ngFor="let tx of visibleTransactions()">
+                <td><strong>{{ tx.referenceCode || tx.utr || tx.paymentId || tx.id }}</strong></td>
                 <td>{{ tx.createdAt | date:'mediumDate' }}</td>
                 <td>{{ tx.planName || '—' }}</td>
                 <td>₹{{ tx.amountInr | number }}</td>
                 <td>{{ tx.gateway || '—' }}</td>
-                <td><span class="status-pill-green">{{ tx.status }}</span></td>
+                <td><span [class]="paymentStatusClass(tx.status)">{{ paymentStatusLabel(tx.status) }}</span></td>
               </tr>
             </tbody>
           </table>
@@ -294,8 +301,11 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               <img *ngIf="upiQrUrl" [src]="upiQrUrl" alt="UPI QR code" class="upi-qr" />
               <div class="upi-id">{{ upiAccounts[selectedUpiIndex].upiId }}</div>
               <div class="upi-amount">Pay ₹{{ totalDue() }}</div>
+              <div class="pay-code">Payment code {{ checkoutOrder.referenceCode }}</div>
               <a class="upi-open" [href]="upiPayLink()">Open in UPI app</a>
-              <p class="upi-note">Scan the QR or open the UPI app and pay this exact amount. After the money is received, click I have paid.</p>
+              <p class="upi-note">Pay this exact amount. The code {{ checkoutOrder.referenceCode }} is in the UPI note. Then enter the UPI reference from your app. The plan stays off until the owner confirms the money.</p>
+              <label class="utr-label" for="upi-utr">UPI reference number</label>
+              <input id="upi-utr" class="utr-input" name="utr" [(ngModel)]="utr" placeholder="From GPay or PhonePe" autocomplete="off" />
             </div>
 
             <p class="checkout-error" *ngIf="checkoutError">{{ checkoutError }}</p>
@@ -303,7 +313,7 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
 
           <div class="modal-footer">
             <button class="btn-cancel" (click)="closeCheckoutModal()">Cancel</button>
-            <button class="btn-checkout-confirm" [disabled]="isProcessingPayment()" (click)="confirmPayment()">
+            <button class="btn-checkout-confirm" [disabled]="isProcessingPayment() || utr.trim().length < 6" (click)="confirmPayment()">
               <span *ngIf="!isProcessingPayment()">I have paid ₹{{ totalDue() }}</span>
               <span *ngIf="isProcessingPayment()" class="spinner-sm"></span>
             </button>
@@ -1064,6 +1074,30 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
       font-size: 0.85rem;
     }
 
+    .pay-code {
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: #0f172a;
+    }
+
+    .utr-label {
+      align-self: stretch;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #334155;
+      margin-top: 0.35rem;
+    }
+
+    .utr-input {
+      align-self: stretch;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 0.55rem 0.7rem;
+      font-size: 0.9rem;
+    }
+
     .upi-note {
       margin: 0.35rem 0 0;
       color: #64748b;
@@ -1124,10 +1158,51 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
       box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
     }
 
+    .btn-checkout-confirm:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status-pill-green {
+      background: #ecfdf5;
+      color: #059669;
+      font-size: 0.725rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      border: 1px solid #a7f3d0;
+    }
+
+    .status-pill-amber {
+      background: #fffbeb;
+      color: #b45309;
+      font-size: 0.725rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      border: 1px solid #fde68a;
+    }
+
+    .status-pill-red {
+      background: #fef2f2;
+      color: #b91c1c;
+      font-size: 0.725rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      border: 1px solid #fecaca;
+    }
+
     .alert-banner.error {
       background: #fef2f2;
       border-color: #fecaca;
       color: #991b1b;
+    }
+
+    .alert-banner.warning {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: #92400e;
     }
 
     .alert-banner {
@@ -1182,6 +1257,7 @@ export class SubscriptionsComponent implements OnInit {
   ];
   selectedUpiIndex = 0;
   upiQrUrl = '';
+  utr = '';
 
   constructor(private subscriptionService: SubscriptionService) {}
 
@@ -1281,9 +1357,14 @@ export class SubscriptionsComponent implements OnInit {
   resetPaymentForm(): void {
     this.selectedUpiIndex = 0;
     this.upiQrUrl = '';
+    this.utr = '';
   }
 
   totalDue(): number {
+    const due = this.checkoutOrder?.amountDueInr;
+    if (due != null) {
+      return Math.round(Number(due));
+    }
     return Math.round(Number(this.checkoutOrder?.amountInr || 0) * 1.18);
   }
 
@@ -1294,7 +1375,7 @@ export class SubscriptionsComponent implements OnInit {
       pn: 'SmartReply',
       am: this.totalDue().toFixed(2),
       cu: 'INR',
-      tn: `SmartReply ${this.checkoutOrder?.planCode || ''}`.trim()
+      tn: this.checkoutOrder?.referenceCode || 'SmartReply'
     });
     return `upi://pay?${params.toString()}`;
   }
@@ -1319,6 +1400,11 @@ export class SubscriptionsComponent implements OnInit {
 
   confirmPayment(): void {
     if (!this.checkoutOrder) return;
+    const utr = this.utr.trim();
+    if (utr.length < 6) {
+      this.checkoutError = 'Enter the UPI reference number from GPay or PhonePe.';
+      return;
+    }
 
     this.isProcessingPayment.set(true);
     this.checkoutError = '';
@@ -1326,24 +1412,50 @@ export class SubscriptionsComponent implements OnInit {
     const req: VerifyPaymentRequest = {
       planCode: this.checkoutOrder.planCode,
       orderId: this.checkoutOrder.orderId,
-      paymentId: `${account.label.toLowerCase()}_${account.upiId}`,
+      paymentId: utr,
       paymentMethod: 'UPI',
-      isSimulated: true
+      upiId: account.upiId
     };
 
     this.subscriptionService.verifyPayment(req).subscribe({
       next: (res) => {
         this.isProcessingPayment.set(false);
         this.subscription.set(res.data);
+        const code = this.checkoutOrder?.referenceCode;
         this.closeCheckoutModal();
         this.alertType = 'success';
-        this.alertMsg = `UPI payment recorded on ${account.label}. ${res.data.planName} is now active.`;
+        this.alertMsg = `Payment ${code} is waiting for confirmation. Your plan was not changed.`;
       },
       error: () => {
         this.isProcessingPayment.set(false);
-        this.checkoutError = 'Payment could not be recorded.';
+        this.checkoutError = 'Payment could not be submitted. Open Pay again and enter the UPI reference.';
       }
     });
+  }
+
+  pendingReview() {
+    return (this.subscription()?.transactions || []).find(tx => (tx.status || '').toUpperCase() === 'PENDING_REVIEW') || null;
+  }
+
+  visibleTransactions() {
+    return (this.subscription()?.transactions || []).filter(tx => (tx.status || '').toUpperCase() !== 'AWAITING_PAYMENT');
+  }
+
+  paymentStatusLabel(status: string): string {
+    switch ((status || '').toUpperCase()) {
+      case 'PENDING_REVIEW': return 'Waiting for confirmation';
+      case 'SUCCESS': return 'Received';
+      case 'REJECTED': return 'Not received';
+      default: return status || '—';
+    }
+  }
+
+  paymentStatusClass(status: string): string {
+    switch ((status || '').toUpperCase()) {
+      case 'PENDING_REVIEW': return 'status-pill-amber';
+      case 'REJECTED': return 'status-pill-red';
+      default: return 'status-pill-green';
+    }
   }
 
   formatDate(dateStr: string): string {

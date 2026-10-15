@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem } from '../../core/services/admin.service';
+import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem, PendingPayment } from '../../core/services/admin.service';
 
 @Component({
   selector: 'app-admin',
@@ -115,6 +115,9 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem } f
       <!-- 3. Toolbar Navigation -->
       <div class="toolbar-nav">
         <div class="tabs-pills">
+          <button class="tab-pill-btn" [class.active]="activeTab() === 'payments'" (click)="activeTab.set('payments')">
+            Payments waiting ({{ pendingPayments().length }})
+          </button>
           <button class="tab-pill-btn" [class.active]="activeTab() === 'businesses'" (click)="activeTab.set('businesses')">
             🏢 Business Tenants ({{ businesses().length || 4 }})
           </button>
@@ -124,6 +127,51 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem } f
           <button class="tab-pill-btn" [class.active]="activeTab() === 'audit'" (click)="activeTab.set('audit')">
             🛡 Audit Trails & Security
           </button>
+        </div>
+      </div>
+
+      <div *ngIf="activeTab() === 'payments'" class="table-card">
+        <div class="card-header-flex">
+          <div class="table-title-box">
+            <div>
+              <h3 class="table-title">Payments waiting for your confirmation</h3>
+              <p class="table-subtitle">Match the amount, payment code, and UPI reference in GPay or PhonePe. The clinic plan turns on only after you confirm the money.</p>
+            </div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Clinic</th>
+                <th>Plan</th>
+                <th>Amount</th>
+                <th>Payment code</th>
+                <th>UPI reference</th>
+                <th>Paid to</th>
+                <th>Time</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="!pendingPayments().length">
+                <td colspan="8">No payments are waiting.</td>
+              </tr>
+              <tr *ngFor="let payment of pendingPayments()">
+                <td><strong>{{ payment.businessName }}</strong></td>
+                <td>{{ payment.planName }}</td>
+                <td>₹{{ payment.amountInr | number:'1.0-0' }}</td>
+                <td><strong>{{ payment.referenceCode }}</strong></td>
+                <td>{{ payment.utr }}</td>
+                <td>{{ payment.upiId || '—' }}</td>
+                <td>{{ payment.createdAt | date:'medium' }}</td>
+                <td class="text-right">
+                  <button class="btn-activate" (click)="confirmPayment(payment)">Money received</button>
+                  <button class="btn-suspend" (click)="rejectPayment(payment)">Money not found</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -826,12 +874,13 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem } f
 })
 export class AdminComponent implements OnInit {
   isLoading = signal<boolean>(false);
-  activeTab = signal<'businesses' | 'users' | 'audit'>('businesses');
+  activeTab = signal<'payments' | 'businesses' | 'users' | 'audit'>('payments');
 
   overview = signal<AdminOverview | null>(null);
   businesses = signal<AdminBusiness[]>([]);
   users = signal<AdminUser[]>([]);
   auditLogs = signal<AuditLogItem[]>([]);
+  pendingPayments = signal<PendingPayment[]>([]);
 
   businessSearchQuery = '';
   userSearchQuery = '';
@@ -869,6 +918,11 @@ export class AdminComponent implements OnInit {
       error: () => this.users.set([])
     });
 
+    this.adminService.getPendingPayments().subscribe({
+      next: res => this.pendingPayments.set((res.success && res.data) ? res.data : []),
+      error: () => this.pendingPayments.set([])
+    });
+
     this.adminService.getAuditLogs().subscribe({
       next: res => {
         const list = (res.success && res.data) ? res.data : [];
@@ -904,6 +958,34 @@ export class AdminComponent implements OnInit {
       u.role.toLowerCase().includes(q) ||
       (u.businessName && u.businessName.toLowerCase().includes(q))
     );
+  }
+
+  confirmPayment(payment: PendingPayment): void {
+    this.adminService.confirmPayment(payment.id).subscribe({
+      next: () => {
+        this.pendingPayments.set(this.pendingPayments().filter(item => item.id !== payment.id));
+        this.alertType.set('success');
+        this.alertMessage.set(`${payment.businessName} paid ₹${payment.amountInr}. ${payment.planName} is now active.`);
+      },
+      error: () => {
+        this.alertType.set('error');
+        this.alertMessage.set('Could not confirm this payment.');
+      }
+    });
+  }
+
+  rejectPayment(payment: PendingPayment): void {
+    this.adminService.rejectPayment(payment.id).subscribe({
+      next: () => {
+        this.pendingPayments.set(this.pendingPayments().filter(item => item.id !== payment.id));
+        this.alertType.set('success');
+        this.alertMessage.set(`${payment.businessName} was marked as money not found. Their plan was not changed.`);
+      },
+      error: () => {
+        this.alertType.set('error');
+        this.alertMessage.set('Could not reject this payment.');
+      }
+    });
   }
 
   toggleBusinessStatus(biz: AdminBusiness, newStatus: boolean): void {

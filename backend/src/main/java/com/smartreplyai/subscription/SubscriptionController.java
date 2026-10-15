@@ -59,7 +59,7 @@ public class SubscriptionController {
         if (businessId == null) throw new BadRequestException("Active business tenant required");
 
         SubscriptionDetailsDto details = subscriptionService.verifyAndActivateSubscription(businessId, req);
-        return ResponseEntity.ok(ApiResponse.ok("Subscription activated successfully", details));
+        return ResponseEntity.ok(ApiResponse.ok("Payment submitted. The plan stays the same until the owner confirms the money.", details));
     }
 
     @PostMapping("/cancel")

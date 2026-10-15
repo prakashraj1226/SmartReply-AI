@@ -13,6 +13,8 @@ public class PaymentTransactionDto {
     private String paymentId;
     private BigDecimal amountInr;
     private String status;
+    private String referenceCode;
+    private String utr;
     private Instant createdAt;
 
     public PaymentTransactionDto() {
@@ -26,6 +28,8 @@ public class PaymentTransactionDto {
         dto.setPaymentId(tx.getPaymentId());
         dto.setAmountInr(tx.getAmountInr());
         dto.setStatus(tx.getStatus());
+        dto.setReferenceCode(tx.getReferenceCode());
+        dto.setUtr(tx.getUtr());
         dto.setCreatedAt(tx.getCreatedAt());
         return dto;
     }
@@ -76,6 +80,22 @@ public class PaymentTransactionDto {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getReferenceCode() {
+        return referenceCode;
+    }
+
+    public void setReferenceCode(String referenceCode) {
+        this.referenceCode = referenceCode;
+    }
+
+    public String getUtr() {
+        return utr;
+    }
+
+    public void setUtr(String utr) {
+        this.utr = utr;
     }
 
     public Instant getCreatedAt() {

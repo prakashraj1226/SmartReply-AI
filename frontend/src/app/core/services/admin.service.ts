@@ -39,6 +39,19 @@ export interface AdminUser {
   createdAt: string;
 }
 
+export interface PendingPayment {
+  id: string;
+  businessName: string;
+  planName: string;
+  planCode: string;
+  amountInr: number;
+  referenceCode: string;
+  utr: string;
+  upiId: string;
+  status: string;
+  createdAt: string;
+}
+
 export interface AuditLogItem {
   id: string;
   businessName: string;
@@ -77,5 +90,17 @@ export class AdminService {
 
   getAuditLogs(): Observable<ApiResponse<AuditLogItem[]>> {
     return this.http.get<ApiResponse<AuditLogItem[]>>(`${this.baseUrl}/audit-logs`);
+  }
+
+  getPendingPayments(): Observable<ApiResponse<PendingPayment[]>> {
+    return this.http.get<ApiResponse<PendingPayment[]>>(`${this.baseUrl}/payments/pending`);
+  }
+
+  confirmPayment(id: string): Observable<ApiResponse<PendingPayment>> {
+    return this.http.post<ApiResponse<PendingPayment>>(`${this.baseUrl}/payments/${id}/confirm`, {});
+  }
+
+  rejectPayment(id: string): Observable<ApiResponse<PendingPayment>> {
+    return this.http.post<ApiResponse<PendingPayment>>(`${this.baseUrl}/payments/${id}/reject`, {});
   }
 }

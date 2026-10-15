@@ -108,6 +108,7 @@ com/smartreplyai/whatsapp/client/OfficialWhatsAppCloudApiClient.class
 com/smartreplyai/auth/dto/ResetPasswordRequest.class
 com/smartreplyai/settings/dto/AiConfigDto.class
 com/smartreplyai/customer/CustomerRepository.class
+com/smartreplyai/subscription/dto/PendingPaymentDto.class
 com/smartreplyai/settings/dto/TeamMemberDto.class
 com/smartreplyai/settings/SettingsService.class
 com/smartreplyai/staff/dto/SaveStaffAvailabilityRequest.class

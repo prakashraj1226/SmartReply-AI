@@ -7,6 +7,7 @@ import com.smartreplyai.common.ResourceNotFoundException;
 import com.smartreplyai.conversation.ConversationRepository;
 import com.smartreplyai.subscription.dto.CheckoutOrderDto;
 import com.smartreplyai.subscription.dto.PaymentTransactionDto;
+import com.smartreplyai.subscription.dto.PendingPaymentDto;
 import com.smartreplyai.subscription.dto.SubscriptionDetailsDto;
 import com.smartreplyai.subscription.dto.VerifyPaymentRequest;
 import org.slf4j.Logger;
@@ -18,12 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class SubscriptionService {
@@ -112,63 +115,104 @@ public class SubscriptionService {
 
     @Transactional
     public CheckoutOrderDto createCheckoutOrder(UUID businessId, String planCode) {
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
         SubscriptionPlan plan = planRepository.findByCode(planCode.toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found: " + planCode));
 
-        String orderId = "order_rzp_" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
+        String orderId = "order_upi_" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
+        String reference = newReferenceCode();
+        BigDecimal amountDue = amountWithGst(plan.getPriceInr());
         boolean isSimulated = "rzp_test_mock_key".equals(razorpayKeyId);
 
-        return new CheckoutOrderDto(orderId, plan.getCode(), plan.getPriceInr(), razorpayKeyId, isSimulated);
+        PaymentTransaction tx = new PaymentTransaction(
+                business, plan, "UPI", orderId, null, null, amountDue, "AWAITING_PAYMENT");
+        tx.setReferenceCode(reference);
+        paymentTransactionRepository.save(tx);
+
+        CheckoutOrderDto order = new CheckoutOrderDto(orderId, plan.getCode(), plan.getPriceInr(), razorpayKeyId, isSimulated);
+        order.setReferenceCode(reference);
+        order.setAmountDueInr(amountDue);
+        return order;
     }
 
     @Transactional
     public SubscriptionDetailsDto verifyAndActivateSubscription(UUID businessId, VerifyPaymentRequest req) {
-        Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
-        SubscriptionPlan plan = planRepository.findByCode(req.getPlanCode().toUpperCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Plan not found: " + req.getPlanCode()));
-
         String method = req.getPaymentMethod() == null ? "" : req.getPaymentMethod().trim().toUpperCase();
-        boolean collectedPayment = "UPI".equals(method) || "CARD".equals(method) || "CASH".equals(method);
-        boolean isSimulated = collectedPayment
-                || Boolean.TRUE.equals(req.getIsSimulated())
-                || "rzp_test_mock_key".equals(razorpayKeyId);
-
-        if (!isSimulated && req.getSignature() != null && !req.getSignature().isBlank()) {
-            boolean valid = verifyRazorpaySignature(req.getOrderId(), req.getPaymentId(), req.getSignature(), razorpayKeySecret);
-            if (!valid) {
-                throw new BadRequestException("Invalid payment signature verification");
-            }
+        if (!"UPI".equals(method)) {
+            throw new BadRequestException("Pay with UPI, then submit the reference for confirmation");
         }
 
-        BigDecimal amount = plan.getPriceInr() == null ? BigDecimal.ZERO : plan.getPriceInr();
-        if (collectedPayment) {
-            amount = amount.multiply(new BigDecimal("1.18")).setScale(0, java.math.RoundingMode.HALF_UP);
+        String utr = req.getPaymentId() == null ? "" : req.getPaymentId().trim();
+        if (utr.length() < 6 || utr.length() > 64) {
+            throw new BadRequestException("Enter the UPI reference number from your payment");
         }
 
-        PaymentTransaction tx = new PaymentTransaction(
-                business,
-                plan,
-                collectedPayment ? method : (isSimulated ? "SIMULATED" : "RAZORPAY"),
-                req.getOrderId(),
-                req.getPaymentId(),
-                req.getSignature(),
-                amount,
-                "SUCCESS"
-        );
+        PaymentTransaction tx = paymentTransactionRepository.findByBusinessIdAndOrderId(businessId, req.getOrderId())
+                .orElseThrow(() -> new BadRequestException("Checkout not found. Open Pay again."));
+        if (!"AWAITING_PAYMENT".equals(tx.getStatus()) && !"PENDING_REVIEW".equals(tx.getStatus())) {
+            throw new BadRequestException("This payment was already reviewed");
+        }
+        if (tx.getPlan() == null || !tx.getPlan().getCode().equalsIgnoreCase(req.getPlanCode())) {
+            throw new BadRequestException("Plan does not match this checkout");
+        }
+
+        tx.setStatus("PENDING_REVIEW");
+        tx.setUtr(utr);
+        tx.setPaymentId(utr);
+        tx.setGateway("UPI");
+        String upiId = req.getUpiId() == null ? "" : req.getUpiId().trim();
+        if (!upiId.isBlank()) {
+            tx.setUpiId(upiId.length() > 120 ? upiId.substring(0, 120) : upiId);
+        }
         paymentTransactionRepository.save(tx);
 
-        // Activate / Upgrade Subscription
-        Subscription sub = getOrInitSubscription(businessId);
-        sub.setPlan(plan);
+        logger.info("Payment {} for business {} is waiting for owner confirmation", tx.getReferenceCode(), businessId);
+        return getSubscriptionDetails(businessId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PendingPaymentDto> listPaymentsAwaitingConfirmation() {
+        return paymentTransactionRepository.findDetailedByStatus("PENDING_REVIEW").stream()
+                .map(PendingPaymentDto::fromEntity)
+                .toList();
+    }
+
+    @Transactional
+    public PendingPaymentDto confirmReceivedPayment(UUID paymentId) {
+        PaymentTransaction tx = paymentTransactionRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+        if (!"PENDING_REVIEW".equals(tx.getStatus())) {
+            throw new BadRequestException("This payment is not waiting for confirmation");
+        }
+
+        tx.setStatus("SUCCESS");
+        paymentTransactionRepository.save(tx);
+
+        Subscription sub = getOrInitSubscription(tx.getBusiness().getId());
+        sub.setPlan(tx.getPlan());
         sub.setStatus("ACTIVE");
-        sub.setCurrentPeriodStart(Instant.now());
-        sub.setCurrentPeriodEnd(Instant.now().plus(30, ChronoUnit.DAYS));
+        Instant start = Instant.now();
+        sub.setCurrentPeriodStart(start);
+        sub.setCurrentPeriodEnd(start.plus(30, ChronoUnit.DAYS));
         sub.setCancelAtPeriodEnd(false);
         subscriptionRepository.save(sub);
 
-        logger.info("Activated subscription {} for business {} on plan {}", sub.getId(), business.getName(), plan.getName());
-        return getSubscriptionDetails(businessId);
+        logger.info("Owner confirmed payment {} and activated {} for {}", tx.getReferenceCode(), tx.getPlan().getName(), tx.getBusiness().getName());
+        return PendingPaymentDto.fromEntity(tx);
+    }
+
+    @Transactional
+    public PendingPaymentDto rejectPayment(UUID paymentId) {
+        PaymentTransaction tx = paymentTransactionRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+        if (!"PENDING_REVIEW".equals(tx.getStatus())) {
+            throw new BadRequestException("This payment is not waiting for confirmation");
+        }
+        tx.setStatus("REJECTED");
+        paymentTransactionRepository.save(tx);
+        logger.info("Owner rejected payment {} for {}", tx.getReferenceCode(), tx.getBusiness().getName());
+        return PendingPaymentDto.fromEntity(tx);
     }
 
     @Transactional
@@ -185,6 +229,26 @@ public class SubscriptionService {
         long currentCount = conversationRepository.countByBusinessIdAndCreatedAtBetween(
                 businessId, sub.getCurrentPeriodStart(), sub.getCurrentPeriodEnd());
         return currentCount < sub.getPlan().getMaxConversationsMonthly();
+    }
+
+    private BigDecimal amountWithGst(BigDecimal price) {
+        BigDecimal base = price == null ? BigDecimal.ZERO : price;
+        return base.multiply(new BigDecimal("1.18")).setScale(0, RoundingMode.HALF_UP);
+    }
+
+    private String newReferenceCode() {
+        String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        for (int attempt = 0; attempt < 8; attempt++) {
+            StringBuilder code = new StringBuilder("SR-");
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            for (int i = 0; i < 4; i++) {
+                code.append(alphabet.charAt(random.nextInt(alphabet.length())));
+            }
+            if (paymentTransactionRepository.findByReferenceCode(code.toString()).isEmpty()) {
+                return code.toString();
+            }
+        }
+        throw new BadRequestException("Could not create a payment code. Try again.");
     }
 
     private boolean verifyRazorpaySignature(String orderId, String paymentId, String signature, String secret) {
