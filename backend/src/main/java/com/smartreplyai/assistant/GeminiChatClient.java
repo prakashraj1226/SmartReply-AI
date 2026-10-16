@@ -31,11 +31,11 @@ public class GeminiChatClient {
 
     public GeminiChatClient(ObjectMapper objectMapper,
                             @Value("${app.gemini.api-key:}") String apiKey,
-                            @Value("${app.gemini.model:gemini-3.5-flash-lite}") String model,
+                            @Value("${app.gemini.model:gemini-1.5-flash}") String model,
                             @Value("${app.gemini.base-url:https://generativelanguage.googleapis.com/v1beta}") String baseUrl) {
         this.objectMapper = objectMapper;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.model = (model == null || model.isBlank()) ? "gemini-3.5-flash-lite" : model.trim();
+        this.model = (model == null || model.isBlank()) ? "gemini-1.5-flash" : model.trim();
         this.baseUrl = baseUrl == null ? "" : baseUrl.replaceAll("/$", "");
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))

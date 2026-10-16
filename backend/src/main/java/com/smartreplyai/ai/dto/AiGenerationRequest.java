@@ -12,6 +12,8 @@ public class AiGenerationRequest {
     private String businessName;
     private String businessCategory;
     private String businessDescription;
+    private String businessPhone;
+    private String businessAddress;
     private String operatingHours;
     private String assistantName;
     private String tone;
@@ -60,6 +62,22 @@ public class AiGenerationRequest {
 
     public void setBusinessDescription(String businessDescription) {
         this.businessDescription = businessDescription;
+    }
+
+    public String getBusinessPhone() {
+        return businessPhone;
+    }
+
+    public void setBusinessPhone(String businessPhone) {
+        this.businessPhone = businessPhone;
+    }
+
+    public String getBusinessAddress() {
+        return businessAddress;
+    }
+
+    public void setBusinessAddress(String businessAddress) {
+        this.businessAddress = businessAddress;
     }
 
     public String getOperatingHours() {

@@ -157,6 +157,55 @@ class RuleBasedKnowledgeAiProviderTest {
     }
 
     @Test
+    void generateReply_WhenCustomerAsksOrganisationName_ShouldReturnBusinessName() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setBusinessCategory("Healthcare");
+        req.setCustomerMessage("What is you organisation name");
+        req.setApprovedKnowledge(List.of());
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertEquals("Business Organization Overview", resp.getMatchedQuestion());
+        assertTrue(resp.getReplyText().contains("SmileCare Dental Clinic"));
+    }
+
+    @Test
+    void generateReply_WhenCustomerAsksWhatInformationProvided_ShouldReturnCapabilities() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setCustomerMessage("Which information you Give");
+        req.setApprovedKnowledge(List.of());
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertEquals("Assistant Capabilities", resp.getMatchedQuestion());
+        assertTrue(resp.getReplyText().contains("Treatments & Services"));
+        assertTrue(resp.getReplyText().contains("Appointments"));
+    }
+
+    @Test
+    void generateReply_WhenCustomerAsksForOwnerOrContact_ShouldReturnContactDetails() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        com.smartreplyai.staff.Staff drKarthik = new com.smartreplyai.staff.Staff(null, null, "Dr. Karthik Menon", "DOCTOR", "info@smilecare.com", null);
+        req.setStaffMembers(List.of(drKarthik));
+        req.setCustomerMessage("Give the owner number i will suggest");
+        req.setApprovedKnowledge(List.of());
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertEquals("Contact Information", resp.getMatchedQuestion());
+        assertTrue(resp.getReplyText().contains("Dr. Karthik Menon"));
+    }
+
+    @Test
     void generateReply_WhenCustomerAsksAboutServices_ShouldReturnGroundedCatalogList() {
         Business biz = new Business();
         biz.setName("Luxe Hair Lounge");
@@ -293,5 +342,110 @@ class RuleBasedKnowledgeAiProviderTest {
         assertTrue(resp.getReplyText().contains("appointment has been successfully confirmed"));
         assertTrue(resp.getReplyText().contains("Teeth Cleaning"));
         org.mockito.Mockito.verify(mockAptService).createAppointment(org.mockito.ArgumentMatchers.eq(bizId), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void generateReply_WhenCustomerSendsOkayOrThanks_ShouldReturnWarmAcknowledgement() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setCustomerMessage("Okay");
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertTrue(resp.getReplyText().contains("welcome"));
+        assertEquals("Acknowledgement", resp.getMatchedQuestion());
+    }
+
+    @Test
+    void generateReply_WhenCustomerMentionsEmergencyOrSeverePain_ShouldReturnEmergencyGuidance() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setCustomerMessage("I have severe tooth pain and bleeding");
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertTrue(resp.getReplyText().contains("emergency") || resp.getReplyText().contains("relief"));
+        assertEquals("Emergency Assistance", resp.getMatchedQuestion());
+    }
+
+    @Test
+    void generateReply_WhenCustomerAsksLocationOrAddress_ShouldReturnClinicAddress() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setBusinessAddress("124 Cross Cut Road, Gandhipuram, Coimbatore");
+        req.setCustomerMessage("Where are you located?");
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertTrue(resp.getReplyText().contains("124 Cross Cut Road"));
+        assertEquals("Location and Address", resp.getMatchedQuestion());
+    }
+
+    @Test
+    void generateReply_WhenCustomerAsksIfAi_ShouldReturnFriendlyAiIntroduction() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setCustomerMessage("Are you AI or human?");
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertTrue(resp.getReplyText().contains("AI assistant for SmileCare Dental Clinic"));
+        assertEquals("AI Assistant Small Talk", resp.getMatchedQuestion());
+    }
+
+    @Test
+    void generateReply_WhenCustomerAsksServicesAvailable_ShouldListAllActiveServices() {
+        Business biz = new Business();
+        biz.setName("SmileCare Dental Clinic");
+
+        com.smartreplyai.servicecatalog.ServiceItem s1 = new com.smartreplyai.servicecatalog.ServiceItem(
+                biz, null, "Dental Consultation & Digital X-Ray", "DENTAL", 30, java.math.BigDecimal.valueOf(500)
+        );
+        com.smartreplyai.servicecatalog.ServiceItem s2 = new com.smartreplyai.servicecatalog.ServiceItem(
+                biz, null, "Laser Teeth Whitening", "DENTAL", 60, java.math.BigDecimal.valueOf(5000)
+        );
+
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setCustomerMessage("What are the service available");
+        req.setServices(List.of(s1, s2));
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertTrue(resp.getReplyText().contains("Dental Consultation & Digital X-Ray"));
+        assertTrue(resp.getReplyText().contains("Laser Teeth Whitening"));
+        assertEquals("Service Catalog Inquiry", resp.getMatchedQuestion());
+    }
+
+    @Test
+    void generateReply_WhenCustomerAsksStaff_ShouldListActiveStaff() {
+        Business biz = new Business();
+        biz.setName("SmileCare Dental Clinic");
+
+        com.smartreplyai.staff.Staff st1 = new com.smartreplyai.staff.Staff();
+        st1.setName("Dr. Karthik Menon");
+        st1.setStaffType("DENTIST");
+
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setCustomerMessage("How many staff are there");
+        req.setStaffMembers(List.of(st1));
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertTrue(resp.getReplyText().contains("Dr. Karthik Menon"));
+        assertEquals("Staff Inquiry", resp.getMatchedQuestion());
     }
 }

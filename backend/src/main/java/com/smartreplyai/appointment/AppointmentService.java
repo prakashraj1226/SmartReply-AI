@@ -105,6 +105,9 @@ public class AppointmentService {
             }
         } else if (serviceId != null) {
             candidateStaff = staffServiceMappingRepository.findEligibleStaffForService(businessId, serviceId);
+            if (candidateStaff.isEmpty()) {
+                candidateStaff = staffRepository.findByBusinessIdAndIsActiveTrue(businessId);
+            }
         } else {
             candidateStaff = staffRepository.findByBusinessIdAndIsActiveTrue(businessId);
         }
@@ -138,15 +141,24 @@ public class AppointmentService {
             // Check availability schedule
             Optional<StaffAvailability> availOpt = staffAvailabilityRepository
                     .findByBusinessIdAndStaffIdAndDayOfWeek(businessId, staff.getId(), dayOfWeek);
-            if (availOpt.isEmpty() || !availOpt.get().isActive()) {
-                continue;
-            }
 
-            StaffAvailability avail = availOpt.get();
-            LocalTime shiftStart = avail.getStartTime();
-            LocalTime shiftEnd = avail.getEndTime();
-            LocalTime breakStart = avail.getBreakStartTime();
-            LocalTime breakEnd = avail.getBreakEndTime();
+            LocalTime shiftStart = LocalTime.of(9, 0);
+            LocalTime shiftEnd = LocalTime.of(19, 0);
+            LocalTime breakStart = LocalTime.of(13, 0);
+            LocalTime breakEnd = LocalTime.of(14, 0);
+
+            if (availOpt.isPresent()) {
+                StaffAvailability avail = availOpt.get();
+                if (!avail.isActive()) {
+                    continue; // Explicitly marked off/inactive on this day
+                }
+                shiftStart = avail.getStartTime() != null ? avail.getStartTime() : shiftStart;
+                shiftEnd = avail.getEndTime() != null ? avail.getEndTime() : shiftEnd;
+                breakStart = avail.getBreakStartTime();
+                breakEnd = avail.getBreakEndTime();
+            } else if (dayOfWeek == 7) {
+                continue; // Sunday closed by default
+            }
 
             // Fetch existing appointments for this staff member on this date
             ZonedDateTime dayStartZdt = date.atStartOfDay(zone);

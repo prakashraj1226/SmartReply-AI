@@ -56,6 +56,9 @@ public class TelegramIntegrationService {
     @Value("${backend.base-url:}")
     private String backendBaseUrl;
 
+    @Value("${app.telegram.bot-token:${TELEGRAM_BOT_TOKEN:}}")
+    private String defaultBotToken;
+
     public TelegramIntegrationService(IntegrationAccountRepository integrationAccountRepository,
                                       BusinessRepository businessRepository,
                                       CustomerRepository customerRepository,
@@ -93,6 +96,24 @@ public class TelegramIntegrationService {
 
         if (account.getWebhookVerifyToken() == null || account.getWebhookVerifyToken().isBlank()) {
             account.setWebhookVerifyToken("tg_sec_" + UUID.randomUUID().toString().replace("-", ""));
+            account = integrationAccountRepository.save(account);
+        }
+
+        if ((account.getAccessToken() == null || account.getAccessToken().isBlank())
+                && defaultBotToken != null && !defaultBotToken.isBlank()) {
+            account.setAccessToken(defaultBotToken.trim());
+            TelegramBotInfo botInfo = telegramClient.getMe(defaultBotToken.trim());
+            if (botInfo.isValid()) {
+                account.setStatus("CONNECTED");
+                account.setSandbox(false);
+                if (botInfo.getUsername() != null) {
+                    account.setBotUsername(botInfo.getUsername());
+                    account.setPhoneNumber(botInfo.getUsername());
+                }
+                if (botInfo.getFirstName() != null) {
+                    account.setDisplayName(botInfo.getFirstName());
+                }
+            }
             account = integrationAccountRepository.save(account);
         }
 

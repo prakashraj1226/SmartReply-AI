@@ -55,7 +55,25 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
             return new AiGenerationResponse(greeting, 0.98, false, null, "Greeting", 25, elapsed, getProviderName());
         }
 
-        // 2. Appointment Availability & Safe Booking Intent Engine
+        // 2. Handle Acknowledgements, Thanks, and conversational closing
+        if (isAcknowledgementIntent(customerText)) {
+            String ack = "You're very welcome! If you need more information or wish to book an appointment at "
+                    + (req.getBusinessName() != null ? req.getBusinessName() : "our clinic")
+                    + ", feel free to message anytime. Have a wonderful day!";
+            long elapsed = System.currentTimeMillis() - startTime;
+            return new AiGenerationResponse(ack, 0.98, false, null, "Acknowledgement", 25, elapsed, getProviderName());
+        }
+
+        // 3. Emergency & Acute Pain Grounding
+        if (isEmergencyIntent(customerText)) {
+            String reply = "If you are experiencing severe pain, acute swelling, or a medical/dental emergency, our clinic prioritizes same-day relief visits! Please come to "
+                    + (req.getBusinessName() != null ? req.getBusinessName() : "our clinic")
+                    + " right away or ask me to check today's emergency appointment slots.";
+            long elapsed = System.currentTimeMillis() - startTime;
+            return new AiGenerationResponse(reply, 0.98, false, null, "Emergency Assistance", 30, elapsed, getProviderName());
+        }
+
+        // 4. Appointment Availability & Safe Booking Intent Engine
         if (isAppointmentIntent(customerText) && appointmentService != null && req.getBusinessId() != null) {
             try {
                 AiGenerationResponse bookingResp = handleAppointmentIntent(req, customerText, startTime);
@@ -67,7 +85,7 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
             }
         }
 
-        // 3. Service Catalog & Pricing Grounding
+        // 5. Service Catalog & Pricing Grounding
         if (isServiceInquiryIntent(customerText) && req.getServices() != null && !req.getServices().isEmpty()) {
             AiGenerationResponse serviceResp = handleServiceInquiry(req, customerText, startTime);
             if (serviceResp != null) {
@@ -75,7 +93,7 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
             }
         }
 
-        // 4. Staff / Specialists Grounding
+        // 6. Staff / Specialists Grounding
         if (isStaffInquiryIntent(customerText) && req.getStaffMembers() != null && !req.getStaffMembers().isEmpty()) {
             AiGenerationResponse staffResp = handleStaffInquiry(req, startTime);
             if (staffResp != null) {
@@ -83,7 +101,7 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
             }
         }
 
-        // 5. Operating Hours Grounding
+        // 7. Operating Hours Grounding (Only if hours are configured on the business)
         if (isOperatingHoursIntent(customerText) && req.getOperatingHours() != null && !req.getOperatingHours().isBlank()) {
             String hoursReply = "Our operating hours at " + req.getBusinessName() + " are: " + req.getOperatingHours()
                     + ". Would you like to schedule a visit or consultation?";
@@ -91,7 +109,67 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
             return new AiGenerationResponse(hoursReply, 0.95, false, null, "Operating Hours", 30, elapsed, getProviderName());
         }
 
-        // 6. Knowledge Base (FAQ) Article Match
+        // 8. Location & Address Grounding
+        if (isLocationIntent(customerText)) {
+            String addr = (req.getBusinessAddress() != null && !req.getBusinessAddress().isBlank())
+                    ? req.getBusinessAddress()
+                    : "our main clinic branch";
+            String reply = req.getBusinessName() + " is located at: " + addr
+                    + ". You can visit us during operating hours or book an appointment right here on chat. Would you like to check open slots?";
+            long elapsed = System.currentTimeMillis() - startTime;
+            return new AiGenerationResponse(reply, 0.95, false, null, "Location and Address", 30, elapsed, getProviderName());
+        }
+
+        // 9. Organization & Business Identity Grounding
+        if (isOrganizationIntent(customerText) && req.getBusinessName() != null && !req.getBusinessName().isBlank()) {
+            StringBuilder sb = new StringBuilder("We are " + req.getBusinessName());
+            if (req.getBusinessCategory() != null && !req.getBusinessCategory().isBlank()) {
+                sb.append(" (").append(req.getBusinessCategory()).append(")");
+            }
+            sb.append(". ");
+            if (req.getBusinessDescription() != null && !req.getBusinessDescription().isBlank()) {
+                sb.append(req.getBusinessDescription()).append(" ");
+            }
+            sb.append("I am your automated AI assistant here to assist you with treatments, pricing, timings, and booking doctor appointments.");
+            long elapsed = System.currentTimeMillis() - startTime;
+            return new AiGenerationResponse(sb.toString().trim(), 0.95, false, null, "Business Organization Overview", 30, elapsed, getProviderName());
+        }
+
+        // 10. Assistant Capabilities & "Which information you give" Grounding
+        if (isCapabilityIntent(customerText)) {
+            StringBuilder sb = new StringBuilder("At " + req.getBusinessName() + ", I can help you with:\n");
+            sb.append("• Treatments & Services — pricing, duration & procedures\n");
+            sb.append("• Specialists & Doctors — availability and profiles\n");
+            sb.append("• Operating Hours — clinic working hours and timings\n");
+            sb.append("• Appointments — checking available slots and booking\n");
+            sb.append("\nYou can ask me questions like 'What are your dental cleaning charges?' or 'Are you open tomorrow?'");
+            long elapsed = System.currentTimeMillis() - startTime;
+            return new AiGenerationResponse(sb.toString().trim(), 0.95, false, null, "Assistant Capabilities", 35, elapsed, getProviderName());
+        }
+
+        // 11. Contact & Management Inquiry Grounding
+        if (isContactIntent(customerText)) {
+            StringBuilder sb = new StringBuilder("You can reach " + req.getBusinessName() + " right here on this chat! ");
+            if (req.getBusinessPhone() != null && !req.getBusinessPhone().isBlank()) {
+                sb.append("Direct phone: ").append(req.getBusinessPhone()).append(". ");
+            }
+            if (req.getStaffMembers() != null && !req.getStaffMembers().isEmpty()) {
+                sb.append("Our clinical team is led by ").append(req.getStaffMembers().get(0).getName()).append(". ");
+            }
+            sb.append("If you need direct assistance from our management, a team member will follow up with you. You can also message your query or book a visit directly.");
+            long elapsed = System.currentTimeMillis() - startTime;
+            return new AiGenerationResponse(sb.toString().trim(), 0.95, false, null, "Contact Information", 30, elapsed, getProviderName());
+        }
+
+        // 12. Small Talk & Identity Grounding
+        if (isSmallTalkOrIdentityIntent(customerText)) {
+            String reply = "I am the AI assistant for " + req.getBusinessName()
+                    + "! I am here 24/7 to help you with treatment details, doctor availability, clinic timings, and scheduling appointments. How can I assist you today?";
+            long elapsed = System.currentTimeMillis() - startTime;
+            return new AiGenerationResponse(reply, 0.98, false, null, "AI Assistant Small Talk", 30, elapsed, getProviderName());
+        }
+
+        // 9. Knowledge Base (FAQ) Article Match
         KnowledgeArticle bestMatch = null;
         double highestScore = 0.0;
 
@@ -162,11 +240,18 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
     }
 
     private AiGenerationResponse handleAppointmentIntent(AiGenerationRequest req, String text, long startTime) {
-        LocalDate targetDate = LocalDate.now().plusDays(1);
-        if (text.contains("today")) {
-            targetDate = LocalDate.now();
-        } else if (text.contains("tomorrow")) {
+        LocalDate targetDate = LocalDate.now();
+        if (text.contains("tomorrow")) {
             targetDate = LocalDate.now().plusDays(1);
+        } else if (text.contains("today")) {
+            targetDate = LocalDate.now();
+        } else if (targetDate.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+            targetDate = targetDate.plusDays(1); // Default to Monday if today is Sunday
+        }
+
+        // If target date is Sunday, advance to Monday
+        if (targetDate.getDayOfWeek() == java.time.DayOfWeek.SUNDAY && !text.contains("today")) {
+            targetDate = targetDate.plusDays(1);
         }
 
         // Find service match
@@ -198,6 +283,16 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
         UUID staffId = targetStaff != null ? targetStaff.getId() : null;
 
         List<TimeSlotDto> slots = appointmentService.getAvailableSlots(req.getBusinessId(), null, serviceId, staffId, targetDate);
+
+        // If slots are exhausted for targetDate (e.g. clinic closed or end of day), look ahead to next working day
+        if (slots.isEmpty() && !text.contains("today")) {
+            LocalDate nextDay = targetDate.plusDays(targetDate.getDayOfWeek() == java.time.DayOfWeek.SATURDAY ? 2 : 1);
+            List<TimeSlotDto> nextSlots = appointmentService.getAvailableSlots(req.getBusinessId(), null, serviceId, staffId, nextDay);
+            if (!nextSlots.isEmpty()) {
+                targetDate = nextDay;
+                slots = nextSlots;
+            }
+        }
 
         // Check if user requested an explicit time (e.g. "10:00", "11:30", "10am", "2pm")
         String extractedTime = extractRequestedTime(text);
@@ -293,11 +388,15 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
     }
 
     private boolean isServiceInquiryIntent(String text) {
-        return text.contains("service") || text.contains("treatment") || text.contains("price")
-                || text.contains("pricing") || text.contains("cost") || text.contains("rate")
+        if (text == null || text.isBlank()) return false;
+        return text.contains("service") || text.contains("treatment") || text.contains("procedure")
+                || text.contains("price") || text.contains("pricing") || text.contains("cost")
+                || text.contains("rate") || text.contains("charge") || text.contains("fee")
                 || text.contains("menu") || text.contains("offer") || text.contains("how much")
-                || text.contains("haircut") || text.contains("facial") || text.contains("cleaning")
-                || text.contains("root canal");
+                || text.contains("cleaning") || text.contains("scaling") || text.contains("polishing")
+                || text.contains("whitening") || text.contains("root canal") || text.contains("filling")
+                || text.contains("extraction") || text.contains("x-ray") || text.contains("xray")
+                || text.contains("implant") || text.contains("braces") || text.contains("consultation");
     }
 
     private AiGenerationResponse handleServiceInquiry(AiGenerationRequest req, String text, long startTime) {
@@ -339,10 +438,74 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
         return new AiGenerationResponse(sb.toString().trim(), 0.95, false, null, "Staff Inquiry", 30, elapsed, getProviderName());
     }
 
+    private boolean isOrganizationIntent(String text) {
+        if (text == null || text.isBlank()) return false;
+        return text.contains("organisation") || text.contains("organization") || text.contains("business name")
+                || text.contains("clinic name") || text.contains("company name") || text.contains("who are you")
+                || text.contains("what is your name") || text.contains("what clinic") || text.contains("about your business")
+                || text.contains("about you") || text.contains("unga peru") || text.contains("enga irukku");
+    }
+
+    private boolean isCapabilityIntent(String text) {
+        if (text == null || text.isBlank()) return false;
+        return text.contains("which information") || text.contains("what information") || text.contains("information you give")
+                || text.contains("information you provide") || text.contains("what can you do") || text.contains("what do you do")
+                || text.contains("how can you help") || text.contains("what can i ask") || text.contains("how does this work")
+                || text.contains("features") || text.contains("help me") || text.contains("enna panna mudiyum") || text.contains("guide me");
+    }
+
+    private boolean isContactIntent(String text) {
+        if (text == null || text.isBlank()) return false;
+        return text.contains("owner number") || text.contains("doctor number") || text.contains("phone number")
+                || text.contains("contact number") || text.contains("mobile number") || text.contains("owner phone")
+                || text.contains("owner") || text.contains("how to contact") || text.contains("call you")
+                || text.contains("contact details");
+    }
+
     private boolean isOperatingHoursIntent(String text) {
         return text.contains("timing") || text.contains("hours") || text.contains("open")
                 || text.contains("close") || text.contains("sunday") || text.contains("working hours")
                 || text.contains("schedule");
+    }
+
+    private boolean isAcknowledgementIntent(String text) {
+        if (text == null || text.isBlank()) return false;
+        String clean = text.replaceAll("[^a-zA-Z0-9 ]", " ").replaceAll("\\s+", " ").trim().toLowerCase();
+        Set<String> acks = Set.of(
+                "ok", "okay", "okie", "k", "kk", "thanks", "thank you", "thank u", "tq",
+                "sure", "cool", "got it", "fine", "alright", "great", "nice", "done",
+                "bye", "goodbye", "see you", "take care", "understood", "super", "perfect", "seri", "nandri"
+        );
+        if (acks.contains(clean)) return true;
+        for (String a : acks) {
+            if (clean.equals(a) || clean.startsWith(a + " ") || clean.endsWith(" " + a)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isEmergencyIntent(String text) {
+        if (text == null || text.isBlank()) return false;
+        return text.contains("emergency") || text.contains("severe pain") || text.contains("toothache")
+                || text.contains("tooth ache") || text.contains("tooth pain") || text.contains("bleeding")
+                || text.contains("swelling") || text.contains("urgent") || text.contains("vali")
+                || (text.contains("pain") && !text.contains("painless"));
+    }
+
+    private boolean isLocationIntent(String text) {
+        if (text == null || text.isBlank()) return false;
+        return text.contains("location") || text.contains("address") || text.contains("where are you")
+                || text.contains("where is") || text.contains("directions") || text.contains("how to reach")
+                || text.contains("map") || text.contains("place") || text.contains("enga irukku");
+    }
+
+    private boolean isSmallTalkOrIdentityIntent(String text) {
+        if (text == null || text.isBlank()) return false;
+        return (text.contains("you") && (text.contains("ai") || text.contains("bot") || text.contains("human") || text.contains("real") || text.contains("robot")))
+                || text.contains("how are you") || text.contains("who made you") || text.contains("ai assistant")
+                || text.contains("chatbot") || text.contains("robot") || text.contains("who are u")
+                || text.contains("what is your name");
     }
 
     private boolean isGreeting(String text) {

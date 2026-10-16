@@ -26,7 +26,10 @@ public class AiService {
 
     private static final Logger logger = LoggerFactory.getLogger(AiService.class);
     private static final Set<String> KEEP_EXACT_REPLY = Set.of(
-            "Greeting", "Appointment Booked", "Available Slots", "Slots Unavailable");
+            "Greeting", "Acknowledgement", "Appointment Booked", "Available Slots", "Slots Unavailable",
+            "Business Organization Overview", "Assistant Capabilities", "Contact Information",
+            "Operating Hours", "Service Pricing Inquiry", "Service Catalog Inquiry", "Staff Inquiry",
+            "Emergency Assistance", "Location and Address", "AI Assistant Small Talk");
 
     private final AiConfigurationRepository aiConfigurationRepository;
     private final KnowledgeArticleRepository knowledgeArticleRepository;
@@ -85,6 +88,8 @@ public class AiService {
         req.setBusinessName(business.getName());
         req.setBusinessCategory(business.getCategory());
         req.setBusinessDescription(business.getDescription());
+        req.setBusinessPhone(business.getPhone());
+        req.setBusinessAddress(business.getAddress());
         req.setOperatingHours(business.getOperatingHoursJson());
         req.setAssistantName(config.getAssistantName());
         req.setTone(config.getTone());
