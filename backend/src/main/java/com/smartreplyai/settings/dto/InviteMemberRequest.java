@@ -15,7 +15,19 @@ public class InviteMemberRequest {
     @NotBlank(message = "Role is required")
     private String role; // BUSINESS_ADMIN, MANAGER, RECEPTIONIST, DOCTOR, DENTIST, SALON_STAFF, AGENT
 
+    private String phone;
+
+    private String password;
+
     public InviteMemberRequest() {
+    }
+
+    public InviteMemberRequest(String email, String fullName, String role, String phone, String password) {
+        this.email = email;
+        this.fullName = fullName;
+        this.role = role;
+        this.phone = phone;
+        this.password = password;
     }
 
     public String getEmail() {
@@ -40,5 +52,21 @@ public class InviteMemberRequest {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

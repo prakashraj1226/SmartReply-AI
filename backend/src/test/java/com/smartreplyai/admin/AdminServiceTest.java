@@ -92,6 +92,7 @@ class AdminServiceTest {
         assertNotNull(overview);
         assertEquals(2, overview.getTotalBusinesses());
         assertEquals(1, overview.getActiveBusinesses());
+        assertEquals(1, overview.getSuspendedBusinesses());
         assertEquals(5, overview.getTotalUsers());
         assertEquals(42, overview.getTotalConversations());
         assertEquals(150, overview.getTotalMessages());
@@ -120,6 +121,10 @@ class AdminServiceTest {
 
         assertFalse(result.isActive());
         verify(auditLogService, times(1)).logAction(any(), eq(adminUser), eq("BUSINESS_SUSPENDED"), eq("BUSINESS"), eq(bId.toString()), any(), eq("127.0.0.1"));
+
+        AdminBusinessDto activated = adminService.updateBusinessStatus(bId, true, adminUser, "127.0.0.1");
+        assertTrue(activated.isActive());
+        verify(auditLogService, times(1)).logAction(any(), eq(adminUser), eq("BUSINESS_ACTIVATED"), eq("BUSINESS"), eq(bId.toString()), any(), eq("127.0.0.1"));
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.smartreplyai.admin.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -8,6 +10,7 @@ public class AdminUserDto {
     private String fullName;
     private String email;
     private String role;
+    @JsonProperty("isActive")
     private boolean isActive;
     private boolean emailVerified;
     private String businessName;
@@ -48,10 +51,12 @@ public class AdminUserDto {
         this.role = role;
     }
 
+    @JsonProperty("isActive")
     public boolean isActive() {
         return isActive;
     }
 
+    @JsonProperty("isActive")
     public void setActive(boolean active) {
         isActive = active;
     }

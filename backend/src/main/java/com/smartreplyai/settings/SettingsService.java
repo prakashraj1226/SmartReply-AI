@@ -20,7 +20,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -35,6 +40,7 @@ public class SettingsService {
     private final SubscriptionService subscriptionService;
     private final AuditLogService auditLogService;
     private final StaffRepository staffRepository;
+    private final com.smartreplyai.subscription.PlanLimitService planLimitService;
 
     public SettingsService(BusinessRepository businessRepository,
                            AiConfigurationRepository aiConfigurationRepository,
@@ -43,7 +49,8 @@ public class SettingsService {
                            PasswordEncoder passwordEncoder,
                            SubscriptionService subscriptionService,
                            AuditLogService auditLogService,
-                           StaffRepository staffRepository) {
+                           StaffRepository staffRepository,
+                           com.smartreplyai.subscription.PlanLimitService planLimitService) {
         this.businessRepository = businessRepository;
         this.aiConfigurationRepository = aiConfigurationRepository;
         this.businessMemberRepository = businessMemberRepository;
@@ -52,6 +59,7 @@ public class SettingsService {
         this.subscriptionService = subscriptionService;
         this.auditLogService = auditLogService;
         this.staffRepository = staffRepository;
+        this.planLimitService = planLimitService;
     }
 
     @Transactional(readOnly = true)
@@ -166,16 +174,58 @@ public class SettingsService {
 
     @Transactional(readOnly = true)
     public List<TeamMemberDto> getTeamMembers(UUID businessId) {
-        List<BusinessMember> members = businessMemberRepository.findByBusinessId(businessId);
-        return members.stream().map(m -> new TeamMemberDto(
-                m.getId(),
-                m.getUser().getId(),
-                m.getUser().getFullName(),
-                m.getUser().getEmail(),
-                m.getRole(),
-                m.getMembershipStatus() != null ? m.getMembershipStatus() : "ACTIVE",
-                m.getJoinedAt() != null ? m.getJoinedAt() : m.getCreatedAt()
-        )).collect(Collectors.toList());
+        List<BusinessMember> members = businessMemberRepository.findByBusinessIdWithUser(businessId);
+        Set<String> seenEmails = new HashSet<>();
+        List<TeamMemberDto> dtos = new ArrayList<>();
+
+        for (BusinessMember m : members) {
+            if (m.getUser() == null) continue;
+            String email = m.getUser().getEmail() != null ? m.getUser().getEmail().toLowerCase() : "";
+            if (!email.isBlank()) {
+                seenEmails.add(email);
+            }
+            dtos.add(new TeamMemberDto(
+                    m.getId(),
+                    m.getUser().getId(),
+                    m.getUser().getFullName() != null ? m.getUser().getFullName() : "Team Member",
+                    m.getUser().getEmail(),
+                    m.getUser().getPhone(),
+                    m.getRole(),
+                    m.getMembershipStatus() != null ? m.getMembershipStatus() : "ACTIVE",
+                    m.getJoinedAt() != null ? m.getJoinedAt() : m.getCreatedAt()
+            ));
+        }
+
+        if (staffRepository != null) {
+            List<Staff> extraStaff = staffRepository.findByBusinessId(businessId);
+            for (Staff s : extraStaff) {
+                if (!s.isActive()) {
+                    continue; // Skip deactivated or deleted staff members
+                }
+                String sEmail = s.getEmail() != null ? s.getEmail().toLowerCase() : "";
+                if (!sEmail.isBlank() && seenEmails.contains(sEmail)) {
+                    continue;
+                }
+                if (s.getUser() != null && s.getUser().getEmail() != null && seenEmails.contains(s.getUser().getEmail().toLowerCase())) {
+                    continue;
+                }
+                if (!sEmail.isBlank()) {
+                    seenEmails.add(sEmail);
+                }
+                dtos.add(new TeamMemberDto(
+                        s.getId(),
+                        s.getUser() != null ? s.getUser().getId() : s.getId(),
+                        s.getName(),
+                        s.getEmail() != null ? s.getEmail() : "",
+                        s.getPhone() != null ? s.getPhone() : "",
+                        s.getStaffType() != null ? s.getStaffType() : "STAFF",
+                        s.isActive() ? "ACTIVE" : "INACTIVE",
+                        s.getCreatedAt() != null ? s.getCreatedAt() : Instant.now()
+                ));
+            }
+        }
+
+        return dtos;
     }
 
     @Transactional
@@ -184,17 +234,7 @@ public class SettingsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
         // Check subscription agent limit (counting non-owner invited agents)
-        Subscription sub = subscriptionService.getOrInitSubscription(businessId);
-        int maxAgents = sub.getPlan() != null ? sub.getPlan().getMaxAgents() : 5;
-        List<BusinessMember> currentMembers = businessMemberRepository.findByBusinessId(businessId);
-        long currentAgentCount = currentMembers.stream()
-                .filter(m -> !"OWNER".equalsIgnoreCase(m.getRole()) && !"BUSINESS_OWNER".equalsIgnoreCase(m.getRole()))
-                .count();
-        if (currentAgentCount >= maxAgents) {
-            String planName = (sub.getPlan() != null && sub.getPlan().getName() != null) ? sub.getPlan().getName() : "Current Plan";
-            throw new BadRequestException("Current plan (" + planName + ") limit reached: maximum " +
-                    maxAgents + " invited staff agent(s) allowed. Please upgrade your subscription to add more members.");
-        }
+        planLimitService.checkStaffLimit(businessId);
 
         String rawRole = req.getRole() != null ? req.getRole().trim().toUpperCase() : "AGENT";
         if (rawRole.contains("OWNER")) {
@@ -212,14 +252,37 @@ public class SettingsService {
         };
 
         String email = req.getEmail().trim().toLowerCase();
-        User targetUser = userRepository.findByEmail(email).orElseGet(() -> {
+        String rawPhone = req.getPhone() != null && !req.getPhone().isBlank() ? req.getPhone().trim() : null;
+        String rawPassword = req.getPassword() != null && !req.getPassword().isBlank() ? req.getPassword().trim() : "Staff@123";
+
+        // Check if phone is already taken by another user
+        if (rawPhone != null) {
+            userRepository.findByPhone(rawPhone).ifPresent(existingUserWithPhone -> {
+                if (!existingUserWithPhone.getEmail().equalsIgnoreCase(email)) {
+                    throw new BadRequestException("Phone number " + rawPhone + " is already in use by another user account.");
+                }
+            });
+        }
+
+        User targetUser = userRepository.findByEmail(email).map(existingUser -> {
+            if (rawPhone != null && (existingUser.getPhone() == null || existingUser.getPhone().isBlank())) {
+                existingUser.setPhone(rawPhone);
+            }
+            if (req.getPassword() != null && !req.getPassword().isBlank()) {
+                existingUser.setPassword(passwordEncoder.encode(rawPassword));
+            }
+            User saved = userRepository.save(existingUser);
+            return saved != null ? saved : existingUser;
+        }).orElseGet(() -> {
             User newUser = new User(
                     email,
-                    passwordEncoder.encode("Welcome@" + UUID.randomUUID().toString().substring(0, 8)),
+                    passwordEncoder != null ? passwordEncoder.encode(rawPassword) : rawPassword,
                     req.getFullName().trim(),
                     "BUSINESS_AGENT"
             );
-            return userRepository.save(newUser);
+            newUser.setPhone(rawPhone);
+            User saved = userRepository.save(newUser);
+            return saved != null ? saved : newUser;
         });
 
         if (businessMemberRepository.existsByBusinessIdAndUserId(businessId, targetUser.getId())) {
@@ -231,9 +294,10 @@ public class SettingsService {
         BusinessMember saved = businessMemberRepository.save(member);
 
         // Synchronize with Staff entity if not already present
-        if (!staffRepository.existsByBusinessIdAndUserId(businessId, targetUser.getId()) &&
+        if (staffRepository != null &&
+            !staffRepository.existsByBusinessIdAndUserId(businessId, targetUser.getId()) &&
             !staffRepository.existsByBusinessIdAndEmail(businessId, email)) {
-            Staff staff = new Staff(business, null, req.getFullName().trim(), normalizedRole, null, email);
+            Staff staff = new Staff(business, null, req.getFullName().trim(), normalizedRole, rawPhone, email);
             staff.setUser(targetUser);
             staff.setActive(true);
             staffRepository.save(staff);
@@ -254,6 +318,7 @@ public class SettingsService {
                 targetUser.getId(),
                 targetUser.getFullName(),
                 targetUser.getEmail(),
+                targetUser.getPhone(),
                 saved.getRole(),
                 saved.getMembershipStatus(),
                 saved.getJoinedAt() != null ? saved.getJoinedAt() : saved.getCreatedAt()
@@ -292,11 +357,13 @@ public class SettingsService {
         BusinessMember saved = businessMemberRepository.save(member);
 
         // Synchronize with Staff entity
-        staffRepository.findByBusinessIdAndUserId(businessId, member.getUser().getId())
-                .ifPresent(s -> {
-                    s.setStaffType(normalizedRole);
-                    staffRepository.save(s);
-                });
+        if (staffRepository != null) {
+            staffRepository.findByBusinessIdAndUserId(businessId, member.getUser().getId())
+                    .ifPresent(s -> {
+                        s.setStaffType(normalizedRole);
+                        staffRepository.save(s);
+                    });
+        }
 
         auditLogService.logAction(
                 member.getBusiness(),
@@ -313,6 +380,7 @@ public class SettingsService {
                 saved.getUser().getId(),
                 saved.getUser().getFullName(),
                 saved.getUser().getEmail(),
+                saved.getUser().getPhone(),
                 saved.getRole(),
                 saved.getMembershipStatus(),
                 saved.getJoinedAt() != null ? saved.getJoinedAt() : saved.getCreatedAt()
@@ -321,43 +389,222 @@ public class SettingsService {
 
     @Transactional
     public TeamMemberDto updateTeamMemberStatus(UUID businessId, UUID memberId, UpdateMemberStatusRequest req, User currentUser, String ipAddress) {
-        BusinessMember member = businessMemberRepository.findById(memberId)
-                .orElseThrow(() -> new ResourceNotFoundException("Team member not found"));
+        String status = "SUSPENDED".equalsIgnoreCase(req.getStatus()) ? "SUSPENDED" : "ACTIVE";
+
+        Optional<BusinessMember> memberOpt = businessMemberRepository.findById(memberId);
+        if (memberOpt.isPresent()) {
+            BusinessMember member = memberOpt.get();
+            if (!member.getBusiness().getId().equals(businessId)) {
+                throw new BadRequestException("Member does not belong to this business");
+            }
+
+            if ("OWNER".equalsIgnoreCase(member.getRole()) || "BUSINESS_OWNER".equalsIgnoreCase(member.getRole())) {
+                throw new BadRequestException("Primary business owner cannot be suspended");
+            }
+
+            member.setMembershipStatus(status);
+            BusinessMember saved = businessMemberRepository.save(member);
+
+            // Synchronize with Staff entity
+            if (staffRepository != null && member.getUser() != null) {
+                staffRepository.findByBusinessIdAndUserId(businessId, member.getUser().getId())
+                        .ifPresent(s -> {
+                            s.setActive("ACTIVE".equalsIgnoreCase(status));
+                            staffRepository.save(s);
+                        });
+            }
+
+            auditLogService.logAction(
+                    member.getBusiness(),
+                    currentUser,
+                    "TEAM_MEMBER_STATUS_UPDATED",
+                    "BUSINESS_MEMBER",
+                    saved.getId().toString(),
+                    "{\"status\":\"" + status + "\"}",
+                    ipAddress
+            );
+
+            return new TeamMemberDto(
+                    saved.getId(),
+                    saved.getUser().getId(),
+                    saved.getUser().getFullName(),
+                    saved.getUser().getEmail(),
+                    saved.getUser().getPhone(),
+                    saved.getRole(),
+                    saved.getMembershipStatus(),
+                    saved.getJoinedAt() != null ? saved.getJoinedAt() : saved.getCreatedAt()
+            );
+        }
+
+        if (staffRepository != null) {
+            Optional<Staff> staffOpt = staffRepository.findById(memberId);
+            if (staffOpt.isPresent()) {
+                Staff s = staffOpt.get();
+                if (!s.getBusiness().getId().equals(businessId)) {
+                    throw new BadRequestException("Member does not belong to this business");
+                }
+                s.setActive("ACTIVE".equalsIgnoreCase(status));
+                Staff savedStaff = staffRepository.save(s);
+                return new TeamMemberDto(
+                        savedStaff.getId(),
+                        savedStaff.getUser() != null ? savedStaff.getUser().getId() : savedStaff.getId(),
+                        savedStaff.getName(),
+                        savedStaff.getEmail() != null ? savedStaff.getEmail() : "",
+                        savedStaff.getPhone() != null ? savedStaff.getPhone() : "",
+                        savedStaff.getStaffType() != null ? savedStaff.getStaffType() : "STAFF",
+                        savedStaff.isActive() ? "ACTIVE" : "INACTIVE",
+                        savedStaff.getCreatedAt() != null ? savedStaff.getCreatedAt() : Instant.now()
+                );
+            }
+        }
+
+        throw new ResourceNotFoundException("Team member not found");
+    }
+
+    @Transactional
+    public TeamMemberDto updateTeamMember(UUID businessId, UUID memberId, UpdateTeamMemberRequest req, User currentUser, String ipAddress) {
+        Optional<BusinessMember> memberOpt = businessMemberRepository.findById(memberId);
+        if (memberOpt.isEmpty()) {
+            if (staffRepository != null) {
+                Optional<Staff> staffOpt = staffRepository.findById(memberId);
+                if (staffOpt.isPresent()) {
+                    Staff s = staffOpt.get();
+                    if (!s.getBusiness().getId().equals(businessId)) {
+                        throw new BadRequestException("Member does not belong to this business");
+                    }
+                    if (req.getFullName() != null && !req.getFullName().isBlank()) {
+                        s.setName(req.getFullName().trim());
+                    }
+                    if (req.getPhone() != null) {
+                        s.setPhone(req.getPhone().trim());
+                    }
+                    if (req.getRole() != null && !req.getRole().isBlank()) {
+                        s.setStaffType(req.getRole().trim());
+                    }
+                    if (req.getStatus() != null && !req.getStatus().isBlank()) {
+                        s.setActive("ACTIVE".equalsIgnoreCase(req.getStatus()));
+                    }
+                    Staff savedStaff = staffRepository.save(s);
+                    return new TeamMemberDto(
+                            savedStaff.getId(),
+                            savedStaff.getUser() != null ? savedStaff.getUser().getId() : savedStaff.getId(),
+                            savedStaff.getName(),
+                            savedStaff.getEmail() != null ? savedStaff.getEmail() : "",
+                            savedStaff.getPhone() != null ? savedStaff.getPhone() : "",
+                            savedStaff.getStaffType() != null ? savedStaff.getStaffType() : "STAFF",
+                            savedStaff.isActive() ? "ACTIVE" : "INACTIVE",
+                            savedStaff.getCreatedAt() != null ? savedStaff.getCreatedAt() : Instant.now()
+                    );
+                }
+            }
+            throw new ResourceNotFoundException("Team member not found");
+        }
+
+        BusinessMember member = memberOpt.get();
 
         if (!member.getBusiness().getId().equals(businessId)) {
             throw new BadRequestException("Member does not belong to this business");
         }
 
-        if ("OWNER".equalsIgnoreCase(member.getRole()) || "BUSINESS_OWNER".equalsIgnoreCase(member.getRole())) {
-            throw new BadRequestException("Primary business owner cannot be suspended");
+        boolean isOwner = "OWNER".equalsIgnoreCase(member.getRole()) || "BUSINESS_OWNER".equalsIgnoreCase(member.getRole());
+        User targetUser = member.getUser();
+
+        // 1. Update Full Name
+        if (req.getFullName() != null && !req.getFullName().isBlank()) {
+            targetUser.setFullName(req.getFullName().trim());
         }
 
-        String status = "SUSPENDED".equalsIgnoreCase(req.getStatus()) ? "SUSPENDED" : "ACTIVE";
-        member.setMembershipStatus(status);
+        // 2. Update Phone Number
+        if (req.getPhone() != null) {
+            String trimmedPhone = req.getPhone().trim();
+            if (trimmedPhone.isBlank()) {
+                targetUser.setPhone(null);
+            } else {
+                userRepository.findByPhone(trimmedPhone).ifPresent(existingWithPhone -> {
+                    if (!existingWithPhone.getId().equals(targetUser.getId())) {
+                        throw new BadRequestException("Phone number " + trimmedPhone + " is already in use by another user account.");
+                    }
+                });
+                targetUser.setPhone(trimmedPhone);
+            }
+        }
+
+        // 3. Update Password if provided
+        if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            if (req.getPassword().trim().length() < 6) {
+                throw new BadRequestException("Password must be at least 6 characters long");
+            }
+            targetUser.setPassword(passwordEncoder != null ? passwordEncoder.encode(req.getPassword().trim()) : req.getPassword().trim());
+        }
+
+        userRepository.save(targetUser);
+
+        // 4. Update Role (if not Owner)
+        String normalizedRole = member.getRole();
+        if (req.getRole() != null && !req.getRole().isBlank()) {
+            String rawRole = req.getRole().trim().toUpperCase();
+            if (isOwner && !rawRole.contains("OWNER")) {
+                throw new BadRequestException("Primary business owner role cannot be changed");
+            }
+            if (!isOwner && rawRole.contains("OWNER")) {
+                throw new BadRequestException("Cannot escalate role to Owner");
+            }
+            if (!isOwner) {
+                normalizedRole = switch (rawRole) {
+                    case "ADMIN", "BUSINESS_ADMIN" -> "BUSINESS_ADMIN";
+                    case "MANAGER" -> "MANAGER";
+                    case "RECEPTIONIST" -> "RECEPTIONIST";
+                    case "DOCTOR" -> "DOCTOR";
+                    case "DENTIST" -> "DENTIST";
+                    case "SALON_STAFF", "STYLIST", "BEAUTICIAN" -> "SALON_STAFF";
+                    default -> "AGENT";
+                };
+                member.setRole(normalizedRole);
+            }
+        }
+
+        // 5. Update Status (if not Owner)
+        String newStatus = member.getMembershipStatus();
+        if (req.getStatus() != null && !req.getStatus().isBlank()) {
+            if (isOwner && "SUSPENDED".equalsIgnoreCase(req.getStatus())) {
+                throw new BadRequestException("Primary business owner cannot be suspended");
+            }
+            newStatus = "SUSPENDED".equalsIgnoreCase(req.getStatus()) ? "SUSPENDED" : "ACTIVE";
+            member.setMembershipStatus(newStatus);
+        }
+
         BusinessMember saved = businessMemberRepository.save(member);
 
         // Synchronize with Staff entity
-        staffRepository.findByBusinessIdAndUserId(businessId, member.getUser().getId())
-                .ifPresent(s -> {
-                    s.setActive("ACTIVE".equalsIgnoreCase(status));
-                    staffRepository.save(s);
-                });
+        if (staffRepository != null) {
+            String finalRole = normalizedRole;
+            String finalStatus = newStatus;
+            staffRepository.findByBusinessIdAndUserId(businessId, targetUser.getId())
+                    .ifPresent(s -> {
+                        s.setName(targetUser.getFullName());
+                        s.setPhone(targetUser.getPhone());
+                        s.setStaffType(finalRole);
+                        s.setActive("ACTIVE".equalsIgnoreCase(finalStatus));
+                        staffRepository.save(s);
+                    });
+        }
 
         auditLogService.logAction(
                 member.getBusiness(),
                 currentUser,
-                "TEAM_MEMBER_STATUS_UPDATED",
+                "TEAM_MEMBER_UPDATED",
                 "BUSINESS_MEMBER",
                 saved.getId().toString(),
-                "{\"status\":\"" + status + "\"}",
+                "{\"fullName\":\"" + targetUser.getFullName() + "\",\"role\":\"" + saved.getRole() + "\",\"status\":\"" + saved.getMembershipStatus() + "\"}",
                 ipAddress
         );
 
         return new TeamMemberDto(
                 saved.getId(),
-                saved.getUser().getId(),
-                saved.getUser().getFullName(),
-                saved.getUser().getEmail(),
+                targetUser.getId(),
+                targetUser.getFullName(),
+                targetUser.getEmail(),
+                targetUser.getPhone(),
                 saved.getRole(),
                 saved.getMembershipStatus(),
                 saved.getJoinedAt() != null ? saved.getJoinedAt() : saved.getCreatedAt()
@@ -366,35 +613,89 @@ public class SettingsService {
 
     @Transactional
     public void removeTeamMember(UUID businessId, UUID memberId, User currentUser, String ipAddress) {
-        BusinessMember member = businessMemberRepository.findById(memberId)
-                .orElseThrow(() -> new ResourceNotFoundException("Team member not found"));
+        // 1. Try to find and delete BusinessMember
+        Optional<BusinessMember> memberOpt = businessMemberRepository.findById(memberId);
+        if (memberOpt.isPresent()) {
+            BusinessMember member = memberOpt.get();
+            if (!member.getBusiness().getId().equals(businessId)) {
+                throw new BadRequestException("Member does not belong to this business");
+            }
 
-        if (!member.getBusiness().getId().equals(businessId)) {
-            throw new BadRequestException("Member does not belong to this business");
+            if ("OWNER".equalsIgnoreCase(member.getRole()) || "BUSINESS_OWNER".equalsIgnoreCase(member.getRole())) {
+                throw new BadRequestException("The primary business owner cannot be removed");
+            }
+
+            Business business = member.getBusiness();
+            String memberEmail = member.getUser() != null ? member.getUser().getEmail() : "";
+            UUID memberUserId = member.getUser() != null ? member.getUser().getId() : null;
+
+            businessMemberRepository.delete(member);
+
+            // Synchronize with Staff entity by deleting matching staff
+            if (memberUserId != null && staffRepository != null) {
+                staffRepository.findByBusinessIdAndUserId(businessId, memberUserId)
+                        .ifPresent(s -> {
+                            try {
+                                staffRepository.delete(s);
+                            } catch (Exception ex) {
+                                s.setActive(false);
+                                staffRepository.save(s);
+                            }
+                        });
+            }
+
+            auditLogService.logAction(
+                    business,
+                    currentUser,
+                    "TEAM_MEMBER_REMOVED",
+                    "BUSINESS_MEMBER",
+                    memberId.toString(),
+                    "{\"memberEmail\":\"" + memberEmail + "\"}",
+                    ipAddress
+            );
+            return;
         }
 
-        if ("OWNER".equalsIgnoreCase(member.getRole()) || "BUSINESS_OWNER".equalsIgnoreCase(member.getRole())) {
-            throw new BadRequestException("The primary business owner cannot be removed");
-        }
+        // 2. Fallback: check if memberId is a Staff record ID
+        if (staffRepository != null) {
+            Optional<Staff> staffOpt = staffRepository.findById(memberId);
+            if (staffOpt.isPresent()) {
+                Staff s = staffOpt.get();
+                if (!s.getBusiness().getId().equals(businessId)) {
+                    throw new BadRequestException("Member does not belong to this business");
+                }
 
-        Business business = member.getBusiness();
-        businessMemberRepository.delete(member);
+                String staffEmail = s.getEmail() != null ? s.getEmail() : "";
+                if (s.getUser() != null) {
+                    businessMemberRepository.findByBusinessIdAndUserId(businessId, s.getUser().getId())
+                            .ifPresent(bm -> {
+                                if ("OWNER".equalsIgnoreCase(bm.getRole()) || "BUSINESS_OWNER".equalsIgnoreCase(bm.getRole())) {
+                                    throw new BadRequestException("The primary business owner cannot be removed");
+                                }
+                                businessMemberRepository.delete(bm);
+                            });
+                }
 
-        // Synchronize with Staff entity by deactivating matching staff
-        staffRepository.findByBusinessIdAndUserId(businessId, member.getUser().getId())
-                .ifPresent(s -> {
+                try {
+                    staffRepository.delete(s);
+                } catch (Exception ex) {
                     s.setActive(false);
                     staffRepository.save(s);
-                });
+                }
 
-        auditLogService.logAction(
-                business,
-                currentUser,
-                "TEAM_MEMBER_REMOVED",
-                "BUSINESS_MEMBER",
-                memberId.toString(),
-                "{\"memberEmail\":\"" + member.getUser().getEmail() + "\"}",
-                ipAddress
-        );
+                auditLogService.logAction(
+                        s.getBusiness(),
+                        currentUser,
+                        "TEAM_MEMBER_REMOVED",
+                        "STAFF",
+                        memberId.toString(),
+                        "{\"memberEmail\":\"" + staffEmail + "\"}",
+                        ipAddress
+                );
+                return;
+            }
+        }
+
+        throw new ResourceNotFoundException("Team member not found");
     }
 }

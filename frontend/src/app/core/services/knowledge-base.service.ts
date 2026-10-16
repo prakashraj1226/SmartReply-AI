@@ -16,6 +16,7 @@ export interface KnowledgeArticle {
   businessId: string;
   categoryId?: string;
   categoryName?: string;
+  type?: string;
   question: string;
   answer: string;
   keywords?: string;

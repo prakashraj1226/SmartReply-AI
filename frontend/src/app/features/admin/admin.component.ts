@@ -1,7 +1,8 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem, PendingPayment } from '../../core/services/admin.service';
+import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem, PendingPayment, normalizeAdminBusiness } from '../../core/services/admin.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-admin',
@@ -49,8 +50,8 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem, Pe
               </svg>
             </div>
           </div>
-          <div class="kpi-number">{{ overview()?.totalBusinesses || 18 }}</div>
-          <div class="kpi-subtext">{{ overview()?.activeBusinesses || 18 }} Active clinics · 0 Suspended</div>
+          <div class="kpi-number">{{ overview()?.totalBusinesses ?? 0 }}</div>
+          <div class="kpi-subtext">{{ overview()?.activeBusinesses ?? 0 }} Active clinics · {{ overview()?.suspendedBusinesses ?? 0 }} Suspended</div>
         </div>
 
         <div class="kpi-card">
@@ -199,6 +200,10 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem, Pe
             />
           </div>
         </div>
+
+        <p class="tenant-helper-text">
+          Suspend turns the whole shop off — owners and staff cannot log in or use SmartReply until you Activate. Data is kept; nothing is deleted.
+        </p>
 
         <div class="table-responsive">
           <table class="data-table">
@@ -683,6 +688,14 @@ import { AdminService, AdminOverview, AdminBusiness, AdminUser, AuditLogItem, Pe
       margin: 0;
     }
 
+    .tenant-helper-text {
+      margin: 0 0 14px;
+      padding: 0 4px;
+      font-size: 0.82rem;
+      color: #64748b;
+      line-height: 1.45;
+    }
+
     .table-subtitle {
       font-size: 0.775rem;
       color: #64748b;
@@ -888,7 +901,10 @@ export class AdminComponent implements OnInit {
   alertMessage = signal<string | null>(null);
   alertType = signal<'success' | 'error'>('success');
 
-  constructor(private adminService: AdminService) {}
+  constructor(
+    private adminService: AdminService,
+    private confirmDialog: ConfirmDialogService
+  ) {}
 
   ngOnInit(): void {
     this.loadAllData();
@@ -904,8 +920,9 @@ export class AdminComponent implements OnInit {
 
     this.adminService.getBusinesses().subscribe({
       next: res => {
-        const list = (res.success && res.data) ? res.data : [];
+        const list = (res.success && res.data) ? res.data.map(normalizeAdminBusiness) : [];
         this.businesses.set(list);
+        this.syncOverviewCountsFromBusinesses(list);
       },
       error: () => this.businesses.set([])
     });
@@ -988,22 +1005,76 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  toggleBusinessStatus(biz: AdminBusiness, newStatus: boolean): void {
+  async toggleBusinessStatus(biz: AdminBusiness, newStatus: boolean): Promise<void> {
     const actionName = newStatus ? 'activate' : 'suspend';
-    if (!confirm(`Are you sure you want to ${actionName} business tenant "${biz.name}"?`)) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: `${newStatus ? 'Activate' : 'Suspend'} Business Tenant`,
+      message: `Are you sure you want to ${actionName} business tenant "${biz.name}"? ${newStatus ? 'The tenant will regain active access to workspace and integrations.' : 'All users under this tenant will be blocked from accessing the system.'}`,
+      confirmText: newStatus ? 'Activate Tenant' : 'Suspend Tenant',
+      cancelText: 'Cancel',
+      type: newStatus ? 'info' : 'danger'
+    });
+    if (!confirmed) {
       return;
     }
 
+    const previous = biz.isActive;
     biz.isActive = newStatus;
+    this.businesses.set(this.businesses().map(b => b.id === biz.id ? { ...b, isActive: newStatus } : b));
+    this.syncOverviewCountsFromBusinesses(this.businesses());
+
     this.adminService.updateBusinessStatus(biz.id, newStatus).subscribe({
-      next: () => {
+      next: res => {
+        const updated = res.success && res.data
+          ? normalizeAdminBusiness(res.data)
+          : normalizeAdminBusiness({ ...biz, isActive: newStatus });
+        this.businesses.set(this.businesses().map(b => b.id === updated.id ? updated : b));
+        this.syncOverviewCountsFromBusinesses(this.businesses());
         this.alertType.set('success');
         this.alertMessage.set(`Business "${biz.name}" is now ${newStatus ? 'active' : 'suspended'}.`);
+        // Refresh overview from server so KPI stays authoritative
+        this.adminService.getOverview().subscribe({
+          next: ov => {
+            if (ov.success && ov.data) {
+              this.overview.set(ov.data);
+              this.syncOverviewCountsFromBusinesses(this.businesses());
+            }
+          }
+        });
       },
       error: () => {
-        this.alertType.set('success');
-        this.alertMessage.set(`Business "${biz.name}" is now ${newStatus ? 'active' : 'suspended'}.`);
+        biz.isActive = previous;
+        this.businesses.set(this.businesses().map(b => b.id === biz.id ? { ...b, isActive: previous } : b));
+        this.syncOverviewCountsFromBusinesses(this.businesses());
+        this.alertType.set('error');
+        this.alertMessage.set(`Could not ${actionName} business "${biz.name}". Please try again.`);
       }
+    });
+  }
+
+  /** Keep KPI Active/Suspended counts aligned with the tenants table. */
+  private syncOverviewCountsFromBusinesses(list: AdminBusiness[]): void {
+    const active = list.filter(b => b.isActive).length;
+    const suspended = list.length - active;
+    const current = this.overview();
+    if (!current) {
+      this.overview.set({
+        totalBusinesses: list.length,
+        activeBusinesses: active,
+        suspendedBusinesses: suspended,
+        totalUsers: 0,
+        totalConversations: 0,
+        totalMessages: 0,
+        estimatedMrrInr: 0,
+        activeIntegrations: 0
+      });
+      return;
+    }
+    this.overview.set({
+      ...current,
+      totalBusinesses: list.length,
+      activeBusinesses: active,
+      suspendedBusinesses: suspended
     });
   }
 }

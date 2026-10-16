@@ -33,6 +33,9 @@ class KnowledgeBaseServiceTest {
     @Mock
     private BusinessRepository businessRepository;
 
+    @Mock
+    private com.smartreplyai.subscription.PlanLimitService planLimitService;
+
     @InjectMocks
     private KnowledgeBaseService knowledgeBaseService;
 
@@ -41,6 +44,7 @@ class KnowledgeBaseServiceTest {
         UUID businessId = UUID.randomUUID();
         CreateArticleRequest req = new CreateArticleRequest("What are your business hours?", "We are open Monday through Saturday from 9 AM to 6 PM.");
         req.setKeywords("hours, timings, schedule");
+        when(planLimitService.normalizeArticleType(any())).thenReturn("FAQ");
 
         Business biz = new Business();
         biz.setId(businessId);

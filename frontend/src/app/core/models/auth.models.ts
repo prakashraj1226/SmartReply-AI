@@ -10,6 +10,8 @@ export interface User {
   email: string;
   fullName: string;
   role: 'SUPER_ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_AGENT';
+  tenantRole?: string;
+  phone?: string;
 }
 
 export interface AuthResponse {
@@ -19,6 +21,8 @@ export interface AuthResponse {
   email: string;
   fullName: string;
   role: string;
+  tenantRole?: string;
+  phone?: string;
   businessId: string;
   businessName: string;
   onboardingCompleted: boolean;
@@ -29,6 +33,8 @@ export interface UserProfile {
   email: string;
   fullName: string;
   role: string;
+  tenantRole?: string;
+  phone?: string;
   businessId: string;
   businessName: string;
   onboardingCompleted: boolean;

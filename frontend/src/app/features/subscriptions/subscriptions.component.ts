@@ -31,8 +31,101 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
         </div>
       </div>
 
-      <!-- 2. Integrated 4-Column Stat Cards Row (Reference 4 Style) -->
-      <div class="kpi-grid">
+      <!-- TRIAL SPECIFIC NOTICE BANNER -->
+      <div *ngIf="subscription()?.isTrial" class="trial-page-banner" [class.expired]="subscription()?.isTrialExpired" [class.warning]="!subscription()?.isTrialExpired && (subscription()?.daysRemaining ?? 0) <= 3">
+        <div class="trial-banner-left">
+          <span class="trial-badge-icon" *ngIf="subscription()?.isTrialExpired">⚠️</span>
+          <span class="trial-badge-icon" *ngIf="!subscription()?.isTrialExpired && (subscription()?.daysRemaining ?? 0) <= 3">⏳</span>
+          <span class="trial-badge-icon" *ngIf="!subscription()?.isTrialExpired && (subscription()?.daysRemaining ?? 0) > 3">✨</span>
+          <div class="trial-banner-copy">
+            <span *ngIf="subscription()?.isTrialExpired" class="trial-msg">
+              <strong>Your free trial has ended.</strong> Please upgrade your plan to continue using premium features.
+            </span>
+            <span *ngIf="!subscription()?.isTrialExpired && (subscription()?.daysRemaining ?? 0) <= 3" class="trial-msg">
+              <strong>Free Trial Ending Soon:</strong> Only {{ subscription()?.daysRemaining }} {{ subscription()?.daysRemaining === 1 ? 'day' : 'days' }} remaining. Upgrade your plan before the trial ends.
+            </span>
+            <span *ngIf="!subscription()?.isTrialExpired && (subscription()?.daysRemaining ?? 0) > 3" class="trial-msg">
+              <strong>Free Trial Active:</strong> You have {{ subscription()?.daysRemaining }} days remaining in your 14-day trial.
+            </span>
+          </div>
+        </div>
+        <button type="button" class="btn-trial-upgrade" (click)="scrollToPlans()">Upgrade Plan</button>
+      </div>
+
+      <!-- 2. Integrated 4-Column Stat Cards Row (Trial Account Version) -->
+      <div class="kpi-grid" *ngIf="subscription()?.isTrial">
+        <div class="kpi-card active-accent">
+          <div class="kpi-card-top">
+            <div class="kpi-label-box">
+              <span class="status-indicator" [class.green]="!subscription()?.isTrialExpired" [class.red]="subscription()?.isTrialExpired"></span>
+              <span class="kpi-label">CURRENT TIER</span>
+            </div>
+            <div class="kpi-icon-box blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <rect width="20" height="14" x="2" y="5" rx="2"></rect>
+                <line x1="2" x2="22" y1="10" y2="10"></line>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-number">{{ subscription()?.isTrialExpired ? 'Trial Expired' : 'Free Trial' }}</div>
+          <div class="kpi-subtext">{{ subscription()?.isTrialExpired ? '14-day trial ended' : ((subscription()?.daysRemaining ?? 0) + ' days remaining') }}</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card-top">
+            <div class="kpi-label-box">
+              <span class="status-indicator blue"></span>
+              <span class="kpi-label">STAFF SEATS</span>
+            </div>
+            <div class="kpi-icon-box blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-number">{{ subscription()?.staffCount ?? 0 }} / {{ subscription()?.staffLimit ?? 2 }}</div>
+          <div class="kpi-subtext">Invited staff members (Owner excluded)</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card-top">
+            <div class="kpi-label-box">
+              <span class="status-indicator green"></span>
+              <span class="kpi-label">CUSTOMERS</span>
+            </div>
+            <div class="kpi-icon-box green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-number">{{ subscription()?.customerCount ?? 0 }} / {{ subscription()?.customerLimit ?? 5 }}</div>
+          <div class="kpi-subtext">Verified customer profiles</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card-top">
+            <div class="kpi-label-box">
+              <span class="status-indicator purple"></span>
+              <span class="kpi-label">AI ASSISTANT TODAY</span>
+            </div>
+            <div class="kpi-icon-box purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-number">{{ subscription()?.aiTodayChats ?? 0 }} / {{ subscription()?.aiTodayLimit ?? 10 }}</div>
+          <div class="kpi-subtext">Side chat questions (Resets midnight IST)</div>
+        </div>
+      </div>
+
+      <!-- 2. Integrated 4-Column Stat Cards Row (Paid Account Version) -->
+      <div class="kpi-grid" *ngIf="!subscription()?.isTrial">
         <div class="kpi-card active-accent">
           <div class="kpi-card-top">
             <div class="kpi-label-box">
@@ -116,12 +209,12 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
         <button class="alert-close" (click)="alertMsg = ''">✕</button>
       </div>
 
-      <!-- 3. Current Usage Progress Card -->
-      <div class="usage-overview-card" *ngIf="subscription()">
+      <!-- 3. Current Usage Progress Card (Paid accounts: Monthly Quota; Trial accounts: Allowances summary) -->
+      <div class="usage-overview-card" *ngIf="subscription() && !subscription()?.isTrial">
         <div class="usage-header-row">
           <div>
-            <h3 class="usage-title">Monthly WhatsApp Message Quota</h3>
-            <p class="usage-sub">Calculated across inbound enquiries and automated AI grounding replies</p>
+            <h3 class="usage-title">Monthly WhatsApp Customer Conversation Quota</h3>
+            <p class="usage-sub">Count of customer inbox and WhatsApp chat threads created in the billing month</p>
           </div>
           <div class="usage-percent-badge">{{ getUsagePercentage() }}% Quota Consumed</div>
         </div>
@@ -131,9 +224,55 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
         </div>
 
         <div class="usage-footer-row">
-          <span><strong>{{ conversationsUsed() | number }}</strong> used</span>
+          <span><strong>{{ conversationsUsed() | number }}</strong> threads used</span>
           <span><strong>{{ conversationsRemaining() | number }}</strong> conversations remaining</span>
-          <span>Max <strong>{{ conversationLimit() | number }}</strong> conversations</span>
+          <span>Max <strong>{{ conversationLimit() | number }}</strong> conversations/mo</span>
+        </div>
+      </div>
+
+      <!-- 3. Current Usage Progress Card (Trial accounts: Limits Overview) -->
+      <div class="usage-overview-card" *ngIf="subscription() && subscription()?.isTrial">
+        <div class="usage-header-row">
+          <div>
+            <h3 class="usage-title">Free Trial Limits & Usage</h3>
+            <p class="usage-sub">Real-time allowances during your 14-day Free Trial</p>
+          </div>
+          <div class="usage-percent-badge" [class.badge-expired]="subscription()?.isTrialExpired">
+            {{ subscription()?.isTrialExpired ? 'Trial Expired' : ((subscription()?.daysRemaining ?? 0) + ' Days Left') }}
+          </div>
+        </div>
+
+        <div class="trial-limits-grid">
+          <div class="trial-limit-item">
+            <span class="tli-label">Staff Members</span>
+            <span class="tli-value"><strong>{{ subscription()?.staffCount ?? 0 }}</strong> / {{ subscription()?.staffLimit ?? 2 }}</span>
+            <div class="mini-progress"><div class="mini-bar" [style.width.%]="calcPercent(subscription()?.staffCount, subscription()?.staffLimit)"></div></div>
+          </div>
+          <div class="trial-limit-item">
+            <span class="tli-label">Customers</span>
+            <span class="tli-value"><strong>{{ subscription()?.customerCount ?? 0 }}</strong> / {{ subscription()?.customerLimit ?? 5 }}</span>
+            <div class="mini-progress"><div class="mini-bar" [style.width.%]="calcPercent(subscription()?.customerCount, subscription()?.customerLimit)"></div></div>
+          </div>
+          <div class="trial-limit-item">
+            <span class="tli-label">Knowledge Base Entries</span>
+            <span class="tli-value"><strong>{{ subscription()?.knowledgeCount ?? 0 }}</strong> / {{ subscription()?.knowledgeLimit ?? 2 }}</span>
+            <div class="mini-progress"><div class="mini-bar" [style.width.%]="calcPercent(subscription()?.knowledgeCount, subscription()?.knowledgeLimit)"></div></div>
+          </div>
+          <div class="trial-limit-item">
+            <span class="tli-label">FAQ Entries</span>
+            <span class="tli-value"><strong>{{ subscription()?.faqCount ?? 0 }}</strong> / {{ subscription()?.faqLimit ?? 2 }}</span>
+            <div class="mini-progress"><div class="mini-bar" [style.width.%]="calcPercent(subscription()?.faqCount, subscription()?.faqLimit)"></div></div>
+          </div>
+          <div class="trial-limit-item">
+            <span class="tli-label">AI Assistant (Today)</span>
+            <span class="tli-value"><strong>{{ subscription()?.aiTodayChats ?? 0 }}</strong> / {{ subscription()?.aiTodayLimit ?? 10 }}</span>
+            <div class="mini-progress"><div class="mini-bar" [style.width.%]="calcPercent(subscription()?.aiTodayChats, subscription()?.aiTodayLimit)"></div></div>
+          </div>
+          <div class="trial-limit-item">
+            <span class="tli-label">Appointments Today (Total)</span>
+            <span class="tli-value"><strong>{{ subscription()?.appointmentTodayCount ?? 0 }}/{{ subscription()?.appointmentTodayLimit ?? 2 }}</strong> (Total: {{ subscription()?.appointmentTotalCount ?? 0 }}/{{ subscription()?.appointmentTotalLimit ?? 15 }})</span>
+            <div class="mini-progress"><div class="mini-bar" [style.width.%]="calcPercent(subscription()?.appointmentTotalCount, subscription()?.appointmentTotalLimit)"></div></div>
+          </div>
         </div>
       </div>
 
@@ -149,7 +288,7 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
             *ngFor="let p of plans()"
             class="plan-card"
             [class.highlighted]="p.code === 'GROWTH'"
-            [class.current-active]="p.code === subscription()?.planCode"
+            [class.current-active]="p.code === subscription()?.planCode && !subscription()?.isTrial"
           >
             <div class="plan-card-header">
               <span *ngIf="p.code === 'GROWTH'" class="popular-badge">★ Most Popular</span>
@@ -169,11 +308,23 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               </li>
               <li>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Up to <strong>{{ p.maxAgents }}</strong> Staff Agent seats</span>
+                <span>Up to <strong>{{ p.maxAgents }}</strong> Staff Agent {{ p.maxAgents === 1 ? 'seat' : 'seats' }}</span>
+              </li>
+              <!-- AI Assistant feature indicator -->
+              <li *ngIf="p.code === 'STARTER'">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span style="color: #ef4444; font-weight: 600;">AI Assistant Not Included</span>
+              </li>
+              <li *ngIf="p.code !== 'STARTER'">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>AI Assistant Side Chat Included</span>
               </li>
               <li>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>{{ p.aiFeaturesEnabled ? 'AI FAQ Autonomous Grounding' : 'Basic Rule Engine' }}</span>
+                <span>{{ p.aiFeaturesEnabled ? 'AI FAQ Autonomous Grounding' : 'Basic Rule Engine & Auto-Replies' }}</span>
               </li>
               <li>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -195,14 +346,14 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
 
             <div class="plan-card-footer">
               <button
-                *ngIf="p.code !== subscription()?.planCode"
+                *ngIf="p.code !== subscription()?.planCode || subscription()?.isTrial"
                 class="btn-plan-action"
                 [class.btn-popular]="p.code === 'GROWTH'"
                 (click)="startCheckout(p.code)"
               >
                 Upgrade to {{ p.name }}
               </button>
-              <button *ngIf="p.code === subscription()?.planCode" class="btn-current-plan" disabled>
+              <button *ngIf="p.code === subscription()?.planCode && !subscription()?.isTrial" class="btn-current-plan" disabled>
                 ✓ Current Active Plan
               </button>
             </div>
@@ -1193,6 +1344,137 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
       border: 1px solid #fecaca;
     }
 
+    .trial-page-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      border-radius: 12px;
+      margin-bottom: 0.85rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      gap: 1rem;
+    }
+
+    .trial-page-banner.warning {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: #92400e;
+    }
+
+    .trial-page-banner.expired {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    .trial-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .trial-badge-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .trial-banner-copy {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .trial-msg {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .btn-trial-upgrade {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.4rem 1rem;
+      border-radius: 8px;
+      font-size: 0.775rem;
+      font-weight: 700;
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .trial-page-banner.warning .btn-trial-upgrade {
+      background: #d97706;
+    }
+
+    .trial-page-banner.expired .btn-trial-upgrade {
+      background: #dc2626;
+    }
+
+    .btn-trial-upgrade:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .status-indicator.red {
+      background: #ef4444;
+      box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+    }
+
+    .badge-expired {
+      background: #fee2e2 !important;
+      color: #b91c1c !important;
+      border-color: #fecaca !important;
+    }
+
+    .trial-limits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.85rem;
+      margin-top: 0.85rem;
+    }
+
+    .trial-limit-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0.75rem 0.95rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .tli-label {
+      font-size: 0.725rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .tli-value {
+      font-size: 0.95rem;
+      color: #0f172a;
+    }
+
+    .mini-progress {
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 0.2rem;
+    }
+
+    .mini-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #2563eb, #38bdf8);
+      border-radius: 9999px;
+      transition: width 0.3s ease;
+    }
+
     .alert-banner.error {
       background: #fef2f2;
       border-color: #fecaca;
@@ -1266,6 +1548,18 @@ export class SubscriptionsComponent implements OnInit {
     this.loadPlans();
   }
 
+  calcPercent(val?: number, max?: number): number {
+    if (!max || max <= 0) return 0;
+    return Math.min(100, Math.round(((val ?? 0) / max) * 100));
+  }
+
+  scrollToPlans(): void {
+    const el = document.querySelector('.plans-container');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
   loadSubscription(): void {
     this.subscriptionService.getCurrentSubscription().subscribe({
       next: (res) => {
@@ -1279,7 +1573,10 @@ export class SubscriptionsComponent implements OnInit {
 
   loadPlans(): void {
     this.subscriptionService.getPlans().subscribe({
-      next: (res) => this.plans.set(res.data || []),
+      next: (res) => {
+        const available = (res.data || []).filter(p => p.code !== 'FREE' && p.code !== 'TRIAL');
+        this.plans.set(available);
+      },
       error: () => this.plans.set([])
     });
   }

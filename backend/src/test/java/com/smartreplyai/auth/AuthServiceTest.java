@@ -2,6 +2,7 @@ package com.smartreplyai.auth;
 
 import com.smartreplyai.ai.AiConfigurationRepository;
 import com.smartreplyai.auth.dto.AuthResponse;
+import com.smartreplyai.auth.dto.LoginRequest;
 import com.smartreplyai.auth.dto.RegisterRequest;
 import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessMemberRepository;
@@ -20,8 +21,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -81,9 +85,9 @@ class AuthServiceTest {
         savedBiz.setSlug("apex-dental-clinic");
         when(businessRepository.save(any(Business.class))).thenReturn(savedBiz);
 
-        SubscriptionPlan freePlan = new SubscriptionPlan();
-        freePlan.setCode("FREE");
-        when(subscriptionPlanRepository.findByCode("FREE")).thenReturn(Optional.of(freePlan));
+        SubscriptionPlan trialPlan = new SubscriptionPlan();
+        trialPlan.setCode("TRIAL");
+        when(subscriptionPlanRepository.findByCode(anyString())).thenReturn(Optional.of(trialPlan));
 
         when(tokenProvider.generateToken(any(UserPrincipal.class))).thenReturn("mock-jwt-token");
 
@@ -115,5 +119,77 @@ class AuthServiceTest {
 
         TenantContext.clear();
         assertNull(TenantContext.getBusinessId());
+    }
+
+    @Test
+    void login_WhenBusinessSuspended_ShouldRejectWithClearMessage() {
+        UUID userId = UUID.randomUUID();
+        UUID businessId = UUID.randomUUID();
+
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("apex@gmail.com");
+        user.setFullName("Apex Owner");
+        user.setRole("BUSINESS_OWNER");
+        user.setPasswordHash("hash");
+        user.setActive(true);
+
+        UserPrincipal principal = UserPrincipal.create(user, businessId);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        when(authenticationManager.authenticate(any())).thenReturn(authentication);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        Business suspended = new Business();
+        suspended.setId(businessId);
+        suspended.setName("Apex");
+        suspended.setActive(false);
+        when(businessRepository.findById(businessId)).thenReturn(Optional.of(suspended));
+        when(businessMemberRepository.findBusinessesByUserId(userId)).thenReturn(List.of(suspended));
+
+        LoginRequest req = new LoginRequest();
+        req.setEmail("apex@gmail.com");
+        req.setPassword("password123");
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> authService.login(req));
+        assertTrue(ex.getMessage().toLowerCase().contains("suspended"));
+        verify(tokenProvider, never()).generateToken(any());
+    }
+
+    @Test
+    void login_WhenBusinessActive_ShouldSucceed() {
+        UUID userId = UUID.randomUUID();
+        UUID businessId = UUID.randomUUID();
+
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("owner@clinic.com");
+        user.setFullName("Clinic Owner");
+        user.setRole("BUSINESS_OWNER");
+        user.setPasswordHash("hash");
+        user.setActive(true);
+        user.setPhone("+919000000001");
+
+        UserPrincipal principal = UserPrincipal.create(user, businessId);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        when(authenticationManager.authenticate(any())).thenReturn(authentication);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        Business active = new Business();
+        active.setId(businessId);
+        active.setName("Active Clinic");
+        active.setActive(true);
+        active.setOnboardingCompleted(true);
+        when(businessRepository.findById(businessId)).thenReturn(Optional.of(active));
+        when(businessMemberRepository.findByBusinessIdAndUserId(businessId, userId)).thenReturn(Optional.empty());
+        when(tokenProvider.generateToken(any(UserPrincipal.class))).thenReturn("ok-token");
+
+        LoginRequest req = new LoginRequest();
+        req.setEmail("owner@clinic.com");
+        req.setPassword("password123");
+
+        AuthResponse resp = authService.login(req);
+        assertEquals("ok-token", resp.getToken());
+        assertEquals(businessId, resp.getBusinessId());
+        assertEquals("Active Clinic", resp.getBusinessName());
     }
 }

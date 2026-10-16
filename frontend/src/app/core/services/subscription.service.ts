@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface ApiResponse<T> {
@@ -49,6 +49,26 @@ export interface SubscriptionDetails {
   currentMonthConversations: number;
   remainingConversations: number;
   transactions: PaymentTransaction[];
+  trialStartedAt?: string;
+  trialEndsAt?: string;
+  trialStatus?: string;
+  isTrial?: boolean;
+  isTrialExpired?: boolean;
+  daysRemaining?: number;
+  staffCount?: number;
+  staffLimit?: number;
+  customerCount?: number;
+  customerLimit?: number;
+  knowledgeCount?: number;
+  knowledgeLimit?: number;
+  faqCount?: number;
+  faqLimit?: number;
+  aiTodayChats?: number;
+  aiTodayLimit?: number;
+  appointmentTodayCount?: number;
+  appointmentTodayLimit?: number;
+  appointmentTotalCount?: number;
+  appointmentTotalLimit?: number;
 }
 
 export interface CheckoutOrder {
@@ -77,6 +97,8 @@ export interface VerifyPaymentRequest {
 export class SubscriptionService {
   private apiUrl = `${environment.apiUrl}/subscriptions`;
 
+  currentSubscription = signal<SubscriptionDetails | null>(null);
+
   constructor(private http: HttpClient) {}
 
   getPlans(): Observable<ApiResponse<SubscriptionPlan[]>> {
@@ -84,7 +106,22 @@ export class SubscriptionService {
   }
 
   getCurrentSubscription(): Observable<ApiResponse<SubscriptionDetails>> {
-    return this.http.get<ApiResponse<SubscriptionDetails>>(`${this.apiUrl}/current`);
+    return this.http.get<ApiResponse<SubscriptionDetails>>(`${this.apiUrl}/current`).pipe(
+      tap(res => {
+        if (res.success && res.data) {
+          const d = res.data;
+          d.isTrial = !!(d.isTrial || (d as any).trial || d.planCode === 'TRIAL' || d.planCode === 'FREE' || d.status === 'TRIALING');
+          d.isTrialExpired = !!(d.isTrialExpired || (d as any).trialExpired || d.trialStatus === 'EXPIRED');
+          this.currentSubscription.set(d);
+        }
+      })
+    );
+  }
+
+  refreshSubscription(): void {
+    this.getCurrentSubscription().subscribe({
+      error: () => {}
+    });
   }
 
   createCheckoutOrder(planCode: string): Observable<ApiResponse<CheckoutOrder>> {
@@ -92,7 +129,16 @@ export class SubscriptionService {
   }
 
   verifyPayment(req: VerifyPaymentRequest): Observable<ApiResponse<SubscriptionDetails>> {
-    return this.http.post<ApiResponse<SubscriptionDetails>>(`${this.apiUrl}/verify`, req);
+    return this.http.post<ApiResponse<SubscriptionDetails>>(`${this.apiUrl}/verify`, req).pipe(
+      tap(res => {
+        if (res.success && res.data) {
+          const d = res.data;
+          d.isTrial = !!(d.isTrial || (d as any).trial || d.planCode === 'TRIAL' || d.planCode === 'FREE' || d.status === 'TRIALING');
+          d.isTrialExpired = !!(d.isTrialExpired || (d as any).trialExpired || d.trialStatus === 'EXPIRED');
+          this.currentSubscription.set(d);
+        }
+      })
+    );
   }
 
   cancelSubscription(): Observable<ApiResponse<void>> {

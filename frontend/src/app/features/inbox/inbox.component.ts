@@ -167,7 +167,7 @@ import { AuthService } from '../../core/services/auth.service';
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                     </svg>
-                    {{ selectedConversation()!.customerPhone }}
+                    {{ isTelegram(selectedConversation()!.customerPhone) ? 'Telegram: ' + selectedConversation()!.customerPhone.replace('tg:', '') : selectedConversation()!.customerPhone }}
                   </span>
                   <span class="status-pill-small" [attr.data-status]="selectedConversation()!.status">
                     {{ selectedConversation()!.status }}
@@ -346,12 +346,14 @@ import { AuthService } from '../../core/services/auth.service';
                 {{ getInitials(selectedConversation()!.customerName) }}
               </div>
               <h5 class="profile-name">{{ selectedConversation()!.customerName }}</h5>
-              <p class="profile-phone">{{ selectedConversation()!.customerPhone }}</p>
+              <p class="profile-phone">{{ isTelegram(selectedConversation()!.customerPhone) ? 'Telegram ID: ' + selectedConversation()!.customerPhone.replace('tg:', '') : selectedConversation()!.customerPhone }}</p>
 
               <div class="profile-stats-grid">
                 <div class="pstat-item">
                   <span class="pstat-label">Channel</span>
-                  <span class="pstat-val wa">WhatsApp Cloud</span>
+                  <span class="pstat-val" [class.wa]="!isTelegram(selectedConversation()!.customerPhone)" [class.tg]="isTelegram(selectedConversation()!.customerPhone)">
+                    {{ isTelegram(selectedConversation()!.customerPhone) ? 'Telegram Bot' : 'WhatsApp Cloud' }}
+                  </span>
                 </div>
                 <div class="pstat-item">
                   <span class="pstat-label">Opt-In Status</span>
@@ -1527,6 +1529,7 @@ import { AuthService } from '../../core/services/auth.service';
     }
 
     .pstat-val.wa { color: #059669; }
+    .pstat-val.tg { color: #0284c7; }
     .pstat-val.opt-in { color: #2563eb; }
 
     .ai-card-info {
@@ -2286,6 +2289,10 @@ export class InboxComponent implements OnInit {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  isTelegram(phone: string | undefined): boolean {
+    return !!phone && phone.startsWith('tg:');
   }
 
   getStatusTick(status: string): string {

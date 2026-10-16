@@ -148,6 +148,35 @@ class WhatsAppIntegrationServiceTest {
     }
 
     @Test
+    void testProcessIncomingWebhook_SuspendedBusinessIsIgnored() {
+        business.setActive(false);
+        when(webhookEventRepository.existsByEventId("wamid.SUSPENDED_BIZ")).thenReturn(false);
+        when(integrationAccountRepository.findByPhoneNumberId("10987654321")).thenReturn(Optional.of(account));
+
+        String payload = """
+        {
+          "entry": [{
+            "changes": [{
+              "value": {
+                "metadata": { "phone_number_id": "10987654321" },
+                "messages": [{
+                  "id": "wamid.SUSPENDED_BIZ",
+                  "from": "919876500111",
+                  "text": { "body": "Hello!" }
+                }]
+              }
+            }]
+          }]
+        }
+        """;
+
+        service.processIncomingWebhook(payload, null);
+
+        verify(conversationService, never()).handleCustomerMessage(any(), any(), any(), any());
+        verify(customerRepository, never()).save(any());
+    }
+
+    @Test
     void testProcessIncomingWebhook_OptOutStopsMessages() {
         when(webhookEventRepository.existsByEventId("wamid.STOP_MSG")).thenReturn(false);
         when(integrationAccountRepository.findByPhoneNumberId("10987654321")).thenReturn(Optional.of(account));

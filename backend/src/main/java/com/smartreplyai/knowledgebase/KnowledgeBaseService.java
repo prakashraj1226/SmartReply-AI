@@ -26,13 +26,16 @@ public class KnowledgeBaseService {
     private final KnowledgeArticleRepository articleRepository;
     private final KnowledgeCategoryRepository categoryRepository;
     private final BusinessRepository businessRepository;
+    private final com.smartreplyai.subscription.PlanLimitService planLimitService;
 
     public KnowledgeBaseService(KnowledgeArticleRepository articleRepository,
                                 KnowledgeCategoryRepository categoryRepository,
-                                BusinessRepository businessRepository) {
+                                BusinessRepository businessRepository,
+                                com.smartreplyai.subscription.PlanLimitService planLimitService) {
         this.articleRepository = articleRepository;
         this.categoryRepository = categoryRepository;
         this.businessRepository = businessRepository;
+        this.planLimitService = planLimitService;
     }
 
     // --- CATEGORIES ---
@@ -89,6 +92,9 @@ public class KnowledgeBaseService {
 
     @Transactional
     public KnowledgeArticleDto createArticle(UUID businessId, CreateArticleRequest req) {
+        String articleType = planLimitService.normalizeArticleType(req.getType());
+        planLimitService.checkKnowledgeArticleLimit(businessId, articleType);
+
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
@@ -104,6 +110,7 @@ public class KnowledgeBaseService {
         article.setQuestion(req.getQuestion().trim());
         article.setAnswer(req.getAnswer().trim());
         article.setKeywords(req.getKeywords());
+        article.setType(articleType);
         article.setActive(req.getIsActive() != null ? req.getIsActive() : true);
 
         article = articleRepository.save(article);
@@ -234,12 +241,17 @@ public class KnowledgeBaseService {
                     );
                 }
 
+                planLimitService.checkKnowledgeArticleLimit(businessId, "FAQ");
+
                 KnowledgeArticle article = new KnowledgeArticle(business, category, question.trim(), answer.trim());
                 article.setKeywords(keywords);
+                article.setType("FAQ");
                 article.setActive(true);
                 articleRepository.save(article);
                 importedCount++;
             }
+        } catch (BadRequestException bre) {
+            throw bre;
         } catch (Exception e) {
             throw new BadRequestException("Failed to import CSV: " + e.getMessage());
         }

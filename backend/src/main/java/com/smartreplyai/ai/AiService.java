@@ -26,7 +26,7 @@ public class AiService {
 
     private static final Logger logger = LoggerFactory.getLogger(AiService.class);
     private static final Set<String> KEEP_EXACT_REPLY = Set.of(
-            "Appointment Booked", "Available Slots", "Slots Unavailable");
+            "Greeting", "Appointment Booked", "Available Slots", "Slots Unavailable");
 
     private final AiConfigurationRepository aiConfigurationRepository;
     private final KnowledgeArticleRepository knowledgeArticleRepository;
@@ -54,12 +54,18 @@ public class AiService {
 
     @Transactional(readOnly = true)
     public AiGenerationResponse processIncomingMessage(UUID businessId, String customerMessage, List<String> history) {
-        return processIncomingMessage(businessId, customerMessage, history, null, null);
+        return processIncomingMessage(businessId, customerMessage, history, null, null, false);
     }
 
     @Transactional(readOnly = true)
     public AiGenerationResponse processIncomingMessage(UUID businessId, String customerMessage, List<String> history,
                                                        String customerPhone, String customerName) {
+        return processIncomingMessage(businessId, customerMessage, history, customerPhone, customerName, false);
+    }
+
+    @Transactional(readOnly = true)
+    public AiGenerationResponse processIncomingMessage(UUID businessId, String customerMessage, List<String> history,
+                                                       String customerPhone, String customerName, boolean isFirstMessage) {
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
 
@@ -82,6 +88,8 @@ public class AiService {
         req.setOperatingHours(business.getOperatingHoursJson());
         req.setAssistantName(config.getAssistantName());
         req.setTone(config.getTone());
+        req.setGreetingMessage(config.getGreetingMessage());
+        req.setFirstMessage(isFirstMessage);
         req.setCustomerMessage(customerMessage);
         req.setCustomerPhoneNumber(customerPhone);
         req.setCustomerName(customerName);
@@ -93,7 +101,7 @@ public class AiService {
         req.setFallbackMessage(config.getFallbackMessage());
 
         AiGenerationResponse exact = aiProvider.generateReply(req);
-        if (exact != null && KEEP_EXACT_REPLY.contains(exact.getMatchedQuestion())) {
+        if (exact != null && exact.getMatchedQuestion() != null && KEEP_EXACT_REPLY.contains(exact.getMatchedQuestion())) {
             return exact;
         }
         AiGenerationResponse gemini = geminiReply(req);

@@ -44,6 +44,18 @@ class SubscriptionServiceTest {
     @Mock
     private ConversationRepository conversationRepository;
 
+    @Mock
+    private com.smartreplyai.customer.CustomerRepository customerRepository;
+
+    @Mock
+    private com.smartreplyai.knowledgebase.KnowledgeArticleRepository articleRepository;
+
+    @Mock
+    private com.smartreplyai.appointment.AppointmentRepository appointmentRepository;
+
+    @Mock
+    private PlanLimitService planLimitService;
+
     @InjectMocks
     private SubscriptionService subscriptionService;
 

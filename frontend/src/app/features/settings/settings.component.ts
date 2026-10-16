@@ -1,8 +1,10 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SettingsService, BusinessProfile, AiConfig, TeamMember, InviteMemberRequest } from '../../core/services/settings.service';
+import { SettingsService, BusinessProfile, AiConfig, TeamMember, InviteMemberRequest, UpdateTeamMemberRequest } from '../../core/services/settings.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
+import { SubscriptionService } from '../../core/services/subscription.service';
 
 @Component({
   selector: 'app-settings',
@@ -76,7 +78,7 @@ import { AuthService } from '../../core/services/auth.service';
           <div class="kpi-card-top">
             <div class="kpi-label-box">
               <span class="status-indicator amber"></span>
-              <span class="kpi-label">AUTHORIZED STAFF</span>
+              <span class="kpi-label">STAFF SEATS</span>
             </div>
             <div class="kpi-icon-box amber">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -85,8 +87,8 @@ import { AuthService } from '../../core/services/auth.service';
               </svg>
             </div>
           </div>
-          <div class="kpi-number">{{ teamMembers().length }} Members</div>
-          <div class="kpi-subtext">Authorized team members and agents</div>
+          <div class="kpi-number">{{ staffOnlyCount() }}/{{ staffLimit() }} Seats</div>
+          <div class="kpi-subtext">{{ teamMembers().length }} total (1 Owner + {{ staffOnlyCount() }} Staff)</div>
         </div>
 
         <div class="kpi-card">
@@ -118,16 +120,16 @@ import { AuthService } from '../../core/services/auth.service';
       <!-- 3. Tab Pills Toolbar -->
       <div class="toolbar-nav">
         <div class="tabs-pills">
-          <button class="tab-pill-btn" [class.active]="activeTab() === 'profile'" (click)="activeTab.set('profile')">
+          <button class="tab-pill-btn" [class.active]="activeTab() === 'profile'" (click)="setTab('profile')">
             🏢 Business Profile
           </button>
-          <button class="tab-pill-btn" [class.active]="activeTab() === 'ai'" (click)="activeTab.set('ai')">
+          <button class="tab-pill-btn" [class.active]="activeTab() === 'ai'" (click)="setTab('ai')">
             🤖 AI Persona & Tuning
           </button>
-          <button class="tab-pill-btn" [class.active]="activeTab() === 'team'" (click)="activeTab.set('team')">
-            👥 Staff & Agents ({{ teamMembers().length || 3 }})
+          <button class="tab-pill-btn" [class.active]="activeTab() === 'team'" (click)="setTab('team')">
+            👥 Staff & Agents ({{ staffOnlyCount() }}/{{ staffLimit() }})
           </button>
-          <button class="tab-pill-btn" [class.active]="activeTab() === 'security'" (click)="activeTab.set('security')">
+          <button class="tab-pill-btn" [class.active]="activeTab() === 'security'" (click)="setTab('security')">
             🔒 Security & Compliance
           </button>
         </div>
@@ -285,8 +287,14 @@ import { AuthService } from '../../core/services/auth.service';
               <p class="table-subtitle">Authorize doctors, receptionists, and staff to respond in Live Inbox</p>
             </div>
           </div>
-          <button type="button" class="btn-add-agent" (click)="showInviteModal.set(true)">
-            + Invite Staff Member
+          <button
+            type="button"
+            class="btn-add-agent"
+            [class.btn-limit-reached]="staffOnlyCount() >= staffLimit()"
+            (click)="onInviteStaffClick()"
+          >
+            <span *ngIf="staffOnlyCount() < staffLimit()">+ Invite Staff Member</span>
+            <span *ngIf="staffOnlyCount() >= staffLimit()">🔒 Staff Limit ({{ staffOnlyCount() }}/{{ staffLimit() }})</span>
           </button>
         </div>
 
@@ -296,6 +304,7 @@ import { AuthService } from '../../core/services/auth.service';
               <tr>
                 <th>Member</th>
                 <th>Email Address</th>
+                <th>Mobile Number</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th class="text-right">Action</th>
@@ -310,10 +319,24 @@ import { AuthService } from '../../core/services/auth.service';
                   </div>
                 </td>
                 <td>{{ m.email }}</td>
-                <td><span class="role-pill">{{ m.role }}</span></td>
-                <td><span class="status-pill-green">● Active</span></td>
+                <td>{{ m.phone || '—' }}</td>
+                <td><span class="role-pill">{{ (m.role || '').replace('_', ' ') }}</span></td>
+                <td>
+                  <span [class]="m.membershipStatus === 'SUSPENDED' ? 'status-pill-amber' : 'status-pill-green'">
+                    ● {{ m.membershipStatus === 'SUSPENDED' ? 'Suspended' : 'Active' }}
+                  </span>
+                </td>
                 <td class="text-right">
-                  <button class="btn-remove-user" (click)="removeMember(m)">Remove</button>
+                  <div class="action-btn-group">
+                    <button class="btn-edit-user" (click)="openEditModal(m)" title="Edit Staff Member">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                      </svg>
+                      <span>Edit</span>
+                    </button>
+                    <button *ngIf="!isOwnerRole(m.role)" class="btn-remove-user" (click)="removeMember(m)" title="Remove Staff Member">Remove</button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -372,37 +395,132 @@ import { AuthService } from '../../core/services/auth.service';
               <div class="modal-icon-badge">👥</div>
               <div>
                 <h3>Invite Staff Member</h3>
-                <p class="modal-subtitle">Grant access to business workspace</p>
+                <p class="modal-subtitle">Add staff or practitioner to this organisation</p>
               </div>
             </div>
             <button class="close-btn" (click)="showInviteModal.set(false)">&times;</button>
           </div>
 
           <div class="modal-body">
-            <div class="form-group">
-              <label>Full Name *</label>
-              <input type="text" [(ngModel)]="newMember.fullName" class="form-control" placeholder="e.g. Jane Doe" />
-            </div>
+            <div class="modal-form-grid">
+              <div class="form-group">
+                <label>Full Name <span class="required">*</span></label>
+                <input type="text" [(ngModel)]="newMember.fullName" class="form-control" placeholder="e.g. Priya Sharma" />
+              </div>
 
-            <div class="form-group">
-              <label>Work Email *</label>
-              <input type="email" [(ngModel)]="newMember.email" class="form-control" placeholder="colleague@example.com" />
-            </div>
+              <div class="form-group">
+                <label>Work Email <span class="required">*</span></label>
+                <input type="email" [(ngModel)]="newMember.email" class="form-control" placeholder="priya@salon.com" />
+              </div>
 
-            <div class="form-group">
-              <label>Access Role *</label>
-              <select [(ngModel)]="newMember.role" class="form-control">
-                <option value="AGENT">Staff Agent (Inbox & Appointments)</option>
-                <option value="ADMIN">Clinic Administrator</option>
-              </select>
+              <div class="form-group">
+                <label>Mobile Number (For Login)</label>
+                <input type="tel" [(ngModel)]="newMember.phone" class="form-control" placeholder="e.g. +91 98765 43210" />
+              </div>
+
+              <div class="form-group">
+                <label>Initial Login Password <span class="required">*</span></label>
+                <input type="text" [(ngModel)]="newMember.password" class="form-control" placeholder="e.g. Staff@123" />
+              </div>
+
+              <div class="form-group full-width">
+                <label>Access Role <span class="required">*</span></label>
+                <select [(ngModel)]="newMember.role" class="form-control">
+                  <option value="SALON_STAFF">Salon Stylist / Beautician / Specialist</option>
+                  <option value="RECEPTIONIST">Receptionist / Front Desk</option>
+                  <option value="DOCTOR">Doctor / Medical Practitioner</option>
+                  <option value="DENTIST">Dentist</option>
+                  <option value="AGENT">Staff Agent (Live Inbox & Support)</option>
+                  <option value="MANAGER">Branch Manager</option>
+                  <option value="ADMIN">Clinic / Business Administrator</option>
+                </select>
+                <small class="modal-helper-text">
+                  Staff member can log in directly using this password with either their email or mobile number.
+                </small>
+              </div>
             </div>
           </div>
 
           <div class="modal-footer">
             <button class="btn-cancel" (click)="showInviteModal.set(false)">Cancel</button>
             <button class="btn-save-primary" [disabled]="isInviting() || !newMember.fullName.trim() || !newMember.email.trim()" (click)="inviteMember()">
-              <span *ngIf="!isInviting()">Send Invite</span>
+              <span *ngIf="!isInviting()">Save & Add Staff</span>
               <span *ngIf="isInviting()" class="spinner-sm"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDIT MEMBER MODAL -->
+      <div *ngIf="showEditModal()" class="modal-backdrop">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <div class="modal-title-box">
+              <div class="modal-icon-badge" style="background: #eef2ff; color: #4f46e5;">✏️</div>
+              <div>
+                <h3>Edit Staff Member</h3>
+                <p class="modal-subtitle">Update staff profile, access role, mobile number or login credentials</p>
+              </div>
+            </div>
+            <button class="close-btn" (click)="showEditModal.set(false)">&times;</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="modal-form-grid">
+              <div class="form-group">
+                <label>Full Name <span class="required">*</span></label>
+                <input type="text" [(ngModel)]="editMemberForm.fullName" class="form-control" placeholder="e.g. Priya Sharma" />
+              </div>
+
+              <div class="form-group">
+                <label>Work Email</label>
+                <input type="email" [value]="editMemberForm.email" class="form-control" disabled style="background: #f8fafc; color: #64748b; cursor: not-allowed;" />
+                <small class="modal-helper-text">Primary login email address (fixed)</small>
+              </div>
+
+              <div class="form-group">
+                <label>Mobile Number (For Login / WhatsApp)</label>
+                <input type="tel" [(ngModel)]="editMemberForm.phone" class="form-control" placeholder="e.g. +91 98765 43210" />
+                <small class="modal-helper-text">Can be used as login username</small>
+              </div>
+
+              <div class="form-group">
+                <label>Reset Password (Optional)</label>
+                <input type="text" [(ngModel)]="editMemberForm.password" class="form-control" placeholder="Leave blank to keep unchanged" />
+                <small class="modal-helper-text">Enter new password if staff forgot credentials</small>
+              </div>
+
+              <div class="form-group">
+                <label>Access Role <span class="required">*</span></label>
+                <select [(ngModel)]="editMemberForm.role" class="form-control" [disabled]="isOwnerRole(editMemberForm.role)">
+                  <option *ngIf="isOwnerRole(editMemberForm.role)" [value]="editMemberForm.role">Owner (Primary Administrator)</option>
+                  <option value="SALON_STAFF">Salon Stylist / Beautician / Specialist</option>
+                  <option value="RECEPTIONIST">Receptionist / Front Desk</option>
+                  <option value="DOCTOR">Doctor / Medical Practitioner</option>
+                  <option value="DENTIST">Dentist</option>
+                  <option value="AGENT">Staff Agent (Live Inbox & Support)</option>
+                  <option value="MANAGER">Branch Manager</option>
+                  <option value="ADMIN">Clinic / Business Administrator</option>
+                </select>
+                <small *ngIf="isOwnerRole(editMemberForm.role)" class="modal-helper-text">Primary owner role cannot be changed.</small>
+              </div>
+
+              <div class="form-group">
+                <label>Account Status <span class="required">*</span></label>
+                <select [(ngModel)]="editMemberForm.status" class="form-control" [disabled]="isOwnerRole(editMemberForm.role)">
+                  <option value="ACTIVE">Active (Can Login & Access Inbox)</option>
+                  <option value="SUSPENDED">Suspended (Access Revoked)</option>
+                </select>
+                <small *ngIf="isOwnerRole(editMemberForm.role)" class="modal-helper-text">Primary owner account cannot be suspended.</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-cancel" (click)="showEditModal.set(false)">Cancel</button>
+            <button class="btn-save-primary" [disabled]="isUpdating() || !editMemberForm.fullName.trim()" (click)="saveEditedMember()">
+              <span *ngIf="!isUpdating()">Save Changes</span>
+              <span *ngIf="isUpdating()" class="spinner-sm"></span>
             </button>
           </div>
         </div>
@@ -915,6 +1033,19 @@ import { AuthService } from '../../core/services/auth.service';
       cursor: pointer;
     }
 
+    .btn-add-agent.btn-limit-reached {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+      cursor: pointer;
+    }
+
+    .btn-add-agent.btn-limit-reached:hover {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fca5a5;
+    }
+
     .data-table {
       width: 100%;
       border-collapse: collapse;
@@ -971,6 +1102,49 @@ import { AuthService } from '../../core/services/auth.service';
       font-size: 0.725rem;
       font-weight: 700;
       color: #059669;
+      background: #d1fae5;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .status-pill-amber {
+      font-size: 0.725rem;
+      font-weight: 700;
+      color: #d97706;
+      background: #fef3c7;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .action-btn-group {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.45rem;
+    }
+
+    .btn-edit-user {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      background: #ffffff;
+      border: 1px solid #bfdbfe;
+      color: #2563eb;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-edit-user:hover {
+      background: #eff6ff;
+      border-color: #60a5fa;
+      color: #1d4ed8;
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.15);
     }
 
     .btn-remove-user {
@@ -980,7 +1154,16 @@ import { AuthService } from '../../core/services/auth.service';
       color: #ef4444;
       border-radius: 6px;
       font-size: 0.75rem;
+      font-weight: 600;
       cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-remove-user:hover {
+      background: #fef2f2;
+      border-color: #f87171;
+      color: #dc2626;
+      box-shadow: 0 1px 3px rgba(239, 68, 68, 0.15);
     }
 
     .text-right {
@@ -1029,34 +1212,43 @@ import { AuthService } from '../../core/services/auth.service';
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(9, 19, 40, 0.65);
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: 1050;
+      padding: 1.5rem 1rem;
+      box-sizing: border-box;
+      overflow-y: auto;
     }
 
     .modal-dialog {
       background: #ffffff;
       border-radius: 16px;
-      width: 90%;
-      max-width: 480px;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      width: 100%;
+      max-width: 560px;
+      max-height: min(90vh, 660px);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);
       overflow: hidden;
-      animation: modalSlideUp 0.2s ease-out;
+      animation: modalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      margin: auto;
     }
 
     @keyframes modalSlideUp {
-      from { transform: translateY(15px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      from { transform: translateY(16px) scale(0.98); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
     }
 
     .modal-header {
-      padding: 1.25rem 1.5rem;
+      padding: 1rem 1.4rem;
       border-bottom: 1px solid #e2e8f0;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-shrink: 0;
+      background: #ffffff;
     }
 
     .modal-title-box {
@@ -1075,6 +1267,7 @@ import { AuthService } from '../../core/services/auth.service';
       align-items: center;
       justify-content: center;
       font-size: 1.1rem;
+      flex-shrink: 0;
     }
 
     .modal-title-box h3 {
@@ -1093,25 +1286,96 @@ import { AuthService } from '../../core/services/auth.service';
     .close-btn {
       background: none;
       border: none;
-      font-size: 1.25rem;
+      font-size: 1.35rem;
+      line-height: 1;
       color: #94a3b8;
       cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+
+    .close-btn:hover {
+      background: #f1f5f9;
+      color: #0f172a;
     }
 
     .modal-body {
-      padding: 1.25rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+      padding: 1.25rem 1.4rem;
+      overflow-y: auto;
+      flex: 1 1 auto;
+    }
+
+    .modal-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem 1rem;
+    }
+
+    .modal-form-grid .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .modal-form-grid .form-group {
+      margin-bottom: 0;
+    }
+
+    .modal-form-grid .form-group label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .modal-form-grid .form-group label .required {
+      color: #ef4444;
+    }
+
+    .modal-form-grid .form-control {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.55rem 0.8rem;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #0f172a;
+      background: #f8fafc;
+      transition: all 0.15s ease-in-out;
+    }
+
+    .modal-form-grid .form-control:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .modal-helper-text {
+      color: #64748b;
+      font-size: 0.725rem;
+      margin-top: 0.35rem;
+      display: block;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 520px) {
+      .modal-form-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .modal-footer {
-      padding: 1rem 1.5rem;
+      padding: 0.85rem 1.4rem;
       background: #f8fafc;
       border-top: 1px solid #e2e8f0;
       display: flex;
       justify-content: flex-end;
+      align-items: center;
       gap: 0.75rem;
+      flex-shrink: 0;
     }
 
     .btn-cancel {
@@ -1132,17 +1396,41 @@ import { AuthService } from '../../core/services/auth.service';
       padding: 0.85rem 1.25rem;
       border-radius: 10px;
       margin-bottom: 1.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .alert-banner.success {
       background: #ecfdf5;
       border: 1px solid #a7f3d0;
       color: #065f46;
-      font-weight: 600;
-      font-size: 0.875rem;
+    }
+
+    .alert-banner.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    .alert-content {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
     }
 
     .alert-close {
       background: none;
       border: none;
       cursor: pointer;
+      font-size: 1rem;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+
+    .alert-close:hover {
+      opacity: 1;
     }
 
     .spinner-sm {
@@ -1161,10 +1449,21 @@ import { AuthService } from '../../core/services/auth.service';
   `]
 })
 export class SettingsComponent implements OnInit {
-  activeTab = signal<'profile' | 'ai' | 'team' | 'security'>('profile');
+  activeTab = signal<'profile' | 'ai' | 'team' | 'security'>(
+    (typeof window !== 'undefined' && localStorage.getItem('settings_active_tab') as any) || 'profile'
+  );
+
+  setTab(tab: 'profile' | 'ai' | 'team' | 'security'): void {
+    this.activeTab.set(tab);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('settings_active_tab', tab);
+    }
+  }
   isSaving = signal<boolean>(false);
   isInviting = signal<boolean>(false);
+  isUpdating = signal<boolean>(false);
   showInviteModal = signal<boolean>(false);
+  showEditModal = signal<boolean>(false);
 
   alertMessage = signal<string | null>(null);
   alertType = signal<'success' | 'error'>('success');
@@ -1192,18 +1491,50 @@ export class SettingsComponent implements OnInit {
     maxResponseTokens: 250
   };
 
+  private subscriptionService = inject(SubscriptionService);
   teamMembers = signal<TeamMember[]>([]);
+  subscription = this.subscriptionService.currentSubscription;
+  staffOnlyCount = computed(() => this.teamMembers().filter(m => !this.isOwnerRole(m.role)).length);
+  staffLimit = computed(() => this.subscription()?.staffLimit ?? 2);
 
   newMember: InviteMemberRequest = {
     email: '',
     fullName: '',
-    role: 'AGENT'
+    role: 'SALON_STAFF',
+    phone: '',
+    password: ''
+  };
+
+  editingMemberId: string | null = null;
+  editMemberForm = {
+    fullName: '',
+    email: '',
+    phone: '',
+    role: 'SALON_STAFF',
+    status: 'ACTIVE',
+    password: ''
   };
 
   constructor(
     private settingsService: SettingsService,
-    public authService: AuthService
+    public authService: AuthService,
+    private confirmDialog: ConfirmDialogService
   ) {}
+
+  onInviteStaffClick(): void {
+    const limit = this.staffLimit();
+    if (this.staffOnlyCount() >= limit) {
+      const planName = this.subscription()?.isTrial ? 'Free Trial' : (this.subscription()?.planName || 'Current Plan');
+      this.confirmDialog.alert(
+        `${planName} allows a maximum of ${limit} staff members. Upgrade your plan to add more staff.`,
+        'Plan Limit Reached',
+        'danger',
+        true
+      );
+      return;
+    }
+    this.showInviteModal.set(true);
+  }
 
   ngOnInit(): void {
     const user = this.authService.currentUser();
@@ -1213,6 +1544,7 @@ export class SettingsComponent implements OnInit {
       this.aiConfig.assistantName = (user.businessName || 'SmartReply') + ' Assistant';
       this.aiConfig.greetingMessage = `Hello! Welcome to ${user.businessName || 'our business'}. How can we assist you today?`;
     }
+    this.subscriptionService.refreshSubscription();
     this.loadAllSettings();
   }
 
@@ -1241,7 +1573,7 @@ export class SettingsComponent implements OnInit {
       next: res => {
         if (res.success && res.data && res.data.length > 0) {
           this.teamMembers.set(res.data);
-        } else {
+        } else if (this.teamMembers().length === 0) {
           const user = this.authService.currentUser();
           this.teamMembers.set([
             {
@@ -1255,18 +1587,8 @@ export class SettingsComponent implements OnInit {
           ]);
         }
       },
-      error: () => {
-        const user = this.authService.currentUser();
-        this.teamMembers.set([
-          {
-            id: user?.id || 'owner-1',
-            userId: user?.id || 'owner-1',
-            fullName: user?.fullName || 'Business Owner',
-            email: user?.email || '',
-            role: user?.role || 'BUSINESS_OWNER',
-            joinedAt: new Date().toISOString()
-          }
-        ]);
+      error: (err) => {
+        console.error('Error loading team members:', err);
       }
     });
   }
@@ -1326,35 +1648,119 @@ export class SettingsComponent implements OnInit {
       next: (res) => {
         this.isInviting.set(false);
         this.showInviteModal.set(false);
-        this.newMember = { email: '', fullName: '', role: 'AGENT' };
+        this.newMember = { email: '', fullName: '', role: 'SALON_STAFF', phone: '', password: '' };
         this.loadTeamMembers();
+        this.subscriptionService.refreshSubscription();
         this.alertType.set('success');
-        this.alertMessage.set('Team member invited successfully.');
+        this.alertMessage.set('Staff member added successfully! They can log in immediately with their credentials.');
       },
       error: (err) => {
         this.isInviting.set(false);
-        const errMsg = err?.error?.message || err?.message || 'Failed to invite team member. Please check subscription limit or try again.';
+        const errMsg = this.extractErrorMessage(err, 'Failed to invite team member. Please check subscription limit or try again.');
+        this.alertType.set('error');
+        this.alertMessage.set(errMsg);
+        if (errMsg.toLowerCase().includes('limit') || errMsg.toLowerCase().includes('trial') || errMsg.toLowerCase().includes('maximum')) {
+          this.confirmDialog.alert(errMsg, 'Plan Limit Reached', 'danger', true);
+        }
+      }
+    });
+  }
+
+  async removeMember(member: TeamMember): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Remove Team Member',
+      message: `Are you sure you want to remove ${member.fullName} (${member.email}) from this organisation? They will lose access immediately.`,
+      confirmText: 'Remove Member',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.settingsService.removeTeamMember(member.id).subscribe({
+      next: () => {
+        this.loadTeamMembers();
+        this.subscriptionService.refreshSubscription();
+        this.alertType.set('success');
+        this.alertMessage.set(`Team member "${member.fullName}" removed successfully.`);
+      },
+      error: (err) => {
+        const errMsg = this.extractErrorMessage(err, 'Failed to remove team member. Please try again.');
         this.alertType.set('error');
         this.alertMessage.set(errMsg);
       }
     });
   }
 
-  removeMember(member: TeamMember): void {
-    if (!confirm(`Are you sure you want to remove ${member.fullName} (${member.email}) from your team?`)) {
+  isOwnerRole(role?: string): boolean {
+    if (!role) return false;
+    const r = role.toUpperCase();
+    return r === 'OWNER' || r === 'BUSINESS_OWNER';
+  }
+
+  openEditModal(member: TeamMember): void {
+    this.editingMemberId = member.id;
+    this.editMemberForm = {
+      fullName: member.fullName || '',
+      email: member.email || '',
+      phone: member.phone || '',
+      role: member.role || 'SALON_STAFF',
+      status: member.membershipStatus || 'ACTIVE',
+      password: ''
+    };
+    this.showEditModal.set(true);
+  }
+
+  saveEditedMember(): void {
+    if (!this.editMemberForm.fullName?.trim()) {
+      this.alertType.set('error');
+      this.alertMessage.set('Full Name is required.');
       return;
     }
-    this.settingsService.removeTeamMember(member.id).subscribe({
+    if (!this.editingMemberId) return;
+
+    this.isUpdating.set(true);
+    const req: UpdateTeamMemberRequest = {
+      fullName: this.editMemberForm.fullName.trim(),
+      phone: this.editMemberForm.phone?.trim() || '',
+      role: this.editMemberForm.role,
+      status: this.editMemberForm.status,
+      password: this.editMemberForm.password?.trim() || undefined
+    };
+
+    this.settingsService.updateTeamMember(this.editingMemberId, req).subscribe({
       next: () => {
+        this.isUpdating.set(false);
+        this.showEditModal.set(false);
         this.loadTeamMembers();
         this.alertType.set('success');
-        this.alertMessage.set('Team member removed.');
+        this.alertMessage.set(`Staff member "${req.fullName}" details updated successfully.`);
       },
       error: (err) => {
-        const errMsg = err?.error?.message || err?.message || 'Failed to remove team member.';
+        this.isUpdating.set(false);
+        const errMsg = this.extractErrorMessage(err, 'Failed to update staff member. Please try again.');
         this.alertType.set('error');
         this.alertMessage.set(errMsg);
       }
     });
+  }
+
+  private extractErrorMessage(err: any, fallback: string): string {
+    if (err?.error?.message && typeof err.error.message === 'string' && !err.error.message.includes('Http failure')) {
+      return err.error.message;
+    }
+    if (err?.error?.detail && typeof err.error.detail === 'string') {
+      return err.error.detail;
+    }
+    if (err?.status === 403) {
+      return 'You do not have permission to perform this action.';
+    }
+    if (err?.status === 404) {
+      return 'The requested team member was not found.';
+    }
+    if (err?.status === 400 && typeof err?.error?.error === 'string') {
+      return err.error.error;
+    }
+    return fallback;
   }
 }

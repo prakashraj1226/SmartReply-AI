@@ -13,23 +13,49 @@ public class TenantSecurityService {
     }
 
     public boolean isOwnerOrAdmin() {
-        return TenantContext.isOwnerOrAdmin();
+        if (TenantContext.isOwnerOrAdmin()) {
+            return true;
+        }
+        return checkPrincipalRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "SUPER_ADMIN");
     }
 
     public boolean canManageTeam() {
-        return TenantContext.hasRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "SUPER_ADMIN");
+        if (TenantContext.hasRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "SUPER_ADMIN")) {
+            return true;
+        }
+        return checkPrincipalRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "SUPER_ADMIN");
     }
 
     public boolean canManageBilling() {
-        return TenantContext.hasRole("OWNER", "BUSINESS_OWNER", "SUPER_ADMIN");
+        if (TenantContext.hasRole("OWNER", "BUSINESS_OWNER", "SUPER_ADMIN")) {
+            return true;
+        }
+        return checkPrincipalRole("OWNER", "BUSINESS_OWNER", "SUPER_ADMIN");
     }
 
     public boolean canManageIntegrations() {
-        return TenantContext.hasRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "SUPER_ADMIN");
+        if (TenantContext.hasRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "SUPER_ADMIN")) {
+            return true;
+        }
+        return checkPrincipalRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "SUPER_ADMIN");
     }
 
     public boolean canManageCatalog() {
-        return TenantContext.hasRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "MANAGER", "SUPER_ADMIN");
+        if (TenantContext.hasRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "MANAGER", "SUPER_ADMIN")) {
+            return true;
+        }
+        return checkPrincipalRole("OWNER", "BUSINESS_OWNER", "BUSINESS_ADMIN", "ADMIN", "MANAGER", "SUPER_ADMIN");
+    }
+
+    private boolean checkPrincipalRole(String... allowedRoles) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
+            String role = principal.getRole();
+            if (role != null) {
+                return java.util.Arrays.stream(allowedRoles).anyMatch(r -> r.equalsIgnoreCase(role));
+            }
+        }
+        return false;
     }
 
     public boolean canManageAppointments() {

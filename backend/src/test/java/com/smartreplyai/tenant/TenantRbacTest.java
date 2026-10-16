@@ -36,7 +36,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class TenantRbacTest {
 
     @Mock
@@ -56,6 +60,12 @@ class TenantRbacTest {
 
     @Mock
     private AuditLogService auditLogService;
+
+    @Mock
+    private com.smartreplyai.staff.StaffRepository staffRepository;
+
+    @Mock
+    private com.smartreplyai.subscription.PlanLimitService planLimitService;
 
     @InjectMocks
     private SettingsService settingsService;
@@ -192,6 +202,39 @@ class TenantRbacTest {
         assertEquals("DOCTOR", dto.getRole());
         assertEquals("ACTIVE", dto.getMembershipStatus());
         verify(businessMemberRepository).save(any(BusinessMember.class));
+    }
+
+    @Test
+    @DisplayName("Owner can invite staff with mobile number and initial password")
+    void testInviteStaffWithPhoneAndPassword() {
+        SubscriptionPlan plan = new SubscriptionPlan();
+        plan.setCode("GROWTH");
+        plan.setName("Growth Plan");
+        plan.setMaxAgents(5);
+        Subscription sub = new Subscription(testBusiness, plan);
+
+        when(businessRepository.findById(businessId)).thenReturn(Optional.of(testBusiness));
+        when(subscriptionService.getOrInitSubscription(businessId)).thenReturn(sub);
+        when(businessMemberRepository.findByBusinessId(businessId)).thenReturn(List.of(ownerMember));
+        when(userRepository.findByEmail("priya@royalhair.com")).thenReturn(Optional.empty());
+        when(userRepository.findByPhone("+919876543210")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("Stylist@2026")).thenReturn("hashedStylistPass");
+        when(businessMemberRepository.existsByBusinessIdAndUserId(eq(businessId), any())).thenReturn(false);
+        when(businessMemberRepository.save(any(BusinessMember.class))).thenAnswer(i -> {
+            BusinessMember m = i.getArgument(0);
+            m.setId(UUID.randomUUID());
+            return m;
+        });
+
+        InviteMemberRequest req = new InviteMemberRequest("priya@royalhair.com", "Priya Stylist", "SALON_STAFF", "+919876543210", "Stylist@2026");
+
+        TeamMemberDto dto = settingsService.inviteTeamMember(businessId, req, ownerUser, "127.0.0.1");
+
+        assertNotNull(dto);
+        assertEquals("SALON_STAFF", dto.getRole());
+        assertEquals("Priya Stylist", dto.getFullName());
+        assertEquals("+919876543210", dto.getPhone());
+        assertEquals("priya@royalhair.com", dto.getEmail());
     }
 
     @Test

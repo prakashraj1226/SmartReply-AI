@@ -30,10 +30,9 @@ public class SettingsController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse<BusinessProfileDto>> getProfile() {
-        UUID businessId = TenantContext.getBusinessId();
-        if (businessId == null) throw new BadRequestException("Active business tenant required");
-
+    public ResponseEntity<ApiResponse<BusinessProfileDto>> getProfile(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        UUID businessId = resolveBusinessId(principal);
         BusinessProfileDto profile = settingsService.getBusinessProfile(businessId);
         return ResponseEntity.ok(ApiResponse.ok(profile));
     }
@@ -45,9 +44,7 @@ public class SettingsController {
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest request) {
 
-        UUID businessId = TenantContext.getBusinessId();
-        if (businessId == null) throw new BadRequestException("Active business tenant required");
-
+        UUID businessId = resolveBusinessId(principal);
         User user = principal != null ? userRepository.findById(principal.getId()).orElse(null) : null;
         String ip = extractIp(request);
 
@@ -56,10 +53,9 @@ public class SettingsController {
     }
 
     @GetMapping("/ai")
-    public ResponseEntity<ApiResponse<AiConfigDto>> getAiConfig() {
-        UUID businessId = TenantContext.getBusinessId();
-        if (businessId == null) throw new BadRequestException("Active business tenant required");
-
+    public ResponseEntity<ApiResponse<AiConfigDto>> getAiConfig(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        UUID businessId = resolveBusinessId(principal);
         AiConfigDto config = settingsService.getAiConfiguration(businessId);
         return ResponseEntity.ok(ApiResponse.ok(config));
     }
@@ -71,9 +67,7 @@ public class SettingsController {
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest request) {
 
-        UUID businessId = TenantContext.getBusinessId();
-        if (businessId == null) throw new BadRequestException("Active business tenant required");
-
+        UUID businessId = resolveBusinessId(principal);
         User user = principal != null ? userRepository.findById(principal.getId()).orElse(null) : null;
         String ip = extractIp(request);
 
@@ -82,10 +76,9 @@ public class SettingsController {
     }
 
     @GetMapping("/team")
-    public ResponseEntity<ApiResponse<List<TeamMemberDto>>> getTeamMembers() {
-        UUID businessId = TenantContext.getBusinessId();
-        if (businessId == null) throw new BadRequestException("Active business tenant required");
-
+    public ResponseEntity<ApiResponse<List<TeamMemberDto>>> getTeamMembers(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        UUID businessId = resolveBusinessId(principal);
         List<TeamMemberDto> members = settingsService.getTeamMembers(businessId);
         return ResponseEntity.ok(ApiResponse.ok(members));
     }
@@ -97,9 +90,7 @@ public class SettingsController {
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest request) {
 
-        UUID businessId = TenantContext.getBusinessId();
-        if (businessId == null) throw new BadRequestException("Active business tenant required");
-
+        UUID businessId = resolveBusinessId(principal);
         User user = principal != null ? userRepository.findById(principal.getId()).orElse(null) : null;
         String ip = extractIp(request);
 
@@ -115,9 +106,7 @@ public class SettingsController {
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest request) {
 
-        UUID businessId = TenantContext.getBusinessId();
-        if (businessId == null) throw new BadRequestException("Active business tenant required");
-
+        UUID businessId = resolveBusinessId(principal);
         User user = principal != null ? userRepository.findById(principal.getId()).orElse(null) : null;
         String ip = extractIp(request);
 
@@ -133,14 +122,28 @@ public class SettingsController {
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest request) {
 
-        UUID businessId = TenantContext.getBusinessId();
-        if (businessId == null) throw new BadRequestException("Active business tenant required");
-
+        UUID businessId = resolveBusinessId(principal);
         User user = principal != null ? userRepository.findById(principal.getId()).orElse(null) : null;
         String ip = extractIp(request);
 
         TeamMemberDto member = settingsService.updateTeamMemberStatus(businessId, memberId, req, user, ip);
         return ResponseEntity.ok(ApiResponse.ok("Team member membership status updated successfully", member));
+    }
+
+    @PutMapping("/team/{memberId}")
+    @PreAuthorize("@tenantSecurity.canManageTeam()")
+    public ResponseEntity<ApiResponse<TeamMemberDto>> updateTeamMember(
+            @PathVariable UUID memberId,
+            @Valid @RequestBody UpdateTeamMemberRequest req,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest request) {
+
+        UUID businessId = resolveBusinessId(principal);
+        User user = principal != null ? userRepository.findById(principal.getId()).orElse(null) : null;
+        String ip = extractIp(request);
+
+        TeamMemberDto member = settingsService.updateTeamMember(businessId, memberId, req, user, ip);
+        return ResponseEntity.ok(ApiResponse.ok("Team member updated successfully", member));
     }
 
     @DeleteMapping("/team/{memberId}")
@@ -150,14 +153,24 @@ public class SettingsController {
             @AuthenticationPrincipal UserPrincipal principal,
             HttpServletRequest request) {
 
-        UUID businessId = TenantContext.getBusinessId();
-        if (businessId == null) throw new BadRequestException("Active business tenant required");
-
+        UUID businessId = resolveBusinessId(principal);
         User user = principal != null ? userRepository.findById(principal.getId()).orElse(null) : null;
         String ip = extractIp(request);
 
         settingsService.removeTeamMember(businessId, memberId, user, ip);
         return ResponseEntity.ok(ApiResponse.ok("Team member removed successfully", null));
+    }
+
+    private UUID resolveBusinessId(UserPrincipal principal) {
+        UUID businessId = TenantContext.getBusinessId();
+        if (businessId == null && principal != null && principal.getDefaultBusinessId() != null) {
+            businessId = principal.getDefaultBusinessId();
+            TenantContext.setBusinessId(businessId);
+        }
+        if (businessId == null) {
+            throw new BadRequestException("Active business tenant required");
+        }
+        return businessId;
     }
 
     private String extractIp(HttpServletRequest request) {

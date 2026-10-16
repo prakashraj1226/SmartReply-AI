@@ -24,6 +24,9 @@ public class User {
     @Column(nullable = false, length = 50)
     private String role; // SUPER_ADMIN, BUSINESS_OWNER, BUSINESS_AGENT
 
+    @Column(name = "phone", length = 50)
+    private String phone;
+
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
@@ -79,6 +82,10 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
+    public void setPassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
     public String getFullName() {
         return fullName;
     }
@@ -125,5 +132,13 @@ public class User {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }

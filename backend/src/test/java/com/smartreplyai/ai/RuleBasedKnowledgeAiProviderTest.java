@@ -94,6 +94,69 @@ class RuleBasedKnowledgeAiProviderTest {
     }
 
     @Test
+    void generateReply_WhenCustomerSendsStartCommand_ShouldReturnWelcomeGreeting() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setCustomerName("Priya Raman");
+        req.setCustomerMessage("/start");
+        req.setApprovedKnowledge(List.of());
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated());
+        assertEquals("Greeting", resp.getMatchedQuestion());
+        assertTrue(resp.getReplyText().contains("Priya Raman"));
+        assertTrue(resp.getReplyText().contains("SmileCare Dental Clinic"));
+    }
+
+    @Test
+    void generateReply_WhenFirstMessageFromCustomerWithNoSpecificIntent_ShouldGreetInsteadOfEscalate() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setCustomerName("Anand Kumar");
+        req.setCustomerMessage("Hey there buddy!");
+        req.setFirstMessage(true);
+        req.setApprovedKnowledge(List.of());
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertFalse(resp.isEscalated(), "First message should welcome customer rather than trigger cold escalation");
+        assertEquals("Greeting", resp.getMatchedQuestion());
+        assertTrue(resp.getReplyText().contains("SmileCare Dental Clinic"));
+    }
+
+    @Test
+    void generateReply_WhenTamilGreetingSent_ShouldReturnPoliteGreeting() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setCustomerMessage("vanakkam");
+        req.setApprovedKnowledge(List.of());
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertEquals("Greeting", resp.getMatchedQuestion());
+        assertTrue(resp.getReplyText().contains("SmileCare Dental Clinic"));
+    }
+
+    @Test
+    void generateReply_WhenCustomGreetingConfigured_ShouldUseConfiguredGreeting() {
+        AiGenerationRequest req = new AiGenerationRequest();
+        req.setBusinessName("SmileCare Dental Clinic");
+        req.setGreetingMessage("Welcome to SmileCare Dental Clinic! We offer teeth cleaning, implants and root canal treatments. How may we assist you?");
+        req.setCustomerMessage("/start");
+        req.setApprovedKnowledge(List.of());
+
+        AiGenerationResponse resp = provider.generateReply(req);
+
+        assertNotNull(resp);
+        assertEquals("Greeting", resp.getMatchedQuestion());
+        assertEquals("Welcome to SmileCare Dental Clinic! We offer teeth cleaning, implants and root canal treatments. How may we assist you?", resp.getReplyText());
+    }
+
+    @Test
     void generateReply_WhenCustomerAsksAboutServices_ShouldReturnGroundedCatalogList() {
         Business biz = new Business();
         biz.setName("Luxe Hair Lounge");

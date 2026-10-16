@@ -52,6 +52,9 @@ public class IntegrationAccount {
     @Column(name = "config_json", columnDefinition = "TEXT")
     private String configJson;
 
+    @Column(name = "bot_username", length = 100)
+    private String botUsername;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -185,6 +188,14 @@ public class IntegrationAccount {
 
     public void setConfigJson(String configJson) {
         this.configJson = configJson;
+    }
+
+    public String getBotUsername() {
+        return botUsername;
+    }
+
+    public void setBotUsername(String botUsername) {
+        this.botUsername = botUsername;
     }
 
     public Instant getCreatedAt() {

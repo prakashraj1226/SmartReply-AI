@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { KnowledgeBaseService, KnowledgeCategory, KnowledgeArticle, CsvPreviewResponse } from '../../core/services/knowledge-base.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-knowledge-base',
@@ -163,7 +164,10 @@ import { AuthService } from '../../core/services/auth.service';
       <div class="articles-grid">
         <div class="article-card" *ngFor="let a of displayArticles">
           <div class="article-card-header">
-            <span class="category-badge">{{ a.categoryName || 'General Services' }}</span>
+            <div style="display: flex; align-items: center; gap: 0.45rem;">
+              <span class="category-badge">{{ a.categoryName || 'General Services' }}</span>
+              <span class="type-pill-badge" [class.type-kb]="a.type === 'KNOWLEDGE'">{{ a.type === 'KNOWLEDGE' ? 'KNOWLEDGE' : 'FAQ' }}</span>
+            </div>
             <div class="status-toggle-box">
               <label class="switch">
                 <input type="checkbox" [checked]="a.active" (change)="toggleStatus(a)" />
@@ -211,11 +215,19 @@ import { AuthService } from '../../core/services/auth.service';
       <div class="modal-backdrop" *ngIf="showArticleModal">
         <div class="modal-card">
           <div class="modal-header">
-            <h3>{{ editingArticle ? 'Edit FAQ Article' : 'Add FAQ Article' }}</h3>
+            <h3>{{ editingArticle ? 'Edit Article' : 'Add Article' }}</h3>
             <button class="close-btn" (click)="showArticleModal = false">&times;</button>
           </div>
 
           <form [formGroup]="articleForm" (ngSubmit)="saveArticle()">
+            <div class="form-group">
+              <label class="form-label">Classification / Entry Type*</label>
+              <select class="form-select" formControlName="type">
+                <option value="FAQ">FAQ Entry (Customer Inquiries)</option>
+                <option value="KNOWLEDGE">Knowledge Base Entry (Clinical & Treatment Protocol)</option>
+              </select>
+            </div>
+
             <div class="form-group">
               <label class="form-label">Category</label>
               <select class="form-select" formControlName="categoryId">
@@ -763,6 +775,23 @@ import { AuthService } from '../../core/services/auth.service';
       border-radius: 6px;
     }
 
+    .type-pill-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #dbeafe;
+      letter-spacing: 0.04em;
+    }
+
+    .type-pill-badge.type-kb {
+      background: #faf5ff;
+      color: #7c3aed;
+      border-color: #f3e8ff;
+    }
+
     .status-toggle-box {
       display: flex;
       align-items: center;
@@ -969,6 +998,7 @@ export class KnowledgeBaseComponent implements OnInit {
   private kbService = inject(KnowledgeBaseService);
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   categories: KnowledgeCategory[] = [];
   articles: KnowledgeArticle[] = [];
@@ -999,6 +1029,7 @@ export class KnowledgeBaseComponent implements OnInit {
 
   articleForm: FormGroup = this.fb.group({
     categoryId: [null],
+    type: ['FAQ', Validators.required],
     question: ['', Validators.required],
     answer: ['', Validators.required],
     keywords: ['']
@@ -1072,7 +1103,7 @@ export class KnowledgeBaseComponent implements OnInit {
 
   openAddModal(): void {
     this.editingArticle = null;
-    this.articleForm.reset({ categoryId: this.selectedCategoryId });
+    this.articleForm.reset({ categoryId: this.selectedCategoryId, type: 'FAQ' });
     this.showArticleModal = true;
   }
 
@@ -1080,6 +1111,7 @@ export class KnowledgeBaseComponent implements OnInit {
     this.editingArticle = article;
     this.articleForm.patchValue({
       categoryId: article.categoryId,
+      type: article.type || 'FAQ',
       question: article.question,
       answer: article.answer,
       keywords: article.keywords
@@ -1099,15 +1131,10 @@ export class KnowledgeBaseComponent implements OnInit {
           this.showArticleModal = false;
           this.loadArticles();
         },
-        error: () => {
+        error: (err) => {
           this.isSaving = false;
-          // Local fallback
-          if (this.editingArticle) {
-            this.editingArticle.question = formVal.question;
-            this.editingArticle.answer = formVal.answer;
-            this.editingArticle.keywords = formVal.keywords;
-          }
-          this.showArticleModal = false;
+          const msg = err?.error?.message || 'Failed to update article';
+          this.confirmDialog.alert(msg, 'Error', 'danger');
         }
       });
     } else {
@@ -1117,10 +1144,10 @@ export class KnowledgeBaseComponent implements OnInit {
           this.showArticleModal = false;
           this.loadArticles();
         },
-        error: () => {
+        error: (err) => {
           this.isSaving = false;
-          this.showArticleModal = false;
-          this.loadArticles();
+          const msg = err?.error?.message || 'Failed to create article';
+          this.confirmDialog.alert(msg, 'Limit Reached', 'danger');
         }
       });
     }
@@ -1134,8 +1161,15 @@ export class KnowledgeBaseComponent implements OnInit {
     });
   }
 
-  deleteArticle(article: KnowledgeArticle): void {
-    if (!confirm('Are you sure you want to delete this FAQ article?')) return;
+  async deleteArticle(article: KnowledgeArticle): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Delete FAQ Article',
+      message: `Are you sure you want to delete "${article.question}"? The AI assistant will no longer use this Q&A article to answer customers.`,
+      confirmText: 'Delete Article',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!confirmed) return;
     this.kbService.deleteArticle(article.id).subscribe({
       next: () => this.loadArticles(),
       error: () => this.loadArticles()
@@ -1181,7 +1215,7 @@ export class KnowledgeBaseComponent implements OnInit {
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
-      alert('CSV uploaded and verified successfully! 6 articles imported.');
+      this.confirmDialog.alert('CSV knowledge base imported and verified successfully! 6 articles synchronized with the AI engine.', 'Import Complete', 'success');
       this.showCsvModal = false;
     }
   }

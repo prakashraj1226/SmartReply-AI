@@ -21,6 +21,7 @@ import com.smartreplyai.whatsapp.IntegrationAccount;
 import com.smartreplyai.whatsapp.IntegrationAccountRepository;
 import com.smartreplyai.whatsapp.client.OfficialWhatsAppCloudApiClient;
 import com.smartreplyai.whatsapp.client.WhatsAppSendResult;
+import com.smartreplyai.telegram.client.TelegramClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +42,8 @@ public class ConversationService {
     private final AiService aiService;
     private final IntegrationAccountRepository integrationAccountRepository;
     private final OfficialWhatsAppCloudApiClient whatsAppClient;
+    private final TelegramClient telegramClient;
+    private final com.smartreplyai.subscription.PlanLimitService planLimitService;
 
     public ConversationService(ConversationRepository conversationRepository,
                                MessageRepository messageRepository,
@@ -49,7 +52,9 @@ public class ConversationService {
                                UserRepository userRepository,
                                AiService aiService,
                                IntegrationAccountRepository integrationAccountRepository,
-                               OfficialWhatsAppCloudApiClient whatsAppClient) {
+                               OfficialWhatsAppCloudApiClient whatsAppClient,
+                               TelegramClient telegramClient,
+                               com.smartreplyai.subscription.PlanLimitService planLimitService) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.customerRepository = customerRepository;
@@ -58,6 +63,8 @@ public class ConversationService {
         this.aiService = aiService;
         this.integrationAccountRepository = integrationAccountRepository;
         this.whatsAppClient = whatsAppClient;
+        this.telegramClient = telegramClient;
+        this.planLimitService = planLimitService;
     }
 
     @Transactional(readOnly = true)
@@ -107,22 +114,35 @@ public class ConversationService {
         conversation.setUnreadCount(0);
         conversationRepository.save(conversation);
 
-        // Outbound WhatsApp dispatch if customer has phone number
+        // Outbound dispatch to Telegram or WhatsApp based on customer channel
         if (conversation.getCustomer() != null && conversation.getCustomer().getPhoneNumber() != null) {
-            integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
-                    .ifPresent(account -> {
-                        try {
-                            WhatsAppSendResult result = whatsAppClient.sendTextMessage(account, conversation.getCustomer().getPhoneNumber(), textContent.trim());
-                            if (result.isSuccess()) {
-                                logger.info("Outbound WhatsApp agent message dispatched to {}: id={}, simulated={}",
-                                        conversation.getCustomer().getPhoneNumber(), result.getMessageId(), result.isSimulated());
-                            } else {
-                                logger.warn("Outbound WhatsApp message failed: {}", result.getErrorMessage());
+            String phone = conversation.getCustomer().getPhoneNumber();
+            if (phone.startsWith("tg:")) {
+                String chatId = phone.substring(3);
+                integrationAccountRepository.findByBusinessIdAndProvider(businessId, "TELEGRAM_BOT")
+                        .ifPresent(account -> {
+                            try {
+                                telegramClient.sendMessage(account, chatId, textContent.trim());
+                            } catch (Exception e) {
+                                logger.error("Failed to dispatch Telegram outbound message", e);
                             }
-                        } catch (Exception e) {
-                            logger.error("Failed to dispatch WhatsApp outbound message", e);
-                        }
-                    });
+                        });
+            } else {
+                integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
+                        .ifPresent(account -> {
+                            try {
+                                WhatsAppSendResult result = whatsAppClient.sendTextMessage(account, conversation.getCustomer().getPhoneNumber(), textContent.trim());
+                                if (result.isSuccess()) {
+                                    logger.info("Outbound WhatsApp agent message dispatched to {}: id={}, simulated={}",
+                                            conversation.getCustomer().getPhoneNumber(), result.getMessageId(), result.isSimulated());
+                                } else {
+                                    logger.warn("Outbound WhatsApp message failed: {}", result.getErrorMessage());
+                                }
+                            } catch (Exception e) {
+                                logger.error("Failed to dispatch WhatsApp outbound message", e);
+                            }
+                        });
+            }
         }
 
         return message;
@@ -135,11 +155,24 @@ public class ConversationService {
         Customer customer = customerRepository.findByBusinessIdAndId(businessId, customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
+        boolean isNewConversation = conversationRepository.findByBusinessIdAndCustomerId(businessId, customerId).isEmpty();
+
         Conversation conversation = conversationRepository.findByBusinessIdAndCustomerId(businessId, customerId)
                 .orElseGet(() -> {
+                    planLimitService.checkConversationLimit(businessId);
                     Conversation c = new Conversation(business, customer);
+                    if (customer.getPhoneNumber() != null && customer.getPhoneNumber().startsWith("tg:")) {
+                        c.setChannel("TELEGRAM");
+                    }
                     return conversationRepository.save(c);
                 });
+
+        if (customer.getPhoneNumber() != null && customer.getPhoneNumber().startsWith("tg:")
+                && !"TELEGRAM".equalsIgnoreCase(conversation.getChannel())) {
+            conversation.setChannel("TELEGRAM");
+        }
+
+        boolean isFirstMessage = isNewConversation || messageRepository.countByBusinessIdAndConversationId(businessId, conversation.getId()) == 0;
 
         // 1. Persist Customer Message
         Message incomingMessage = new Message();
@@ -156,10 +189,10 @@ public class ConversationService {
         conversation.setStatus("OPEN");
         conversation.setUnreadCount(conversation.getUnreadCount() + 1);
 
-        // 2. Trigger AI Autonomous Response if AI is enabled
-        if (conversation.isAiEnabled()) {
+        // 2. Trigger AI Autonomous Response if AI is enabled and not blocked by plan/trial expiration
+        if (conversation.isAiEnabled() && planLimitService.canSendWhatsAppAutoReply(businessId)) {
             AiGenerationResponse aiResponse = aiService.processIncomingMessage(
-                    businessId, textContent, List.of(), customer.getPhoneNumber(), customer.getName()
+                    businessId, textContent, List.of(), customer.getPhoneNumber(), customer.getName(), isFirstMessage
             );
 
             if (aiResponse != null && aiResponse.getReplyText() != null) {
@@ -180,16 +213,28 @@ public class ConversationService {
                     conversation.setUnreadCount(0); // Answered cleanly
                 }
 
-                // Dispatch AI autonomous reply to customer's WhatsApp
+                // Dispatch AI autonomous reply to Telegram or WhatsApp based on customer channel
                 if (customer.getPhoneNumber() != null) {
-                    integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
-                            .ifPresent(account -> {
-                                try {
-                                    whatsAppClient.sendTextMessage(account, customer.getPhoneNumber(), aiResponse.getReplyText());
-                                } catch (Exception e) {
-                                    logger.error("Failed to dispatch WhatsApp AI reply", e);
-                                }
-                            });
+                    if (customer.getPhoneNumber().startsWith("tg:")) {
+                        String chatId = customer.getPhoneNumber().substring(3);
+                        integrationAccountRepository.findByBusinessIdAndProvider(businessId, "TELEGRAM_BOT")
+                                .ifPresent(account -> {
+                                    try {
+                                        telegramClient.sendMessage(account, chatId, aiResponse.getReplyText());
+                                    } catch (Exception e) {
+                                        logger.error("Failed to dispatch Telegram AI reply", e);
+                                    }
+                                });
+                    } else {
+                        integrationAccountRepository.findByBusinessIdAndProvider(businessId, "WHATSAPP_CLOUD")
+                                .ifPresent(account -> {
+                                    try {
+                                        whatsAppClient.sendTextMessage(account, customer.getPhoneNumber(), aiResponse.getReplyText());
+                                    } catch (Exception e) {
+                                        logger.error("Failed to dispatch WhatsApp AI reply", e);
+                                    }
+                                });
+                    }
                 }
             }
         }

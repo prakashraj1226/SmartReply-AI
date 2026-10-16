@@ -34,6 +34,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 401 && !req.url.includes('/auth/login') && !req.url.includes('/auth/register')) {
         authService.logout();
         router.navigate(['/auth/login']);
+      } else if (error.status === 403 && !req.url.includes('/auth/login')) {
+        const msg = (error.error?.message || '').toLowerCase();
+        if (msg.includes('suspended')) {
+          authService.logout();
+          router.navigate(['/auth/login'], { queryParams: { reason: 'suspended' } });
+        }
       }
       return throwError(() => error);
     })

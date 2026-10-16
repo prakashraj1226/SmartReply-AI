@@ -7,6 +7,7 @@ import { ApiResponse } from '../models/auth.models';
 export interface AdminOverview {
   totalBusinesses: number;
   activeBusinesses: number;
+  suspendedBusinesses: number;
   totalUsers: number;
   totalConversations: number;
   totalMessages: number;
@@ -22,10 +23,20 @@ export interface AdminBusiness {
   email: string;
   phone: string;
   isActive: boolean;
+  /** Jackson may historically emit `active` instead of `isActive`. */
+  active?: boolean;
   onboardingCompleted: boolean;
   planName: string;
   memberCount: number;
   createdAt: string;
+}
+
+/** Normalize business status from either `isActive` or legacy `active` JSON. */
+export function normalizeAdminBusiness(biz: AdminBusiness): AdminBusiness {
+  const isActive = typeof biz.isActive === 'boolean'
+    ? biz.isActive
+    : !!biz.active;
+  return { ...biz, isActive };
 }
 
 export interface AdminUser {

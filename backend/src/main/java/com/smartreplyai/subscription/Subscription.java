@@ -41,6 +41,15 @@ public class Subscription {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
+    @Column(name = "trial_started_at")
+    private Instant trialStartedAt;
+
+    @Column(name = "trial_ends_at")
+    private Instant trialEndsAt;
+
+    @Column(name = "trial_status", length = 50)
+    private String trialStatus; // ACTIVE, EXPIRED, CONVERTED
+
     public Subscription() {
     }
 
@@ -134,5 +143,55 @@ public class Subscription {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Instant getTrialStartedAt() {
+        return trialStartedAt;
+    }
+
+    public void setTrialStartedAt(Instant trialStartedAt) {
+        this.trialStartedAt = trialStartedAt;
+    }
+
+    public Instant getTrialEndsAt() {
+        return trialEndsAt;
+    }
+
+    public void setTrialEndsAt(Instant trialEndsAt) {
+        this.trialEndsAt = trialEndsAt;
+    }
+
+    public String getTrialStatus() {
+        return trialStatus;
+    }
+
+    public void setTrialStatus(String trialStatus) {
+        this.trialStatus = trialStatus;
+    }
+
+    public boolean isTrial() {
+        return (plan != null && "TRIAL".equalsIgnoreCase(plan.getCode())) || "TRIALING".equalsIgnoreCase(status);
+    }
+
+    public boolean isTrialExpired() {
+        if (!isTrial()) {
+            return false;
+        }
+        if (trialEndsAt == null) {
+            return false;
+        }
+        return Instant.now().isAfter(trialEndsAt);
+    }
+
+    public long getDaysRemaining() {
+        if (!isTrial() || trialEndsAt == null) {
+            return 0;
+        }
+        Instant now = Instant.now();
+        if (now.isAfter(trialEndsAt)) {
+            return 0;
+        }
+        long seconds = java.time.Duration.between(now, trialEndsAt).getSeconds();
+        return Math.max(0, (seconds + 86399) / 86400); // Ceiling of remaining days
     }
 }

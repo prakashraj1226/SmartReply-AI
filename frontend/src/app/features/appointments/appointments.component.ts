@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AppointmentService, Appointment, CreateAppointmentRequest, TimeSlot } from '../../core/services/appointment.service';
 import { CustomerService, Customer } from '../../core/services/customer.service';
 import { CatalogService, ServiceItem, StaffMember, Branch } from '../../core/services/catalog.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-appointments',
@@ -891,7 +892,8 @@ export class AppointmentsComponent implements OnInit {
   constructor(
     private aptService: AppointmentService,
     private customerService: CustomerService,
-    private catalogService: CatalogService
+    private catalogService: CatalogService,
+    private confirmDialog: ConfirmDialogService
   ) {}
 
   ngOnInit(): void {
@@ -1130,8 +1132,15 @@ export class AppointmentsComponent implements OnInit {
     });
   }
 
-  cancelBooking(id: string): void {
-    if (!confirm('Cancel this appointment? An automated notification will be dispatched.')) return;
+  async cancelBooking(id: string): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Cancel Appointment',
+      message: 'Are you sure you want to cancel this booking? An automated WhatsApp cancellation notification will be dispatched to the customer.',
+      confirmText: 'Cancel Booking',
+      cancelText: 'Keep Booking',
+      type: 'warning'
+    });
+    if (!confirmed) return;
     this.aptService.cancelAppointment(id).subscribe({
       next: () => this.loadAppointments(),
       error: () => {

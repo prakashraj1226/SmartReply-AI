@@ -14,6 +14,7 @@ public class KnowledgeArticleDto {
     private String answer;
     private String keywords;
     private boolean isActive;
+    private String type;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -32,6 +33,7 @@ public class KnowledgeArticleDto {
         dto.setAnswer(a.getAnswer());
         dto.setKeywords(a.getKeywords());
         dto.setActive(a.isActive());
+        dto.setType(a.getType() != null ? a.getType() : "FAQ");
         dto.setCreatedAt(a.getCreatedAt());
         dto.setUpdatedAt(a.getUpdatedAt());
         return dto;
@@ -99,6 +101,14 @@ public class KnowledgeArticleDto {
 
     public void setActive(boolean active) {
         isActive = active;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public Instant getCreatedAt() {

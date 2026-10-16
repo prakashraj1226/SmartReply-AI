@@ -1,9 +1,10 @@
 package com.smartreplyai.tenant;
 
+import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessMember;
 import com.smartreplyai.business.BusinessMemberRepository;
+import com.smartreplyai.business.BusinessRepository;
 import com.smartreplyai.security.UserPrincipal;
-import com.smartreplyai.staff.Staff;
 import com.smartreplyai.staff.StaffRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -25,10 +26,14 @@ import java.util.UUID;
 public class TenantFilter extends OncePerRequestFilter {
 
     private final BusinessMemberRepository businessMemberRepository;
+    private final BusinessRepository businessRepository;
     private final StaffRepository staffRepository;
 
-    public TenantFilter(BusinessMemberRepository businessMemberRepository, StaffRepository staffRepository) {
+    public TenantFilter(BusinessMemberRepository businessMemberRepository,
+                        BusinessRepository businessRepository,
+                        StaffRepository staffRepository) {
         this.businessMemberRepository = businessMemberRepository;
+        this.businessRepository = businessRepository;
         this.staffRepository = staffRepository;
     }
 
@@ -73,6 +78,13 @@ public class TenantFilter extends OncePerRequestFilter {
 
                         if ("SUSPENDED".equalsIgnoreCase(status)) {
                             sendForbiddenResponse(response, "Access Denied: Your membership in this business is currently suspended");
+                            return;
+                        }
+
+                        // Whole-tenant suspend (Super Admin Suspend) — source of truth: businesses.is_active
+                        Optional<Business> businessOpt = businessRepository.findById(targetBusinessId);
+                        if (businessOpt.isEmpty() || !businessOpt.get().isActive()) {
+                            sendForbiddenResponse(response, "Access Denied: This business is currently suspended.");
                             return;
                         }
 

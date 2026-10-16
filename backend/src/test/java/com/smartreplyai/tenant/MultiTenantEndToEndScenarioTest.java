@@ -89,6 +89,9 @@ class MultiTenantEndToEndScenarioTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private com.smartreplyai.subscription.PlanLimitService planLimitService;
+
     private TenantSecurityService tenantSecurityService;
     private BusinessOnboardingService onboardingService;
     private BranchService branchService;
@@ -111,13 +114,15 @@ class MultiTenantEndToEndScenarioTest {
 
         staffService = new StaffService(
                 staffRepository, businessRepository, branchRepository, userRepository,
-                serviceItemRepository, staffServiceMappingRepository, staffAvailabilityRepository, staffLeaveRepository
+                serviceItemRepository, staffServiceMappingRepository, staffAvailabilityRepository, staffLeaveRepository,
+                planLimitService
         );
 
         appointmentService = new AppointmentService(
                 appointmentRepository, businessRepository, customerRepository, branchRepository,
                 serviceItemRepository, staffRepository, staffServiceMappingRepository,
-                staffAvailabilityRepository, staffLeaveRepository, userRepository, tenantSecurityService
+                staffAvailabilityRepository, staffLeaveRepository, userRepository, tenantSecurityService,
+                planLimitService
         );
 
         aiProvider = new RuleBasedKnowledgeAiProvider(appointmentService);

@@ -8,6 +8,8 @@ public class UserProfileResponse {
     private String email;
     private String fullName;
     private String role;
+    private String tenantRole;
+    private String phone;
     private UUID businessId;
     private String businessName;
     private boolean onboardingCompleted;
@@ -21,6 +23,7 @@ public class UserProfileResponse {
         this.email = email;
         this.fullName = fullName;
         this.role = role;
+        this.tenantRole = role;
         this.businessId = businessId;
         this.businessName = businessName;
         this.onboardingCompleted = onboardingCompleted;
@@ -80,5 +83,21 @@ public class UserProfileResponse {
 
     public void setOnboardingCompleted(boolean onboardingCompleted) {
         this.onboardingCompleted = onboardingCompleted;
+    }
+
+    public String getTenantRole() {
+        return tenantRole;
+    }
+
+    public void setTenantRole(String tenantRole) {
+        this.tenantRole = tenantRole;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }

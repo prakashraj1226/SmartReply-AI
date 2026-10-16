@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { AssistantService } from '../../core/services/assistant.service';
+import { SubscriptionService } from '../../core/services/subscription.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -35,7 +36,9 @@ import { AssistantService } from '../../core/services/assistant.service';
         </div>
         <div class="tenant-info">
           <span class="tenant-title">{{ user.businessName || 'My Workspace' }}</span>
-          <span class="tenant-plan">STARTER PLAN</span>
+          <span class="tenant-plan" [class.tenant-trial]="subscription()?.isTrial" [class.tenant-expired]="subscription()?.isTrialExpired">
+            {{ getPlanBadgeText() }}
+          </span>
         </div>
       </div>
 
@@ -104,23 +107,31 @@ import { AssistantService } from '../../core/services/assistant.service';
           <span class="nav-label" *ngIf="!isCollapsed">Reports & MRR</span>
         </a>
 
-        <div class="nav-section-title" *ngIf="!isCollapsed">INTEGRATIONS & CONFIG</div>
+        <div class="nav-section-title" *ngIf="!isCollapsed && (authService.canManageSettings() || authService.canManageBilling())">INTEGRATIONS & CONFIG</div>
 
-        <a routerLink="/whatsapp" routerLinkActive="active" class="nav-item">
+        <a routerLink="/whatsapp" routerLinkActive="active" class="nav-item" *ngIf="authService.canManageIntegrations()">
           <svg class="nav-icon wa-color" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
           </svg>
           <span class="nav-label" *ngIf="!isCollapsed">WhatsApp API</span>
         </a>
 
-        <a routerLink="/automations" routerLinkActive="active" class="nav-item">
+        <a routerLink="/telegram" routerLinkActive="active" class="nav-item" *ngIf="authService.canManageIntegrations()">
+          <svg class="nav-icon tg-color" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2L2 11.5l7 3.5 3.5 7 9-20z"></path>
+          </svg>
+          <span class="nav-label" *ngIf="!isCollapsed">Telegram Bot</span>
+          <span class="nav-badge tg-badge" *ngIf="!isCollapsed">Free</span>
+        </a>
+
+        <a routerLink="/automations" routerLinkActive="active" class="nav-item" *ngIf="authService.canManageSettings()">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
           </svg>
           <span class="nav-label" *ngIf="!isCollapsed">Automations</span>
         </a>
 
-        <a routerLink="/subscriptions" routerLinkActive="active" class="nav-item">
+        <a routerLink="/subscriptions" routerLinkActive="active" class="nav-item" *ngIf="authService.canManageBilling()">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect width="20" height="14" x="2" y="5" rx="2"></rect>
             <line x1="2" x2="22" y1="10" y2="10"></line>
@@ -128,7 +139,7 @@ import { AssistantService } from '../../core/services/assistant.service';
           <span class="nav-label" *ngIf="!isCollapsed">Billing & Plans</span>
         </a>
 
-        <a routerLink="/settings" routerLinkActive="active" class="nav-item">
+        <a routerLink="/settings" routerLinkActive="active" class="nav-item" *ngIf="authService.canManageSettings()">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -166,7 +177,7 @@ import { AssistantService } from '../../core/services/assistant.service';
           </div>
           <div class="user-info-sm">
             <span class="user-name-sm">{{ user.fullName }}</span>
-            <span class="user-role-sm">{{ user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Business Owner' }}</span>
+            <span class="user-role-sm">{{ (authService.tenantRole() || (user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Business Owner')).replace('_', ' ') }}</span>
           </div>
           <button type="button" class="logout-btn-sm" (click)="authService.logout()" title="Logout">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -357,6 +368,14 @@ import { AssistantService } from '../../core/services/assistant.service';
       color: #ffffff;
     }
 
+    .tg-color {
+      color: #38bdf8;
+    }
+
+    .nav-item.active .tg-color {
+      color: #ffffff;
+    }
+
     .nav-badge {
       margin-left: auto;
       font-size: 0.6rem;
@@ -366,6 +385,12 @@ import { AssistantService } from '../../core/services/assistant.service';
       border: 1px solid rgba(74, 222, 128, 0.35);
       padding: 0.05rem 0.35rem;
       border-radius: 9999px;
+    }
+
+    .tg-badge {
+      background: rgba(14, 165, 233, 0.22);
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.35);
     }
 
     /* Bottom Panel (Reference 4 & 5) */
@@ -487,9 +512,22 @@ import { AssistantService } from '../../core/services/assistant.service';
 export class SidebarComponent {
   authService = inject(AuthService);
   assistant = inject(AssistantService);
+  private subscriptionService = inject(SubscriptionService);
+  subscription = this.subscriptionService.currentSubscription;
+
   isCollapsed = false;
 
   toggleCollapse() {
     this.isCollapsed = !this.isCollapsed;
+  }
+
+  getPlanBadgeText(): string {
+    const sub = this.subscription();
+    if (!sub) return 'WORKSPACE';
+    if (sub.isTrial) {
+      if (sub.isTrialExpired) return 'TRIAL EXPIRED';
+      return `FREE TRIAL (${sub.daysRemaining ?? 0}D)`;
+    }
+    return (sub.planName || sub.planCode || 'ACTIVE').toUpperCase();
   }
 }

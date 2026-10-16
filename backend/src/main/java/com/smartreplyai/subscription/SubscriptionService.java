@@ -2,9 +2,12 @@ package com.smartreplyai.subscription;
 
 import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessRepository;
+import com.smartreplyai.appointment.AppointmentRepository;
 import com.smartreplyai.common.BadRequestException;
 import com.smartreplyai.common.ResourceNotFoundException;
 import com.smartreplyai.conversation.ConversationRepository;
+import com.smartreplyai.customer.CustomerRepository;
+import com.smartreplyai.knowledgebase.KnowledgeArticleRepository;
 import com.smartreplyai.subscription.dto.CheckoutOrderDto;
 import com.smartreplyai.subscription.dto.PaymentTransactionDto;
 import com.smartreplyai.subscription.dto.PendingPaymentDto;
@@ -22,6 +25,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
 import java.util.List;
@@ -38,6 +42,10 @@ public class SubscriptionService {
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final BusinessRepository businessRepository;
     private final ConversationRepository conversationRepository;
+    private final CustomerRepository customerRepository;
+    private final KnowledgeArticleRepository articleRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final PlanLimitService planLimitService;
 
     @Value("${app.razorpay.key-id:rzp_test_mock_key}")
     private String razorpayKeyId;
@@ -49,12 +57,20 @@ public class SubscriptionService {
                                SubscriptionPlanRepository planRepository,
                                PaymentTransactionRepository paymentTransactionRepository,
                                BusinessRepository businessRepository,
-                               ConversationRepository conversationRepository) {
+                               ConversationRepository conversationRepository,
+                               CustomerRepository customerRepository,
+                               KnowledgeArticleRepository articleRepository,
+                               AppointmentRepository appointmentRepository,
+                               PlanLimitService planLimitService) {
         this.subscriptionRepository = subscriptionRepository;
         this.planRepository = planRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.businessRepository = businessRepository;
         this.conversationRepository = conversationRepository;
+        this.customerRepository = customerRepository;
+        this.articleRepository = articleRepository;
+        this.appointmentRepository = appointmentRepository;
+        this.planLimitService = planLimitService;
     }
 
     @Transactional(readOnly = true)
@@ -68,13 +84,18 @@ public class SubscriptionService {
                 .orElseGet(() -> {
                     Business business = businessRepository.findById(businessId)
                             .orElseThrow(() -> new ResourceNotFoundException("Business not found"));
-                    SubscriptionPlan freePlan = planRepository.findByCode("FREE")
-                            .orElseGet(() -> planRepository.findAll().stream().findFirst()
-                                    .orElseThrow(() -> new ResourceNotFoundException("Default plan not found")));
+                    SubscriptionPlan defaultPlan = planRepository.findByCode("TRIAL")
+                            .orElseGet(() -> planRepository.findByCode("FREE")
+                                    .orElseGet(() -> planRepository.findAll().stream().findFirst()
+                                            .orElseThrow(() -> new ResourceNotFoundException("Default plan not found"))));
 
                     Instant start = Instant.now();
-                    Instant end = start.plus(30, ChronoUnit.DAYS);
-                    Subscription sub = new Subscription(business, freePlan, start, end);
+                    Instant end = start.plus(14, ChronoUnit.DAYS);
+                    Subscription sub = new Subscription(business, defaultPlan, start, end);
+                    sub.setStatus("TRIALING");
+                    sub.setTrialStartedAt(start);
+                    sub.setTrialEndsAt(end);
+                    sub.setTrialStatus("ACTIVE");
                     return subscriptionRepository.save(sub);
                 });
     }
@@ -83,6 +104,12 @@ public class SubscriptionService {
     public SubscriptionDetailsDto getSubscriptionDetails(UUID businessId) {
         Subscription sub = getOrInitSubscription(businessId);
         SubscriptionPlan plan = sub.getPlan();
+
+        // Update trial status if expired
+        if (sub.isTrialExpired() && !"EXPIRED".equalsIgnoreCase(sub.getTrialStatus())) {
+            sub.setTrialStatus("EXPIRED");
+            subscriptionRepository.save(sub);
+        }
 
         long currentMonthConversations = conversationRepository.countByBusinessIdAndCreatedAtBetween(
                 businessId, sub.getCurrentPeriodStart(), sub.getCurrentPeriodEnd());
@@ -109,6 +136,44 @@ public class SubscriptionService {
         dto.setCurrentMonthConversations(currentMonthConversations);
         dto.setRemainingConversations(remaining);
         dto.setTransactions(transactions);
+
+        // Trial fields
+        dto.setTrial(sub.isTrial());
+        dto.setTrialExpired(sub.isTrialExpired());
+        dto.setDaysRemaining(sub.getDaysRemaining());
+        dto.setTrialStartedAt(sub.getTrialStartedAt());
+        dto.setTrialEndsAt(sub.getTrialEndsAt());
+        dto.setTrialStatus(sub.getTrialStatus());
+
+        // Limits and usage breakdown
+        PlanLimits.LimitConfig limits = PlanLimits.forPlan(plan.getCode());
+        long staffCount = planLimitService.getCurrentStaffCount(businessId);
+        long customerCount = customerRepository.countByBusinessId(businessId);
+        long kbCount = articleRepository.countByBusinessIdAndTypeIgnoreCase(businessId, "KNOWLEDGE");
+        long faqCount = articleRepository.countByBusinessIdAndTypeIgnoreCase(businessId, "FAQ");
+        LocalDate today = LocalDate.now(PlanLimitService.ASIA_KOLKATA);
+        int todayAiChats = planLimitService.getTodayAiChats(businessId, today);
+
+        Instant startOfDay = today.atStartOfDay(PlanLimitService.ASIA_KOLKATA).toInstant();
+        Instant endOfDay = today.plusDays(1).atStartOfDay(PlanLimitService.ASIA_KOLKATA).toInstant().minusNanos(1);
+        long apptToday = appointmentRepository.countByBusinessIdAndCreatedAtBetween(businessId, startOfDay, endOfDay);
+        Instant trialStart = sub.getTrialStartedAt() != null ? sub.getTrialStartedAt() : sub.getCreatedAt();
+        long apptTotal = appointmentRepository.countByBusinessIdAndCreatedAtGreaterThanEqual(businessId, trialStart);
+
+        dto.setStaffCount(staffCount);
+        dto.setStaffLimit(limits != null ? limits.maxStaff() : plan.getMaxAgents());
+        dto.setCustomerCount(customerCount);
+        dto.setCustomerLimit(limits != null ? limits.maxCustomers() : Integer.MAX_VALUE);
+        dto.setKnowledgeCount(kbCount);
+        dto.setKnowledgeLimit(limits != null ? limits.maxKnowledgeEntries() : Integer.MAX_VALUE);
+        dto.setFaqCount(faqCount);
+        dto.setFaqLimit(limits != null ? limits.maxFaqEntries() : Integer.MAX_VALUE);
+        dto.setAiTodayChats(todayAiChats);
+        dto.setAiTodayLimit(limits != null ? limits.maxAiAssistantDailyChats() : 0);
+        dto.setAppointmentTodayCount(apptToday);
+        dto.setAppointmentTodayLimit(limits != null ? limits.maxAppointmentsDaily() : Integer.MAX_VALUE);
+        dto.setAppointmentTotalCount(apptTotal);
+        dto.setAppointmentTotalLimit(limits != null ? limits.maxAppointmentsTotal() : Integer.MAX_VALUE);
 
         return dto;
     }
@@ -192,6 +257,7 @@ public class SubscriptionService {
         Subscription sub = getOrInitSubscription(tx.getBusiness().getId());
         sub.setPlan(tx.getPlan());
         sub.setStatus("ACTIVE");
+        sub.setTrialStatus("CONVERTED");
         Instant start = Instant.now();
         sub.setCurrentPeriodStart(start);
         sub.setCurrentPeriodEnd(start.plus(30, ChronoUnit.DAYS));

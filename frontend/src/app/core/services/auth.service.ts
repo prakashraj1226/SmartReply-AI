@@ -20,8 +20,19 @@ export class AuthService {
   readonly token = this.tokenSignal.asReadonly();
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = computed(() => !!this.tokenSignal());
-  readonly isBusinessOwner = computed(() => this.currentUserSignal()?.role === 'BUSINESS_OWNER');
+  readonly isBusinessOwner = computed(() => {
+    const role = (this.currentUserSignal()?.tenantRole || this.currentUserSignal()?.role || '').toUpperCase();
+    return role === 'OWNER' || role === 'BUSINESS_OWNER';
+  });
   readonly isSuperAdmin = computed(() => this.currentUserSignal()?.role === 'SUPER_ADMIN');
+  readonly tenantRole = computed(() => this.currentUserSignal()?.tenantRole || this.currentUserSignal()?.role || 'AGENT');
+  readonly isOwner = computed(() => this.isBusinessOwner() || this.isSuperAdmin());
+  readonly canManageBilling = computed(() => this.isOwner());
+  readonly canManageSettings = computed(() => {
+    const role = (this.currentUserSignal()?.tenantRole || this.currentUserSignal()?.role || '').toUpperCase();
+    return role === 'OWNER' || role === 'BUSINESS_OWNER' || role === 'ADMIN' || role === 'BUSINESS_ADMIN' || this.isSuperAdmin();
+  });
+  readonly canManageIntegrations = computed(() => this.canManageSettings());
   readonly onboardingCompleted = computed(() => !!this.currentUserSignal()?.onboardingCompleted);
 
   constructor(
@@ -98,6 +109,8 @@ export class AuthService {
       email: auth.email,
       fullName: auth.fullName,
       role: auth.role,
+      tenantRole: auth.tenantRole || auth.role,
+      phone: auth.phone,
       businessId: auth.businessId,
       businessName: auth.businessName,
       onboardingCompleted: auth.onboardingCompleted

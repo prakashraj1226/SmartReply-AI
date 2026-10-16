@@ -67,6 +67,7 @@ public class AdminService {
         List<Business> allBusinesses = businessRepository.findAll();
         long totalBusinesses = allBusinesses.size();
         long activeBusinesses = allBusinesses.stream().filter(Business::isActive).count();
+        long suspendedBusinesses = totalBusinesses - activeBusinesses;
         long totalUsers = userRepository.count();
         long totalConversations = conversationRepository.count();
         long totalMessages = messageRepository.count();
@@ -97,6 +98,7 @@ public class AdminService {
                 estimatedMrrInr,
                 activeIntegrations
         );
+        overview.setSuspendedBusinesses(suspendedBusinesses);
         overview.setTotalAppointments(totalAppointments);
         overview.setCompletedAppointments(completedAppointments);
         overview.setBusinessesByIndustry(businessesByIndustry);

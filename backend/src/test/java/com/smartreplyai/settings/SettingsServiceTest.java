@@ -13,6 +13,9 @@ import com.smartreplyai.common.BadRequestException;
 import com.smartreplyai.settings.dto.AiConfigDto;
 import com.smartreplyai.settings.dto.BusinessProfileDto;
 import com.smartreplyai.settings.dto.InviteMemberRequest;
+import com.smartreplyai.settings.dto.TeamMemberDto;
+import com.smartreplyai.settings.dto.UpdateTeamMemberRequest;
+import com.smartreplyai.staff.Staff;
 import com.smartreplyai.subscription.Subscription;
 import com.smartreplyai.subscription.SubscriptionPlan;
 import com.smartreplyai.subscription.SubscriptionService;
@@ -53,6 +56,8 @@ class SettingsServiceTest {
     private AuditLogService auditLogService;
     @Mock
     private com.smartreplyai.staff.StaffRepository staffRepository;
+    @Mock
+    private com.smartreplyai.subscription.PlanLimitService planLimitService;
 
     private SettingsService settingsService;
 
@@ -66,7 +71,8 @@ class SettingsServiceTest {
                 passwordEncoder,
                 subscriptionService,
                 auditLogService,
-                staffRepository
+                staffRepository,
+                planLimitService
         );
     }
 
@@ -145,11 +151,8 @@ class SettingsServiceTest {
         Subscription subscription = new Subscription(business, starterPlan, Instant.now(), Instant.now().plusSeconds(86400));
 
         when(businessRepository.findById(bId)).thenReturn(Optional.of(business));
-        when(subscriptionService.getOrInitSubscription(bId)).thenReturn(subscription);
-
-        User existingAgent = new User("agent1@smilecare.com", "hash", "Agent One", "BUSINESS_AGENT");
-        BusinessMember member1 = new BusinessMember(business, existingAgent, "AGENT");
-        when(businessMemberRepository.findByBusinessId(bId)).thenReturn(List.of(member1));
+        doThrow(new BadRequestException("Starter Plan allows a maximum of 1 staff members. Upgrade your plan to add more staff."))
+                .when(planLimitService).checkStaffLimit(bId);
 
         InviteMemberRequest req = new InviteMemberRequest();
         req.setEmail("agent2@smilecare.com");
@@ -161,7 +164,7 @@ class SettingsServiceTest {
         BadRequestException ex = assertThrows(BadRequestException.class, () ->
                 settingsService.inviteTeamMember(bId, req, user, "127.0.0.1"));
 
-        assertTrue(ex.getMessage().contains("limit reached"));
+        assertTrue(ex.getMessage().contains("maximum of 1 staff members"));
     }
 
     @Test
@@ -179,8 +182,6 @@ class SettingsServiceTest {
         Subscription subscription = new Subscription(business, starterPlan, Instant.now(), Instant.now().plusSeconds(86400));
 
         when(businessRepository.findById(bId)).thenReturn(Optional.of(business));
-        when(subscriptionService.getOrInitSubscription(bId)).thenReturn(subscription);
-        when(businessMemberRepository.findByBusinessId(bId)).thenReturn(List.of());
 
         InviteMemberRequest req = new InviteMemberRequest();
         req.setEmail("john@gmail.com");
@@ -229,5 +230,47 @@ class SettingsServiceTest {
                 settingsService.removeTeamMember(bId, memberId, ownerUser, "127.0.0.1"));
 
         assertEquals("The primary business owner cannot be removed", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("updateTeamMember should update staff name, phone, role, status and sync Staff entity")
+    void testUpdateTeamMember_Success() {
+        UUID bId = UUID.randomUUID();
+        Business business = new Business("SmileCare", "smilecare", "Healthcare", "info@smilecare.com", "+919876543210");
+        business.setId(bId);
+
+        UUID memberId = UUID.randomUUID();
+        UUID staffUserId = UUID.randomUUID();
+        User staffUser = new User("staff@smilecare.com", "hash", "Old Name", "BUSINESS_AGENT");
+        staffUser.setId(staffUserId);
+
+        BusinessMember member = new BusinessMember(business, staffUser, "AGENT");
+        member.setId(memberId);
+        member.setMembershipStatus("ACTIVE");
+
+        when(businessMemberRepository.findById(memberId)).thenReturn(Optional.of(member));
+        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
+        when(businessMemberRepository.save(any(BusinessMember.class))).thenAnswer(i -> i.getArgument(0));
+
+        Staff staff = new Staff(business, null, "Old Name", "AGENT", null, "staff@smilecare.com");
+        when(staffRepository.findByBusinessIdAndUserId(bId, staffUserId)).thenReturn(Optional.of(staff));
+
+        UpdateTeamMemberRequest req = new UpdateTeamMemberRequest("Updated Name", "+919876543299", "SALON_STAFF", "ACTIVE", "NewSecret@123");
+        when(passwordEncoder.encode("NewSecret@123")).thenReturn("newEncodedHash");
+
+        User ownerUser = new User("owner@smilecare.com", "hash", "Owner", "BUSINESS_OWNER");
+        TeamMemberDto result = settingsService.updateTeamMember(bId, memberId, req, ownerUser, "127.0.0.1");
+
+        assertNotNull(result);
+        assertEquals("Updated Name", result.getFullName());
+        assertEquals("+919876543299", result.getPhone());
+        assertEquals("SALON_STAFF", result.getRole());
+        assertEquals("ACTIVE", result.getMembershipStatus());
+        assertEquals("newEncodedHash", staffUser.getPasswordHash());
+        assertEquals("Updated Name", staff.getName());
+        assertEquals("+919876543299", staff.getPhone());
+        assertEquals("SALON_STAFF", staff.getStaffType());
+        verify(staffRepository, times(1)).save(staff);
+        verify(auditLogService, times(1)).logAction(any(), eq(ownerUser), eq("TEAM_MEMBER_UPDATED"), any(), any(), any(), eq("127.0.0.1"));
     }
 }

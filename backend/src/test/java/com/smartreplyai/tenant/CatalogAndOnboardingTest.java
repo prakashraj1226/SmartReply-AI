@@ -69,6 +69,9 @@ class CatalogAndOnboardingTest {
     @Mock
     private KnowledgeArticleRepository articleRepository;
 
+    @Mock
+    private com.smartreplyai.subscription.PlanLimitService planLimitService;
+
     private BranchService branchService;
     private ServiceCatalogService serviceCatalogService;
     private StaffService staffService;
@@ -88,7 +91,8 @@ class CatalogAndOnboardingTest {
         branchService = new BranchService(branchRepository, businessRepository);
         serviceCatalogService = new ServiceCatalogService(serviceItemRepository, businessRepository, branchRepository);
         staffService = new StaffService(staffRepository, businessRepository, branchRepository, userRepository,
-                serviceItemRepository, staffServiceMappingRepository, staffAvailabilityRepository, staffLeaveRepository);
+                serviceItemRepository, staffServiceMappingRepository, staffAvailabilityRepository, staffLeaveRepository,
+                planLimitService);
         onboardingService = new BusinessOnboardingService(businessRepository, branchRepository,
                 serviceItemRepository, staffRepository, staffServiceMappingRepository, staffAvailabilityRepository);
         businessService = new BusinessService(businessRepository, articleRepository,

@@ -24,6 +24,8 @@ public interface KnowledgeArticleRepository extends JpaRepository<KnowledgeArtic
 
     long countByBusinessId(UUID businessId);
 
+    long countByBusinessIdAndTypeIgnoreCase(UUID businessId, String type);
+
     boolean existsByBusinessIdAndQuestionIgnoreCase(UUID businessId, String question);
 
     @Query("SELECT a FROM KnowledgeArticle a WHERE a.business.id = :businessId AND " +

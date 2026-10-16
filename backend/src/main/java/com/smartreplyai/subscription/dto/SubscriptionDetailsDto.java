@@ -1,5 +1,7 @@
 package com.smartreplyai.subscription.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -21,6 +23,34 @@ public class SubscriptionDetailsDto {
     private long currentMonthConversations;
     private long remainingConversations;
     private List<PaymentTransactionDto> transactions;
+
+    // Trial-specific information
+    private Instant trialStartedAt;
+    private Instant trialEndsAt;
+    private String trialStatus;
+
+    @JsonProperty("isTrial")
+    private boolean isTrial;
+
+    @JsonProperty("isTrialExpired")
+    private boolean isTrialExpired;
+    private long daysRemaining;
+
+    // Plan usage counters & limits for UI inspection and warning
+    private long staffCount;
+    private int staffLimit;
+    private long customerCount;
+    private int customerLimit;
+    private long knowledgeCount;
+    private int knowledgeLimit;
+    private long faqCount;
+    private int faqLimit;
+    private int aiTodayChats;
+    private int aiTodayLimit;
+    private long appointmentTodayCount;
+    private int appointmentTodayLimit;
+    private long appointmentTotalCount;
+    private int appointmentTotalLimit;
 
     public SubscriptionDetailsDto() {
     }
@@ -135,5 +165,175 @@ public class SubscriptionDetailsDto {
 
     public void setTransactions(List<PaymentTransactionDto> transactions) {
         this.transactions = transactions;
+    }
+
+    public Instant getTrialStartedAt() {
+        return trialStartedAt;
+    }
+
+    public void setTrialStartedAt(Instant trialStartedAt) {
+        this.trialStartedAt = trialStartedAt;
+    }
+
+    public Instant getTrialEndsAt() {
+        return trialEndsAt;
+    }
+
+    public void setTrialEndsAt(Instant trialEndsAt) {
+        this.trialEndsAt = trialEndsAt;
+    }
+
+    public String getTrialStatus() {
+        return trialStatus;
+    }
+
+    public void setTrialStatus(String trialStatus) {
+        this.trialStatus = trialStatus;
+    }
+
+    @JsonProperty("isTrial")
+    public boolean isTrial() {
+        return isTrial;
+    }
+
+    public boolean getTrial() {
+        return isTrial;
+    }
+
+    public void setTrial(boolean trial) {
+        isTrial = trial;
+    }
+
+    @JsonProperty("isTrialExpired")
+    public boolean isTrialExpired() {
+        return isTrialExpired;
+    }
+
+    public boolean getTrialExpired() {
+        return isTrialExpired;
+    }
+
+    public void setTrialExpired(boolean trialExpired) {
+        isTrialExpired = trialExpired;
+    }
+
+    public long getDaysRemaining() {
+        return daysRemaining;
+    }
+
+    public void setDaysRemaining(long daysRemaining) {
+        this.daysRemaining = daysRemaining;
+    }
+
+    public long getStaffCount() {
+        return staffCount;
+    }
+
+    public void setStaffCount(long staffCount) {
+        this.staffCount = staffCount;
+    }
+
+    public int getStaffLimit() {
+        return staffLimit;
+    }
+
+    public void setStaffLimit(int staffLimit) {
+        this.staffLimit = staffLimit;
+    }
+
+    public long getCustomerCount() {
+        return customerCount;
+    }
+
+    public void setCustomerCount(long customerCount) {
+        this.customerCount = customerCount;
+    }
+
+    public int getCustomerLimit() {
+        return customerLimit;
+    }
+
+    public void setCustomerLimit(int customerLimit) {
+        this.customerLimit = customerLimit;
+    }
+
+    public long getKnowledgeCount() {
+        return knowledgeCount;
+    }
+
+    public void setKnowledgeCount(long knowledgeCount) {
+        this.knowledgeCount = knowledgeCount;
+    }
+
+    public int getKnowledgeLimit() {
+        return knowledgeLimit;
+    }
+
+    public void setKnowledgeLimit(int knowledgeLimit) {
+        this.knowledgeLimit = knowledgeLimit;
+    }
+
+    public long getFaqCount() {
+        return faqCount;
+    }
+
+    public void setFaqCount(long faqCount) {
+        this.faqCount = faqCount;
+    }
+
+    public int getFaqLimit() {
+        return faqLimit;
+    }
+
+    public void setFaqLimit(int faqLimit) {
+        this.faqLimit = faqLimit;
+    }
+
+    public int getAiTodayChats() {
+        return aiTodayChats;
+    }
+
+    public void setAiTodayChats(int aiTodayChats) {
+        this.aiTodayChats = aiTodayChats;
+    }
+
+    public int getAiTodayLimit() {
+        return aiTodayLimit;
+    }
+
+    public void setAiTodayLimit(int aiTodayLimit) {
+        this.aiTodayLimit = aiTodayLimit;
+    }
+
+    public long getAppointmentTodayCount() {
+        return appointmentTodayCount;
+    }
+
+    public void setAppointmentTodayCount(long appointmentTodayCount) {
+        this.appointmentTodayCount = appointmentTodayCount;
+    }
+
+    public int getAppointmentTodayLimit() {
+        return appointmentTodayLimit;
+    }
+
+    public void setAppointmentTodayLimit(int appointmentTodayLimit) {
+        this.appointmentTodayLimit = appointmentTodayLimit;
+    }
+
+    public long getAppointmentTotalCount() {
+        return appointmentTotalCount;
+    }
+
+    public void setAppointmentTotalCount(long appointmentTotalCount) {
+        this.appointmentTotalCount = appointmentTotalCount;
+    }
+
+    public int getAppointmentTotalLimit() {
+        return appointmentTotalLimit;
+    }
+
+    public void setAppointmentTotalLimit(int appointmentTotalLimit) {
+        this.appointmentTotalLimit = appointmentTotalLimit;
     }
 }

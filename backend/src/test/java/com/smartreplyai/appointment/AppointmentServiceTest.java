@@ -74,6 +74,9 @@ class AppointmentServiceTest {
     @Mock
     private TenantSecurityService tenantSecurityService;
 
+    @Mock
+    private com.smartreplyai.subscription.PlanLimitService planLimitService;
+
     @InjectMocks
     private AppointmentService appointmentService;
 

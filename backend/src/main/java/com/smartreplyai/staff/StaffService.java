@@ -33,6 +33,7 @@ public class StaffService {
     private final StaffServiceMappingRepository staffServiceMappingRepository;
     private final StaffAvailabilityRepository staffAvailabilityRepository;
     private final StaffLeaveRepository staffLeaveRepository;
+    private final com.smartreplyai.subscription.PlanLimitService planLimitService;
 
     public StaffService(StaffRepository staffRepository,
                         BusinessRepository businessRepository,
@@ -41,7 +42,8 @@ public class StaffService {
                         ServiceItemRepository serviceItemRepository,
                         StaffServiceMappingRepository staffServiceMappingRepository,
                         StaffAvailabilityRepository staffAvailabilityRepository,
-                        StaffLeaveRepository staffLeaveRepository) {
+                        StaffLeaveRepository staffLeaveRepository,
+                        com.smartreplyai.subscription.PlanLimitService planLimitService) {
         this.staffRepository = staffRepository;
         this.businessRepository = businessRepository;
         this.branchRepository = branchRepository;
@@ -50,6 +52,7 @@ public class StaffService {
         this.staffServiceMappingRepository = staffServiceMappingRepository;
         this.staffAvailabilityRepository = staffAvailabilityRepository;
         this.staffLeaveRepository = staffLeaveRepository;
+        this.planLimitService = planLimitService;
     }
 
     @Transactional(readOnly = true)
@@ -88,6 +91,8 @@ public class StaffService {
 
     @Transactional
     public StaffDto createStaff(UUID businessId, CreateStaffRequest request) {
+        planLimitService.checkStaffLimit(businessId);
+
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found with ID: " + businessId));
 

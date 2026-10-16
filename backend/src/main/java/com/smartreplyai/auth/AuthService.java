@@ -26,6 +26,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import com.smartreplyai.auth.dto.ForgotPasswordRequest;
 import com.smartreplyai.auth.dto.ResetPasswordRequest;
 import java.text.Normalizer;
@@ -116,11 +119,17 @@ public class AuthService {
         AiConfiguration aiConfig = new AiConfiguration(business);
         aiConfigurationRepository.save(aiConfig);
 
-        // 5. Initialize Free Tier Subscription
-        SubscriptionPlan freePlan = subscriptionPlanRepository.findByCode("FREE")
-                .orElse(null);
-        if (freePlan != null) {
-            Subscription subscription = new Subscription(business, freePlan);
+        // 5. Initialize 14-day Free Trial Subscription
+        SubscriptionPlan trialPlan = subscriptionPlanRepository.findByCode("TRIAL")
+                .orElseGet(() -> subscriptionPlanRepository.findByCode("FREE").orElse(null));
+        if (trialPlan != null) {
+            Instant start = Instant.now();
+            Instant end = start.plus(14, ChronoUnit.DAYS);
+            Subscription subscription = new Subscription(business, trialPlan, start, end);
+            subscription.setStatus("TRIALING");
+            subscription.setTrialStartedAt(start);
+            subscription.setTrialEndsAt(end);
+            subscription.setTrialStatus("ACTIVE");
             subscriptionRepository.save(subscription);
         }
 
@@ -142,10 +151,11 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        String rawIdentifier = request.getEmail().trim();
+        String lookupIdentifier = rawIdentifier.contains("@") ? rawIdentifier.toLowerCase(Locale.ROOT) : rawIdentifier;
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(normalizedEmail, request.getPassword())
+                new UsernamePasswordAuthenticationToken(lookupIdentifier, request.getPassword())
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -156,8 +166,24 @@ public class AuthService {
         UUID businessId = principal.getDefaultBusinessId();
         String businessName = "";
         boolean onboardingCompleted = false;
+        String tenantRole = user.getRole();
 
-        if (businessId != null) {
+        // Super Admin is never blocked by tenant suspension.
+        if (!"SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+            Business activeBusiness = resolveActiveBusinessForLogin(user.getId(), businessId);
+            if (activeBusiness == null) {
+                java.util.List<Business> memberships = businessMemberRepository.findBusinessesByUserId(user.getId());
+                if (!memberships.isEmpty() || businessId != null) {
+                    throw new BadRequestException(
+                            "This business account has been suspended. Please contact support.");
+                }
+            } else {
+                businessId = activeBusiness.getId();
+                businessName = activeBusiness.getName();
+                onboardingCompleted = activeBusiness.isOnboardingCompleted();
+                principal = UserPrincipal.create(user, businessId);
+            }
+        } else if (businessId != null) {
             Business business = businessRepository.findById(businessId).orElse(null);
             if (business != null) {
                 businessName = business.getName();
@@ -165,9 +191,16 @@ public class AuthService {
             }
         }
 
+        if (businessId != null) {
+            Optional<BusinessMember> memberOpt = businessMemberRepository.findByBusinessIdAndUserId(businessId, user.getId());
+            if (memberOpt.isPresent()) {
+                tenantRole = memberOpt.get().getRole();
+            }
+        }
+
         String token = tokenProvider.generateToken(principal);
 
-        return new AuthResponse(
+        AuthResponse resp = new AuthResponse(
                 token,
                 user.getId(),
                 user.getEmail(),
@@ -177,6 +210,26 @@ public class AuthService {
                 businessName,
                 onboardingCompleted
         );
+        resp.setTenantRole(tenantRole);
+        resp.setPhone(user.getPhone());
+        return resp;
+    }
+
+    /**
+     * Prefer the caller's default business when it is active; otherwise the first active membership.
+     * Returns null when the user only belongs to suspended tenants (or has no resolvable active shop).
+     */
+    private Business resolveActiveBusinessForLogin(UUID userId, UUID preferredBusinessId) {
+        if (preferredBusinessId != null) {
+            Business preferred = businessRepository.findById(preferredBusinessId).orElse(null);
+            if (preferred != null && preferred.isActive()) {
+                return preferred;
+            }
+        }
+        return businessMemberRepository.findBusinessesByUserId(userId).stream()
+                .filter(Business::isActive)
+                .findFirst()
+                .orElse(null);
     }
 
     @Transactional(readOnly = true)
@@ -187,6 +240,7 @@ public class AuthService {
         UUID businessId = principal.getDefaultBusinessId();
         String businessName = "";
         boolean onboardingCompleted = false;
+        String tenantRole = user.getRole();
 
         if (businessId != null) {
             Business business = businessRepository.findById(businessId).orElse(null);
@@ -194,9 +248,13 @@ public class AuthService {
                 businessName = business.getName();
                 onboardingCompleted = business.isOnboardingCompleted();
             }
+            Optional<BusinessMember> memberOpt = businessMemberRepository.findByBusinessIdAndUserId(businessId, user.getId());
+            if (memberOpt.isPresent()) {
+                tenantRole = memberOpt.get().getRole();
+            }
         }
 
-        return new UserProfileResponse(
+        UserProfileResponse resp = new UserProfileResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
@@ -205,6 +263,9 @@ public class AuthService {
                 businessName,
                 onboardingCompleted
         );
+        resp.setTenantRole(tenantRole);
+        resp.setPhone(user.getPhone());
+        return resp;
     }
 
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");

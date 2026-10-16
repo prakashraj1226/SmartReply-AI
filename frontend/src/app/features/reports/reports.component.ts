@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, signal, ViewChild, ElementRef, AfterViewI
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReportsService, ReportsSummary } from '../../core/services/reports.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -608,7 +609,10 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   breakdownRows: IntentBreakdownRow[] = [];
 
-  constructor(private reportsService: ReportsService) {}
+  constructor(
+    private reportsService: ReportsService,
+    private confirmDialog: ConfirmDialogService
+  ) {}
 
   ngOnInit(): void {
     this.loadSummary();
@@ -683,7 +687,7 @@ export class ReportsComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: () => {
         this.isExporting.set(false);
-        alert('Could not download the report.');
+        this.confirmDialog.alert('Could not download the analytics report. Please try again.', 'Export Failed', 'warning');
       }
     });
   }

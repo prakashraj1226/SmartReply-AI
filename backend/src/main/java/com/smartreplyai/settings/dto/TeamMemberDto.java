@@ -8,6 +8,7 @@ public class TeamMemberDto {
     private UUID userId;
     private String fullName;
     private String email;
+    private String phone;
     private String role;
     private String membershipStatus = "ACTIVE";
     private Instant joinedAt;
@@ -15,14 +16,19 @@ public class TeamMemberDto {
     public TeamMemberDto() {
     }
 
-    public TeamMemberDto(UUID id, UUID userId, String fullName, String email, String role, String membershipStatus, Instant joinedAt) {
+    public TeamMemberDto(UUID id, UUID userId, String fullName, String email, String phone, String role, String membershipStatus, Instant joinedAt) {
         this.id = id;
         this.userId = userId;
         this.fullName = fullName;
         this.email = email;
+        this.phone = phone;
         this.role = role;
         this.membershipStatus = membershipStatus != null ? membershipStatus : "ACTIVE";
         this.joinedAt = joinedAt;
+    }
+
+    public TeamMemberDto(UUID id, UUID userId, String fullName, String email, String role, String membershipStatus, Instant joinedAt) {
+        this(id, userId, fullName, email, null, role, membershipStatus, joinedAt);
     }
 
     public UUID getId() {
@@ -55,6 +61,14 @@ public class TeamMemberDto {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public String getRole() {

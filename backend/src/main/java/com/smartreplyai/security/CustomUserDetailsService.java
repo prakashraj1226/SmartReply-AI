@@ -26,9 +26,11 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
+        String clean = identifier != null ? identifier.trim() : "";
+        User user = userRepository.findByEmail(clean.toLowerCase())
+                .or(() -> userRepository.findByPhone(clean))
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email or phone: " + identifier));
 
         List<BusinessMember> members = businessMemberRepository.findByUserId(user.getId());
         UUID defaultBusinessId = members.isEmpty() ? null : members.get(0).getBusiness().getId();

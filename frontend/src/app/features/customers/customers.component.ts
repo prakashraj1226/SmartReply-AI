@@ -2,6 +2,8 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { CustomerService, Customer } from '../../core/services/customer.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
+import { SubscriptionService } from '../../core/services/subscription.service';
 
 @Component({
   selector: 'app-customers',
@@ -1290,6 +1292,8 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
 export class CustomersComponent implements OnInit {
   private customerService = inject(CustomerService);
   private fb = inject(FormBuilder);
+  private confirmDialog = inject(ConfirmDialogService);
+  private subscriptionService = inject(SubscriptionService);
 
   customers: Customer[] = [];
   totalCustomers: number = 0;
@@ -1326,6 +1330,7 @@ export class CustomersComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.subscriptionService.refreshSubscription();
     this.loadCustomers();
     this.loadStats();
   }
@@ -1381,6 +1386,17 @@ export class CustomersComponent implements OnInit {
   }
 
   openAddModal(): void {
+    const sub = this.subscriptionService.currentSubscription();
+    const custLimit = sub?.customerLimit ?? 5;
+    if (sub?.isTrial && this.totalCustomers >= custLimit) {
+      this.confirmDialog.alert(
+        `Free Trial allows a maximum of ${custLimit} customers. Upgrade your plan to add more customers.`,
+        'Plan Limit Reached',
+        'danger',
+        true
+      );
+      return;
+    }
     this.customerForm.reset();
     this.showAddModal = true;
   }
@@ -1409,25 +1425,12 @@ export class CustomersComponent implements OnInit {
         this.showAddModal = false;
         this.loadCustomers();
         this.loadStats();
+        this.subscriptionService.refreshSubscription();
       },
-      error: () => {
-        // Optimistic addition for demo
-        const newCust: Customer = {
-          id: 'cust-' + Date.now(),
-          businessId: 'biz-1',
-          name: formVal.name,
-          phoneNumber: formVal.phoneNumber,
-          email: formVal.email,
-          optInStatus: 'OPTED_IN',
-          tagsJson: JSON.stringify(tagsArray),
-          notes: formVal.notes,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        this.customers.unshift(newCust);
-        this.totalCustomers++;
+      error: (err) => {
         this.isSaving = false;
-        this.showAddModal = false;
+        const msg = err?.error?.message || 'Failed to add customer. Please check plan limits.';
+        this.confirmDialog.alert(msg, 'Plan Limit Reached', 'danger', true);
       }
     });
   }
@@ -1454,20 +1457,32 @@ export class CustomersComponent implements OnInit {
 
     this.customerService.updateCustomer(this.selectedCustomer.id, { notes: this.selectedCustomer.notes }).subscribe({
       next: () => {
-        alert('Patient treatment notes updated successfully');
+        this.confirmDialog.alert('Customer treatment and consultation notes saved successfully.', 'Notes Updated', 'success');
       },
       error: () => {
-        alert('Patient treatment notes updated successfully');
+        this.confirmDialog.alert('Unable to save treatment notes. Please try again.', 'Update Failed', 'warning');
       }
     });
   }
 
-  deleteCustomer(c: Customer): void {
-    if (confirm(`Are you sure you want to delete ${c.name || c.phoneNumber}?`)) {
+  async deleteCustomer(c: Customer): Promise<void> {
+    const displayName = c.name || c.phoneNumber || 'this customer';
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Delete Customer Record',
+      message: `Are you sure you want to delete ${displayName}? This will permanently remove their profile and WhatsApp history.`,
+      confirmText: 'Delete Customer',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+
+    if (confirmed) {
       this.customers = this.customers.filter(item => item.id !== c.id);
       this.totalCustomers = Math.max(0, this.totalCustomers - 1);
       this.customerService.deleteCustomer(c.id).subscribe({
-        next: () => this.loadStats()
+        next: () => {
+          this.loadStats();
+          this.subscriptionService.refreshSubscription();
+        }
       });
     }
   }

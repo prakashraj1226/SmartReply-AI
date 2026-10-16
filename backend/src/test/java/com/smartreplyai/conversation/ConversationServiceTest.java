@@ -11,6 +11,7 @@ import com.smartreplyai.customer.CustomerRepository;
 import com.smartreplyai.message.Message;
 import com.smartreplyai.message.MessageRepository;
 import com.smartreplyai.security.UserPrincipal;
+import com.smartreplyai.telegram.client.TelegramClient;
 import com.smartreplyai.whatsapp.IntegrationAccount;
 import com.smartreplyai.whatsapp.IntegrationAccountRepository;
 import com.smartreplyai.whatsapp.client.OfficialWhatsAppCloudApiClient;
@@ -33,7 +34,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ConversationServiceTest {
 
     @Mock
@@ -60,6 +65,12 @@ class ConversationServiceTest {
     @Mock
     private OfficialWhatsAppCloudApiClient whatsAppClient;
 
+    @Mock
+    private TelegramClient telegramClient;
+
+    @Mock
+    private com.smartreplyai.subscription.PlanLimitService planLimitService;
+
     @InjectMocks
     private ConversationService conversationService;
 
@@ -73,6 +84,7 @@ class ConversationServiceTest {
         businessId = UUID.randomUUID();
         testBusiness = new Business("SmileCare Dental", "smilecare", "CLINIC", "care@smilecare.com", "+919876543210");
         testBusiness.setId(businessId);
+        when(planLimitService.canSendWhatsAppAutoReply(any())).thenReturn(true);
 
         testCustomer = new Customer(testBusiness, "+919876543210", "Amit Patel", "amit@example.com");
         testCustomer.setId(UUID.randomUUID());
@@ -136,7 +148,7 @@ class ConversationServiceTest {
                 15L,
                 "RULE_BASED"
         );
-        when(aiService.processIncomingMessage(eq(businessId), anyString(), anyList(), any(), any()))
+        when(aiService.processIncomingMessage(eq(businessId), anyString(), anyList(), any(), any(), anyBoolean()))
                 .thenReturn(aiResponse);
 
         Message incoming = conversationService.handleCustomerMessage(
@@ -147,7 +159,7 @@ class ConversationServiceTest {
         assertEquals("wamid.123", incoming.getExternalMessageId());
         // Verify AI message was saved
         verify(messageRepository, times(2)).save(any(Message.class));
-        verify(aiService).processIncomingMessage(eq(businessId), eq("What are your business hours?"), anyList(), any(), any());
+        verify(aiService).processIncomingMessage(eq(businessId), eq("What are your business hours?"), anyList(), any(), any(), anyBoolean());
         assertEquals(0, testConversation.getUnreadCount()); // Cleared since AI answered confidently
     }
 
@@ -170,7 +182,7 @@ class ConversationServiceTest {
                 5L,
                 "RULE_BASED"
         );
-        when(aiService.processIncomingMessage(eq(businessId), anyString(), anyList(), any(), any()))
+        when(aiService.processIncomingMessage(eq(businessId), anyString(), anyList(), any(), any(), anyBoolean()))
                 .thenReturn(aiResponse);
 
         conversationService.handleCustomerMessage(

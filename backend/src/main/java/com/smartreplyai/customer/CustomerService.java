@@ -28,13 +28,16 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final BusinessRepository businessRepository;
     private final ConversationRepository conversationRepository;
+    private final com.smartreplyai.subscription.PlanLimitService planLimitService;
 
     public CustomerService(CustomerRepository customerRepository,
                            BusinessRepository businessRepository,
-                           ConversationRepository conversationRepository) {
+                           ConversationRepository conversationRepository,
+                           com.smartreplyai.subscription.PlanLimitService planLimitService) {
         this.customerRepository = customerRepository;
         this.businessRepository = businessRepository;
         this.conversationRepository = conversationRepository;
+        this.planLimitService = planLimitService;
     }
 
     @Transactional(readOnly = true)
@@ -73,6 +76,8 @@ public class CustomerService {
 
     @Transactional
     public CustomerDto createCustomer(UUID businessId, CreateCustomerRequest req) {
+        planLimitService.checkCustomerLimit(businessId);
+
         String phone = req.getPhoneNumber().trim();
         if (customerRepository.existsByBusinessIdAndPhoneNumber(businessId, phone)) {
             throw new BadRequestException("A customer with phone number " + phone + " already exists");

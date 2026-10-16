@@ -6,6 +6,7 @@ import java.util.Map;
 public class AdminOverviewDto {
     private long totalBusinesses;
     private long activeBusinesses;
+    private long suspendedBusinesses;
     private long totalUsers;
     private long totalConversations;
     private long totalMessages;
@@ -23,6 +24,7 @@ public class AdminOverviewDto {
                             BigDecimal estimatedMrrInr, long activeIntegrations) {
         this.totalBusinesses = totalBusinesses;
         this.activeBusinesses = activeBusinesses;
+        this.suspendedBusinesses = Math.max(0, totalBusinesses - activeBusinesses);
         this.totalUsers = totalUsers;
         this.totalConversations = totalConversations;
         this.totalMessages = totalMessages;
@@ -44,6 +46,14 @@ public class AdminOverviewDto {
 
     public void setActiveBusinesses(long activeBusinesses) {
         this.activeBusinesses = activeBusinesses;
+    }
+
+    public long getSuspendedBusinesses() {
+        return suspendedBusinesses;
+    }
+
+    public void setSuspendedBusinesses(long suspendedBusinesses) {
+        this.suspendedBusinesses = suspendedBusinesses;
     }
 
     public long getTotalUsers() {

@@ -9,6 +9,7 @@ import com.smartreplyai.whatsapp.dto.UpdateWhatsAppConfigRequest;
 import com.smartreplyai.whatsapp.dto.WhatsAppConfigDto;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -25,6 +26,7 @@ public class WhatsAppConfigController {
     }
 
     @GetMapping("/config")
+    @PreAuthorize("@tenantSecurity.canManageIntegrations()")
     public ResponseEntity<ApiResponse<WhatsAppConfigDto>> getConfig() {
         UUID businessId = TenantContext.getBusinessId();
         if (businessId == null) throw new BadRequestException("Active business tenant required");
@@ -34,6 +36,7 @@ public class WhatsAppConfigController {
     }
 
     @PutMapping("/config")
+    @PreAuthorize("@tenantSecurity.canManageIntegrations()")
     public ResponseEntity<ApiResponse<WhatsAppConfigDto>> updateConfig(
             @Valid @RequestBody UpdateWhatsAppConfigRequest req) {
         UUID businessId = TenantContext.getBusinessId();
@@ -44,6 +47,7 @@ public class WhatsAppConfigController {
     }
 
     @PostMapping("/test-send")
+    @PreAuthorize("@tenantSecurity.canManageIntegrations()")
     public ResponseEntity<ApiResponse<WhatsAppSendResult>> testSend(
             @RequestBody Map<String, String> body) {
         UUID businessId = TenantContext.getBusinessId();

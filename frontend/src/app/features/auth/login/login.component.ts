@@ -1,7 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -58,9 +58,9 @@ import { AuthService } from '../../../core/services/auth.service';
           </div>
 
           <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-            <!-- Username / Email Field -->
+            <!-- Username / Email / Mobile Field -->
             <div class="form-group">
-              <label class="form-label" for="email">Username <span class="required">*</span></label>
+              <label class="form-label" for="email">Email or Mobile Number <span class="required">*</span></label>
               <div class="input-wrap">
                 <span class="input-icon">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -70,16 +70,16 @@ import { AuthService } from '../../../core/services/auth.service';
                 </span>
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   class="form-input"
                   [class.error]="isFieldInvalid('email')"
                   formControlName="email"
-                  placeholder="Enter email or username"
-                  autocomplete="email"
+                  placeholder="Enter email or mobile number"
+                  autocomplete="username"
                 />
               </div>
               <div class="field-error" *ngIf="isFieldInvalid('email')">
-                Please enter a valid email address
+                Please enter your email or mobile number
               </div>
             </div>
 
@@ -931,19 +931,26 @@ import { AuthService } from '../../../core/services/auth.service';
     }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   loginForm: FormGroup = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.required]],
     password: ['', [Validators.required]]
   });
 
   isLoading = false;
   showPassword = false;
   errorMessage = '';
+
+  ngOnInit(): void {
+    if (this.route.snapshot.queryParamMap.get('reason') === 'suspended') {
+      this.errorMessage = 'This business account has been suspended. Please contact support.';
+    }
+  }
 
   isFieldInvalid(field: string): boolean {
     const control = this.loginForm.get(field);
@@ -1054,15 +1061,22 @@ export class LoginComponent {
     this.authService.login(this.loginForm.value).subscribe({
       next: (res) => {
         this.isLoading = false;
-        if (res.data?.onboardingCompleted) {
-          this.router.navigate(['/dashboard']);
-        } else {
+        const tenantRole = (res.data?.tenantRole || res.data?.role || '').toUpperCase();
+        if (tenantRole === 'SUPER_ADMIN') {
+          this.router.navigate(['/admin']);
+        } else if (!res.data?.onboardingCompleted && (tenantRole === 'OWNER' || tenantRole === 'BUSINESS_OWNER')) {
           this.router.navigate(['/onboarding']);
+        } else if (tenantRole === 'RECEPTIONIST' || tenantRole === 'SALON_STAFF' || tenantRole === 'DOCTOR' || tenantRole === 'DENTIST') {
+          this.router.navigate(['/appointments']);
+        } else if (tenantRole === 'AGENT') {
+          this.router.navigate(['/inbox']);
+        } else {
+          this.router.navigate(['/dashboard']);
         }
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err.error?.message || 'Invalid email or password. Please try again.';
+        this.errorMessage = err.error?.message || 'Invalid email/phone or password. Please try again.';
       }
     });
   }

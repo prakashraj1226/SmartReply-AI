@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AutomationService, AutomationRule, AutomationExecution, CreateAutomationRuleRequest } from '../../core/services/automation.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-automations',
@@ -1042,7 +1043,10 @@ export class AutomationsComponent implements OnInit {
   notifyMessage = 'A new customer has sent their first WhatsApp enquiry.';
   replyText = 'Welcome! Thanks for messaging us. How can we assist you today?';
 
-  constructor(private automationService: AutomationService) {}
+  constructor(
+    private automationService: AutomationService,
+    private confirmDialog: ConfirmDialogService
+  ) {}
 
   ngOnInit(): void {
     this.loadRules();
@@ -1140,8 +1144,15 @@ export class AutomationsComponent implements OnInit {
     this.automationService.toggleRule(rule.id).subscribe();
   }
 
-  deleteRule(id: string): void {
-    if (!confirm('Are you sure you want to delete this automation rule?')) return;
+  async deleteRule(id: string): Promise<void> {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Delete Automation Rule',
+      message: 'Are you sure you want to delete this automation workflow? WhatsApp triggers attached to this rule will cease execution immediately.',
+      confirmText: 'Delete Workflow',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!confirmed) return;
     this.rules.update(r => r.filter(x => x.id !== id));
     this.automationService.deleteRule(id).subscribe();
   }

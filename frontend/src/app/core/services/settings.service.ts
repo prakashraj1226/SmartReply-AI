@@ -33,7 +33,9 @@ export interface TeamMember {
   userId: string;
   fullName: string;
   email: string;
+  phone?: string;
   role: string;
+  membershipStatus?: string;
   joinedAt: string;
 }
 
@@ -41,6 +43,16 @@ export interface InviteMemberRequest {
   email: string;
   fullName: string;
   role: string;
+  phone?: string;
+  password?: string;
+}
+
+export interface UpdateTeamMemberRequest {
+  fullName: string;
+  phone?: string;
+  role?: string;
+  status?: string;
+  password?: string;
 }
 
 @Injectable({
@@ -75,7 +87,12 @@ export class SettingsService {
     return this.http.post<ApiResponse<TeamMember>>(`${this.baseUrl}/team`, req);
   }
 
+  updateTeamMember(memberId: string, req: UpdateTeamMemberRequest): Observable<ApiResponse<TeamMember>> {
+    return this.http.put<ApiResponse<TeamMember>>(`${this.baseUrl}/team/${memberId}`, req);
+  }
+
   removeTeamMember(memberId: string): Observable<ApiResponse<void>> {
     return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/team/${memberId}`);
   }
 }
+

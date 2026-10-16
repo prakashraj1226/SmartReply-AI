@@ -18,4 +18,7 @@ public interface BusinessMemberRepository extends JpaRepository<BusinessMember, 
 
     @Query("SELECT bm.business FROM BusinessMember bm WHERE bm.user.id = :userId")
     List<Business> findBusinessesByUserId(@Param("userId") UUID userId);
+
+    @Query("SELECT bm FROM BusinessMember bm LEFT JOIN FETCH bm.user WHERE bm.business.id = :businessId ORDER BY bm.joinedAt ASC")
+    List<BusinessMember> findByBusinessIdWithUser(@Param("businessId") UUID businessId);
 }

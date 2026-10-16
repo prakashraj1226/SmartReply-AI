@@ -31,6 +31,9 @@ class CustomerServiceTest {
     @Mock
     private ConversationRepository conversationRepository;
 
+    @Mock
+    private com.smartreplyai.subscription.PlanLimitService planLimitService;
+
     @InjectMocks
     private CustomerService customerService;
 

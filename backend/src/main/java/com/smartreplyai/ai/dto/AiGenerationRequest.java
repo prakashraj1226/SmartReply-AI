@@ -24,6 +24,8 @@ public class AiGenerationRequest {
     private List<Staff> staffMembers;
     private double confidenceThreshold = 0.70;
     private String fallbackMessage;
+    private String greetingMessage;
+    private boolean firstMessage;
 
     public AiGenerationRequest() {
     }
@@ -154,5 +156,21 @@ public class AiGenerationRequest {
 
     public void setFallbackMessage(String fallbackMessage) {
         this.fallbackMessage = fallbackMessage;
+    }
+
+    public String getGreetingMessage() {
+        return greetingMessage;
+    }
+
+    public void setGreetingMessage(String greetingMessage) {
+        this.greetingMessage = greetingMessage;
+    }
+
+    public boolean isFirstMessage() {
+        return firstMessage;
+    }
+
+    public void setFirstMessage(boolean firstMessage) {
+        this.firstMessage = firstMessage;
     }
 }

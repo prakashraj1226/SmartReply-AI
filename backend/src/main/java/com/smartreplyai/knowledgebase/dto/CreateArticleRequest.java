@@ -15,6 +15,7 @@ public class CreateArticleRequest {
 
     private String keywords;
     private Boolean isActive = true;
+    private String type = "FAQ";
 
     public CreateArticleRequest() {
     }
@@ -62,5 +63,13 @@ public class CreateArticleRequest {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }

@@ -8,6 +8,7 @@ import com.smartreplyai.subscription.dto.SubscriptionDetailsDto;
 import com.smartreplyai.subscription.dto.VerifyPaymentRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class SubscriptionController {
     }
 
     @GetMapping("/current")
+    @PreAuthorize("@tenantSecurity.canManageBilling()")
     public ResponseEntity<ApiResponse<SubscriptionDetailsDto>> getCurrentSubscription() {
         UUID businessId = TenantContext.getBusinessId();
         if (businessId == null) throw new BadRequestException("Active business tenant required");
@@ -40,6 +42,7 @@ public class SubscriptionController {
     }
 
     @PostMapping("/checkout")
+    @PreAuthorize("@tenantSecurity.canManageBilling()")
     public ResponseEntity<ApiResponse<CheckoutOrderDto>> createCheckoutOrder(
             @RequestBody Map<String, String> body) {
         UUID businessId = TenantContext.getBusinessId();
@@ -53,6 +56,7 @@ public class SubscriptionController {
     }
 
     @PostMapping("/verify")
+    @PreAuthorize("@tenantSecurity.canManageBilling()")
     public ResponseEntity<ApiResponse<SubscriptionDetailsDto>> verifyPayment(
             @Valid @RequestBody VerifyPaymentRequest req) {
         UUID businessId = TenantContext.getBusinessId();
@@ -63,6 +67,7 @@ public class SubscriptionController {
     }
 
     @PostMapping("/cancel")
+    @PreAuthorize("@tenantSecurity.canManageBilling()")
     public ResponseEntity<ApiResponse<Void>> cancelSubscription() {
         UUID businessId = TenantContext.getBusinessId();
         if (businessId == null) throw new BadRequestException("Active business tenant required");

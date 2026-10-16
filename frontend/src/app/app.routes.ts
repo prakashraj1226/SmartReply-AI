@@ -9,6 +9,7 @@ import { CustomersComponent } from './features/customers/customers.component';
 import { KnowledgeBaseComponent } from './features/knowledge-base/knowledge-base.component';
 import { InboxComponent } from './features/inbox/inbox.component';
 import { WhatsAppIntegrationComponent } from './features/whatsapp/whatsapp.component';
+import { TelegramIntegrationComponent } from './features/telegram/telegram.component';
 import { AppointmentsComponent } from './features/appointments/appointments.component';
 import { AutomationsComponent } from './features/automations/automations.component';
 import { SubscriptionsComponent } from './features/subscriptions/subscriptions.component';
@@ -40,6 +41,7 @@ export const routes: Routes = [
       { path: 'appointments', component: AppointmentsComponent },
       { path: 'customers', component: CustomersComponent },
       { path: 'whatsapp', component: WhatsAppIntegrationComponent },
+      { path: 'telegram', component: TelegramIntegrationComponent },
       { path: 'automations', component: AutomationsComponent },
       { path: 'reports', component: ReportsComponent },
       { path: 'subscriptions', component: SubscriptionsComponent },

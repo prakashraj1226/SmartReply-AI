@@ -63,4 +63,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     long countByBusinessIdAndStatus(UUID businessId, String status);
 
     long countByStatus(String status);
+
+    long countByBusinessIdAndCreatedAtBetween(UUID businessId, Instant start, Instant end);
+
+    long countByBusinessIdAndCreatedAtGreaterThanEqual(UUID businessId, Instant start);
 }

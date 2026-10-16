@@ -40,6 +40,7 @@ public class AppointmentService {
     private final StaffLeaveRepository staffLeaveRepository;
     private final UserRepository userRepository;
     private final TenantSecurityService tenantSecurityService;
+    private final com.smartreplyai.subscription.PlanLimitService planLimitService;
 
     public AppointmentService(AppointmentRepository appointmentRepository,
                               BusinessRepository businessRepository,
@@ -51,7 +52,8 @@ public class AppointmentService {
                               StaffAvailabilityRepository staffAvailabilityRepository,
                               StaffLeaveRepository staffLeaveRepository,
                               UserRepository userRepository,
-                              TenantSecurityService tenantSecurityService) {
+                              TenantSecurityService tenantSecurityService,
+                              com.smartreplyai.subscription.PlanLimitService planLimitService) {
         this.appointmentRepository = appointmentRepository;
         this.businessRepository = businessRepository;
         this.customerRepository = customerRepository;
@@ -63,6 +65,7 @@ public class AppointmentService {
         this.staffLeaveRepository = staffLeaveRepository;
         this.userRepository = userRepository;
         this.tenantSecurityService = tenantSecurityService;
+        this.planLimitService = planLimitService;
     }
 
     // --- Slot Computation Engine ---
@@ -234,6 +237,8 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentDto createAppointment(UUID businessId, CreateAppointmentRequest req) {
+        planLimitService.checkAppointmentLimit(businessId);
+
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new ResourceNotFoundException("Business not found with ID: " + businessId));
 

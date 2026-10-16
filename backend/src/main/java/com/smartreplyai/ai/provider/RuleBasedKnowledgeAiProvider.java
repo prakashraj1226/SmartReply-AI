@@ -48,11 +48,9 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
         long startTime = System.currentTimeMillis();
         String customerText = req.getCustomerMessage() != null ? req.getCustomerMessage().trim().toLowerCase() : "";
 
-        // 1. Handle common greetings gracefully
+        // 1. Handle common greetings and /start command gracefully
         if (isGreeting(customerText)) {
-            String greeting = req.getAssistantName() != null
-                    ? "Hello! I am " + req.getAssistantName() + ", automated assistant for " + req.getBusinessName() + ". How may I assist you today? Feel free to ask about our services, pricing, or available appointment slots!"
-                    : "Hello! Welcome to " + req.getBusinessName() + ". How can I help you today? You can inquire about our services, timings, or book an appointment.";
+            String greeting = buildGreeting(req);
             long elapsed = System.currentTimeMillis() - startTime;
             return new AiGenerationResponse(greeting, 0.98, false, null, "Greeting", 25, elapsed, getProviderName());
         }
@@ -125,7 +123,22 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
             );
         }
 
-        // 7. Fallback: below confidence threshold (Human Escalation)
+        // 7. Fallback: if it's the customer's first message, welcome them gracefully instead of escalating
+        if (req.isFirstMessage()) {
+            String welcome = buildGreeting(req);
+            return new AiGenerationResponse(
+                    welcome,
+                    0.95,
+                    false,
+                    null,
+                    "Greeting",
+                    welcome.split("\\s+").length * 2,
+                    elapsed,
+                    getProviderName()
+            );
+        }
+
+        // Otherwise escalate to human agent
         String fallback = req.getFallbackMessage() != null && !req.getFallbackMessage().isBlank()
                 ? req.getFallbackMessage()
                 : "I apologize, but I don't have that specific information right now. Let me connect you with one of our team members.";
@@ -334,8 +347,21 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
 
     private boolean isGreeting(String text) {
         if (text == null || text.isBlank()) return false;
-        String clean = text.replaceAll("[^a-zA-Z0-9 ]", " ").replaceAll("\\s+", " ").trim();
-        Set<String> greetings = Set.of("hi", "hello", "hey", "good morning", "good evening", "good afternoon", "namaste", "hola");
+        String raw = text.trim().toLowerCase();
+        if (raw.equals("/start") || raw.startsWith("/start ") || raw.equals("/help") || raw.startsWith("/help ")) {
+            return true;
+        }
+        if (raw.equals("start") || raw.equals("help")) {
+            return true;
+        }
+        if (raw.contains("வணக்கம்") || raw.contains("vanakkam")) {
+            return true;
+        }
+        String clean = text.replaceAll("[^a-zA-Z0-9 ]", " ").replaceAll("\\s+", " ").trim().toLowerCase();
+        Set<String> greetings = Set.of(
+                "hi", "hello", "hey", "start", "help", "good morning", "good evening", "good afternoon",
+                "good day", "namaste", "vanakkam", "hola", "hi there", "hello there", "hey there", "greetings"
+        );
         if (greetings.contains(clean)) return true;
         for (String g : greetings) {
             if (clean.equals(g) || clean.startsWith(g + " ") || clean.endsWith(" " + g) || clean.contains(" " + g + " ")) {
@@ -343,6 +369,35 @@ public class RuleBasedKnowledgeAiProvider implements AiProvider {
             }
         }
         return false;
+    }
+
+    private String buildGreeting(AiGenerationRequest req) {
+        String customerSalutation = "";
+        if (req.getCustomerName() != null && !req.getCustomerName().isBlank()
+                && !"Telegram User".equalsIgnoreCase(req.getCustomerName().trim())) {
+            customerSalutation = " " + req.getCustomerName().trim();
+        }
+
+        if (req.getGreetingMessage() != null && !req.getGreetingMessage().isBlank()) {
+            String custom = req.getGreetingMessage().trim();
+            if (!customerSalutation.isEmpty() && custom.toLowerCase().startsWith("hello!")) {
+                return "Hello" + customerSalutation + "!" + custom.substring("hello!".length());
+            }
+            return custom;
+        }
+
+        String bizName = (req.getBusinessName() != null && !req.getBusinessName().isBlank())
+                ? req.getBusinessName().trim()
+                : "our business";
+
+        if (req.getAssistantName() != null && !req.getAssistantName().isBlank()) {
+            return "Hello" + customerSalutation + "! I am " + req.getAssistantName().trim()
+                    + ", automated assistant for " + bizName
+                    + ". How may I assist you today? Feel free to ask about our services, pricing, working hours, or book an appointment!";
+        }
+
+        return "Hello" + customerSalutation + "! Welcome to " + bizName
+                + ". How can I help you today? You can inquire about our services, timings, or book an appointment.";
     }
 
     private double calculateMatchScore(String query, KnowledgeArticle article) {

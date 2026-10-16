@@ -48,6 +48,7 @@ public class WhatsAppIntegrationService {
     private final ConversationRepository conversationRepository;
     private final OfficialWhatsAppCloudApiClient whatsAppClient;
     private final ObjectMapper objectMapper;
+    private final com.smartreplyai.subscription.PlanLimitService planLimitService;
 
     @Value("${app.backend-base-url:}")
     private String backendBaseUrl;
@@ -63,7 +64,8 @@ public class WhatsAppIntegrationService {
                                       ConversationService conversationService,
                                       ConversationRepository conversationRepository,
                                       OfficialWhatsAppCloudApiClient whatsAppClient,
-                                      ObjectMapper objectMapper) {
+                                      ObjectMapper objectMapper,
+                                      com.smartreplyai.subscription.PlanLimitService planLimitService) {
         this.integrationAccountRepository = integrationAccountRepository;
         this.webhookEventRepository = webhookEventRepository;
         this.businessRepository = businessRepository;
@@ -73,6 +75,7 @@ public class WhatsAppIntegrationService {
         this.conversationRepository = conversationRepository;
         this.whatsAppClient = whatsAppClient;
         this.objectMapper = objectMapper;
+        this.planLimitService = planLimitService;
     }
 
     @Transactional
@@ -251,13 +254,20 @@ public class WhatsAppIntegrationService {
 
         final IntegrationAccount finalAccount = account;
 
+        // Suspended tenants must not receive auto-replies or create new customer traffic
+        Business owningBusiness = finalAccount.getBusiness();
+        if (owningBusiness == null || !owningBusiness.isActive()) {
+            logger.info("Ignoring WhatsApp inbound message for suspended business (phone_number_id={})", phoneNumberId);
+            return;
+        }
+
         // Validate HMAC signature if configured
         if (!validateSignature(rawPayload, signatureHeader, finalAccount.getAppSecret())) {
             logger.error("HMAC signature validation failed for WhatsApp webhook!");
             return;
         }
 
-        UUID businessId = finalAccount.getBusiness().getId();
+        UUID businessId = owningBusiness.getId();
         UUID prevTenant = TenantContext.getBusinessId();
         try {
             // Set TenantContext for strict multi-tenant isolation during inbound webhook processing
@@ -306,6 +316,10 @@ public class WhatsAppIntegrationService {
 
     @Transactional
     public AutoReplyResult simulateCustomerMessage(UUID businessId, String fromPhone, String text, String senderName) {
+        planLimitService.ensureBusinessActive(businessId);
+        if (!planLimitService.canSendWhatsAppAutoReply(businessId)) {
+            throw new BadRequestException("Your free trial has ended. Please upgrade your plan to continue using premium features.");
+        }
         if (text == null || text.isBlank()) {
             throw new BadRequestException("Customer message is required");
         }
