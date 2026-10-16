@@ -2,7 +2,10 @@ package com.smartreplyai.ai;
 
 import com.smartreplyai.ai.dto.AiGenerationRequest;
 import com.smartreplyai.ai.dto.AiGenerationResponse;
+import com.smartreplyai.assistant.AssistantService;
 import com.smartreplyai.assistant.GeminiChatClient;
+import com.smartreplyai.assistant.TenantAssistantContext;
+import com.smartreplyai.assistant.dto.AssistantTurn;
 import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessRepository;
 import com.smartreplyai.common.BadRequestException;
@@ -25,11 +28,8 @@ import java.util.UUID;
 public class AiService {
 
     private static final Logger logger = LoggerFactory.getLogger(AiService.class);
-    private static final Set<String> KEEP_EXACT_REPLY = Set.of(
-            "Greeting", "Acknowledgement", "Appointment Booked", "Available Slots", "Slots Unavailable",
-            "Business Organization Overview", "Assistant Capabilities", "Contact Information",
-            "Operating Hours", "Service Pricing Inquiry", "Service Catalog Inquiry", "Staff Inquiry",
-            "Emergency Assistance", "Location and Address", "AI Assistant Small Talk");
+    private static final Set<String> TRANSACTIONAL_APPOINTMENT_REPLIES = Set.of(
+            "Appointment Booked", "Available Slots", "Slots Unavailable");
 
     private final AiConfigurationRepository aiConfigurationRepository;
     private final KnowledgeArticleRepository knowledgeArticleRepository;
@@ -38,6 +38,8 @@ public class AiService {
     private final com.smartreplyai.staff.StaffRepository staffRepository;
     private final AiProvider aiProvider;
     private final GeminiChatClient geminiChatClient;
+    private final TenantAssistantContext tenantAssistantContext;
+    private final AssistantService assistantService;
 
     public AiService(AiConfigurationRepository aiConfigurationRepository,
                      KnowledgeArticleRepository knowledgeArticleRepository,
@@ -45,7 +47,9 @@ public class AiService {
                      com.smartreplyai.servicecatalog.ServiceItemRepository serviceItemRepository,
                      com.smartreplyai.staff.StaffRepository staffRepository,
                      AiProvider aiProvider,
-                     GeminiChatClient geminiChatClient) {
+                     GeminiChatClient geminiChatClient,
+                     TenantAssistantContext tenantAssistantContext,
+                     AssistantService assistantService) {
         this.aiConfigurationRepository = aiConfigurationRepository;
         this.knowledgeArticleRepository = knowledgeArticleRepository;
         this.businessRepository = businessRepository;
@@ -53,6 +57,8 @@ public class AiService {
         this.staffRepository = staffRepository;
         this.aiProvider = aiProvider;
         this.geminiChatClient = geminiChatClient;
+        this.tenantAssistantContext = tenantAssistantContext;
+        this.assistantService = assistantService;
     }
 
     @Transactional(readOnly = true)
@@ -106,33 +112,70 @@ public class AiService {
         req.setFallbackMessage(config.getFallbackMessage());
 
         AiGenerationResponse exact = aiProvider.generateReply(req);
-        if (exact != null && exact.getMatchedQuestion() != null && KEEP_EXACT_REPLY.contains(exact.getMatchedQuestion())) {
+        // 1. Transactional appointment booking and slot availability must use exact business logic
+        if (exact != null && exact.getMatchedQuestion() != null && TRANSACTIONAL_APPOINTMENT_REPLIES.contains(exact.getMatchedQuestion())) {
             return exact;
         }
-        AiGenerationResponse gemini = geminiReply(req);
+
+        // 2. Gemini Assistant Response (Dynamic AI grounded in full workspace context)
+        AiGenerationResponse gemini = geminiAssistantReply(businessId, req, history);
         if (gemini != null) {
             return gemini;
         }
+
+        // 3. Fallback to rule-based grounded reply if confident
+        if (exact != null && exact.getReplyText() != null && !exact.isEscalated()) {
+            return exact;
+        }
+
+        // 4. Fallback to Assistant grounded workspace reply
+        String assistantFallback = assistantService.generateGroundedReply(businessId, customerMessage);
+        if (assistantFallback != null && !assistantFallback.isBlank()) {
+            return new AiGenerationResponse(assistantFallback, 0.85, false, null, "Assistant Grounded", 0, 5L, "RULE_BASED");
+        }
+
         return exact;
     }
 
-    private AiGenerationResponse geminiReply(AiGenerationRequest req) {
+    private AiGenerationResponse geminiAssistantReply(UUID businessId, AiGenerationRequest req, List<String> history) {
         if (geminiChatClient == null || !geminiChatClient.isConfigured()) {
             return null;
         }
         long started = System.currentTimeMillis();
         try {
-            String reply = geminiChatClient.reply(groundingPrompt(req), req.getCustomerMessage(), List.of());
+            String prompt = tenantAssistantContext.build(businessId);
+            List<AssistantTurn> turns = parseHistoryToTurns(history);
+            String reply = geminiChatClient.reply(prompt, req.getCustomerMessage(), turns);
             if (reply == null || reply.isBlank()) {
                 return null;
             }
-            logger.info("Gemini replied for business {}", req.getBusinessId());
-            return new AiGenerationResponse(reply.trim(), 0.9, false, null, "Gemini", 0,
+            logger.info("Gemini AI Assistant replied for business {}", businessId);
+            return new AiGenerationResponse(reply.trim(), 0.95, false, null, "Gemini", 0,
                     System.currentTimeMillis() - started, "GEMINI");
         } catch (BadRequestException ex) {
-            logger.warn("Gemini reply skipped for business {}: {}", req.getBusinessId(), ex.getMessage());
+            logger.warn("Gemini Assistant reply skipped for business {}: {}", businessId, ex.getMessage());
+            return null;
+        } catch (Exception ex) {
+            logger.warn("Gemini Assistant call failed for business {}: {}", businessId, ex.getMessage());
             return null;
         }
+    }
+
+    private List<AssistantTurn> parseHistoryToTurns(List<String> history) {
+        List<AssistantTurn> turns = new ArrayList<>();
+        if (history != null) {
+            for (String item : history) {
+                if (item == null || item.isBlank()) continue;
+                if (item.startsWith("user: ")) {
+                    turns.add(new AssistantTurn("user", item.substring(6).trim()));
+                } else if (item.startsWith("assistant: ")) {
+                    turns.add(new AssistantTurn("assistant", item.substring(11).trim()));
+                } else {
+                    turns.add(new AssistantTurn("user", item.trim()));
+                }
+            }
+        }
+        return turns;
     }
 
     private String groundingPrompt(AiGenerationRequest req) {

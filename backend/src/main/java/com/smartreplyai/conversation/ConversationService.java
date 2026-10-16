@@ -191,8 +191,21 @@ public class ConversationService {
 
         // 2. Trigger AI Autonomous Response if AI is enabled and not blocked by plan/trial expiration
         if (conversation.isAiEnabled() && planLimitService.canSendWhatsAppAutoReply(businessId)) {
+            List<String> history = new java.util.ArrayList<>();
+            List<Message> recent = messageRepository.findByBusinessIdAndConversationIdOrderByCreatedAtAsc(businessId, conversation.getId());
+            if (recent != null && recent.size() > 1) {
+                int start = Math.max(0, recent.size() - 7);
+                for (int i = start; i < recent.size() - 1; i++) {
+                    Message m = recent.get(i);
+                    if (m.getTextContent() != null && !m.getTextContent().isBlank()) {
+                        String role = "CUSTOMER".equalsIgnoreCase(m.getSenderType()) ? "user" : "assistant";
+                        history.add(role + ": " + m.getTextContent().trim());
+                    }
+                }
+            }
+
             AiGenerationResponse aiResponse = aiService.processIncomingMessage(
-                    businessId, textContent, List.of(), customer.getPhoneNumber(), customer.getName(), isFirstMessage
+                    businessId, textContent, history, customer.getPhoneNumber(), customer.getName(), isFirstMessage
             );
 
             if (aiResponse != null && aiResponse.getReplyText() != null) {

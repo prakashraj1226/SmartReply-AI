@@ -45,5 +45,5 @@ app:
     default-provider: ${AI_PROVIDER:MOCK} # MOCK, OPENAI, ANTHROPIC
   gemini:
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-1.5-flash}
+    model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}

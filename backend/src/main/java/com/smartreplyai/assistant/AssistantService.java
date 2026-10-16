@@ -67,6 +67,13 @@ public class AssistantService {
         if (businessId == null) {
             throw new BadRequestException("Select a business workspace first. The assistant answers only for the current business.");
         }
+        return chatForBusiness(businessId, request.getMessage(), request.getHistory());
+    }
+
+    public AssistantChatResponse chatForBusiness(UUID businessId, String message, List<com.smartreplyai.assistant.dto.AssistantTurn> history) {
+        if (businessId == null) {
+            throw new BadRequestException("Business workspace ID is required.");
+        }
 
         // Enforce daily/plan limits for AI Assistant
         planLimitService.checkAiAssistantLimit(businessId);
@@ -77,7 +84,7 @@ public class AssistantService {
         if (geminiChatClient.isConfigured()) {
             try {
                 String prompt = tenantAssistantContext.build(businessId);
-                reply = geminiChatClient.reply(prompt, request.getMessage(), request.getHistory());
+                reply = geminiChatClient.reply(prompt, message, history);
                 modelUsed = geminiChatClient.getModel();
             } catch (Exception ex) {
                 logger.warn("Gemini call failed: {}. Falling back to grounded workspace AI.", ex.getMessage());
@@ -85,7 +92,7 @@ public class AssistantService {
         }
 
         if (reply == null || reply.isBlank()) {
-            reply = generateGroundedReply(businessId, request.getMessage());
+            reply = generateGroundedReply(businessId, message);
         }
 
         // Increment usage count for today
@@ -94,7 +101,7 @@ public class AssistantService {
         return new AssistantChatResponse(reply, modelUsed);
     }
 
-    private String generateGroundedReply(UUID businessId, String userMessage) {
+    public String generateGroundedReply(UUID businessId, String userMessage) {
         Business business = businessRepository.findById(businessId).orElse(null);
         String bizName = business != null ? business.getName() : "our business";
         String cleanMsg = userMessage != null ? userMessage.trim().toLowerCase() : "";
