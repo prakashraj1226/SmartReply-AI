@@ -53,7 +53,9 @@ public class TelegramIntegrationService {
     @Value("${server.port:8081}")
     private String serverPort;
 
-    @Value("${backend.base-url:}")
+    // Same property as WhatsApp so one Render env works for both channels:
+    // APP_BACKEND_BASE_URL / app.backend-base-url
+    @Value("${app.backend-base-url:${BACKEND_BASE_URL:}}")
     private String backendBaseUrl;
 
     @Value("${app.telegram.bot-token:${TELEGRAM_BOT_TOKEN:}}")

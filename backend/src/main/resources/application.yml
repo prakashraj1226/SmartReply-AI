@@ -32,11 +32,14 @@ spring:
     locations: classpath:db/migration
 
 app:
+  # Public HTTPS base of this backend (no trailing slash). Required for Telegram/WhatsApp webhooks in production.
+  # Render env: APP_BACKEND_BASE_URL=https://smartreply-backend-lyda.onrender.com
+  backend-base-url: ${APP_BACKEND_BASE_URL:${BACKEND_BASE_URL:}}
   jwt:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     expiration-ms: 86400000 # 24 hours
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:80,http://localhost:3000,http://127.0.0.1:4200}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:4201,http://localhost:80,http://localhost:3000,http://127.0.0.1:4200,https://smartreply-frontend.onrender.com}
   whatsapp:
     webhook-verify-token: ${WHATSAPP_VERIFY_TOKEN:smartreply_verify_token_secure_2026}
   telegram:
