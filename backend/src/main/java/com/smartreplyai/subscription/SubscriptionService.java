@@ -174,6 +174,10 @@ public class SubscriptionService {
         dto.setAppointmentTodayLimit(limits != null ? limits.maxAppointmentsDaily() : Integer.MAX_VALUE);
         dto.setAppointmentTotalCount(apptTotal);
         dto.setAppointmentTotalLimit(limits != null ? limits.maxAppointmentsTotal() : Integer.MAX_VALUE);
+        dto.setGeminiRepliesToday(planLimitService.getTodayGeminiReplies(businessId, today));
+        dto.setGeminiRepliesDailyLimit(limits != null ? limits.maxGeminiRepliesDaily() : Integer.MAX_VALUE);
+        dto.setGeminiRepliesMonth(planLimitService.getMonthGeminiReplies(businessId, today));
+        dto.setGeminiRepliesMonthlyLimit(limits != null ? limits.maxGeminiRepliesMonthly() : Integer.MAX_VALUE);
 
         return dto;
     }

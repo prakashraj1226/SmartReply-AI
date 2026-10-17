@@ -76,6 +76,9 @@ public class PlanLimitsAndTrialTest {
     private AiAssistantDailyUsageRepository aiAssistantDailyUsageRepository;
 
     @Mock
+    private GeminiReplyDailyUsageRepository geminiReplyDailyUsageRepository;
+
+    @Mock
     private ConversationRepository conversationRepository;
 
     @Mock
@@ -111,15 +114,15 @@ public class PlanLimitsAndTrialTest {
         starterPlan = new SubscriptionPlan();
         starterPlan.setCode("STARTER");
         starterPlan.setName("Starter Plan");
-        starterPlan.setPriceInr(new BigDecimal("499"));
+        starterPlan.setPriceInr(new BigDecimal("999"));
         starterPlan.setMaxConversationsMonthly(500);
         starterPlan.setMaxAgents(1);
-        starterPlan.setAiFeaturesEnabled(false);
+        starterPlan.setAiFeaturesEnabled(true);
 
         growthPlan = new SubscriptionPlan();
         growthPlan.setCode("GROWTH");
         growthPlan.setName("Growth Plan");
-        growthPlan.setPriceInr(new BigDecimal("999"));
+        growthPlan.setPriceInr(new BigDecimal("1999"));
         growthPlan.setMaxConversationsMonthly(2000);
         growthPlan.setMaxAgents(3);
         growthPlan.setAiFeaturesEnabled(true);
@@ -127,7 +130,7 @@ public class PlanLimitsAndTrialTest {
         proPlan = new SubscriptionPlan();
         proPlan.setCode("PRO");
         proPlan.setName("Pro Business");
-        proPlan.setPriceInr(new BigDecimal("1999"));
+        proPlan.setPriceInr(new BigDecimal("3999"));
         proPlan.setMaxConversationsMonthly(10000);
         proPlan.setMaxAgents(10);
         proPlan.setAiFeaturesEnabled(true);
@@ -505,5 +508,58 @@ public class PlanLimitsAndTrialTest {
         assertEquals("ACTIVE", trialSubscription.getStatus());
         assertEquals("CONVERTED", trialSubscription.getTrialStatus());
         assertFalse(trialSubscription.isTrial());
+    }
+
+    @Test
+    @DisplayName("Trial Gemini customer replies are capped at 50 per day")
+    void trialGeminiDailyCap_BlocksAfterFifty() {
+        SubscriptionPlan trialPlan = new SubscriptionPlan();
+        trialPlan.setCode("TRIAL");
+        trialPlan.setName("Free Trial");
+        trialPlan.setAiFeaturesEnabled(true);
+
+        Subscription sub = new Subscription();
+        sub.setPlan(trialPlan);
+        sub.setStatus("TRIALING");
+        sub.setTrialStatus("ACTIVE");
+        sub.setTrialStartedAt(Instant.now().minus(1, ChronoUnit.DAYS));
+        sub.setTrialEndsAt(Instant.now().plus(10, ChronoUnit.DAYS));
+
+        when(subscriptionRepository.findByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
+
+        LocalDate today = LocalDate.now(PlanLimitService.ASIA_KOLKATA);
+        GeminiReplyDailyUsage usage = new GeminiReplyDailyUsage(business, today, 50);
+        when(geminiReplyDailyUsageRepository.findByBusinessIdAndUsageDate(businessId, today))
+                .thenReturn(Optional.of(usage));
+
+        assertFalse(planLimitService.canUseGeminiCustomerReply(businessId));
+    }
+
+    @Test
+    @DisplayName("Starter Gemini customer replies are capped at 1000 per month")
+    void starterGeminiMonthlyCap_BlocksAfterThousand() {
+        SubscriptionPlan starterPlan = new SubscriptionPlan();
+        starterPlan.setCode("STARTER");
+        starterPlan.setName("Starter Plan");
+        starterPlan.setAiFeaturesEnabled(true);
+
+        Subscription sub = new Subscription();
+        sub.setPlan(starterPlan);
+        sub.setStatus("ACTIVE");
+
+        when(subscriptionRepository.findByBusinessId(businessId)).thenReturn(Optional.of(sub));
+
+        LocalDate today = LocalDate.now(PlanLimitService.ASIA_KOLKATA);
+        when(geminiReplyDailyUsageRepository.findByBusinessIdAndUsageDate(businessId, today))
+                .thenReturn(Optional.empty());
+        when(geminiReplyDailyUsageRepository.sumRepliesBetween(eq(businessId), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(1000L);
+
+        assertFalse(planLimitService.canUseGeminiCustomerReply(businessId));
+        assertEquals(1000, PlanLimits.STARTER.maxGeminiRepliesMonthly());
+        assertEquals(5000, PlanLimits.GROWTH.maxGeminiRepliesMonthly());
+        assertEquals(20000, PlanLimits.PRO.maxGeminiRepliesMonthly());
+        assertEquals(50, PlanLimits.TRIAL.maxGeminiRepliesDaily());
     }
 }

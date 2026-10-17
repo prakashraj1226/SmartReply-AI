@@ -14,6 +14,7 @@ import com.smartreplyai.knowledgebase.KnowledgeArticle;
 import com.smartreplyai.knowledgebase.KnowledgeArticleRepository;
 import com.smartreplyai.servicecatalog.ServiceItem;
 import com.smartreplyai.staff.Staff;
+import com.smartreplyai.subscription.PlanLimitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class AiService {
     private final GeminiChatClient geminiChatClient;
     private final TenantAssistantContext tenantAssistantContext;
     private final AssistantService assistantService;
+    private final PlanLimitService planLimitService;
 
     public AiService(AiConfigurationRepository aiConfigurationRepository,
                      KnowledgeArticleRepository knowledgeArticleRepository,
@@ -49,7 +51,8 @@ public class AiService {
                      AiProvider aiProvider,
                      GeminiChatClient geminiChatClient,
                      TenantAssistantContext tenantAssistantContext,
-                     AssistantService assistantService) {
+                     AssistantService assistantService,
+                     PlanLimitService planLimitService) {
         this.aiConfigurationRepository = aiConfigurationRepository;
         this.knowledgeArticleRepository = knowledgeArticleRepository;
         this.businessRepository = businessRepository;
@@ -59,6 +62,7 @@ public class AiService {
         this.geminiChatClient = geminiChatClient;
         this.tenantAssistantContext = tenantAssistantContext;
         this.assistantService = assistantService;
+        this.planLimitService = planLimitService;
     }
 
     @Transactional(readOnly = true)
@@ -141,6 +145,10 @@ public class AiService {
         if (geminiChatClient == null || !geminiChatClient.isConfigured()) {
             return null;
         }
+        if (planLimitService != null && !planLimitService.canUseGeminiCustomerReply(businessId)) {
+            logger.info("Gemini customer reply skipped for business {} — plan Gemini limit reached", businessId);
+            return null;
+        }
         long started = System.currentTimeMillis();
         try {
             String prompt = tenantAssistantContext.build(businessId);
@@ -149,7 +157,10 @@ public class AiService {
             if (reply == null || reply.isBlank()) {
                 return null;
             }
-            logger.info("Gemini AI Assistant replied for business {}", businessId);
+            if (planLimitService != null) {
+                planLimitService.recordGeminiCustomerReply(businessId);
+            }
+            logger.info("Gemini customer reply for business {}", businessId);
             return new AiGenerationResponse(reply.trim(), 0.95, false, null, "Gemini", 0,
                     System.currentTimeMillis() - started, "GEMINI");
         } catch (BadRequestException ex) {

@@ -15,6 +15,8 @@ public class PlanLimits {
             int maxAppointmentsDaily,
             int maxAppointmentsTotal,
             int maxConversationsMonthly,
+            int maxGeminiRepliesDaily,
+            int maxGeminiRepliesMonthly,
             boolean aiAssistantEnabled
     ) {}
 
@@ -29,6 +31,8 @@ public class PlanLimits {
             2,
             15,
             Integer.MAX_VALUE, // No monthly customer conversation cap during trial
+            50,                // Soft daily Gemini customer-reply cap
+            Integer.MAX_VALUE,
             true
     );
 
@@ -43,7 +47,9 @@ public class PlanLimits {
             Integer.MAX_VALUE,
             Integer.MAX_VALUE,
             500,
-            false // AI Assistant turned off
+            Integer.MAX_VALUE,
+            1000,
+            false // AI Assistant side chat off; WhatsApp/Telegram Gemini still allowed within monthly cap
     );
 
     public static final LimitConfig GROWTH = new LimitConfig(
@@ -57,6 +63,8 @@ public class PlanLimits {
             Integer.MAX_VALUE,
             Integer.MAX_VALUE,
             2000,
+            Integer.MAX_VALUE,
+            5000,
             true
     );
 
@@ -71,6 +79,8 @@ public class PlanLimits {
             Integer.MAX_VALUE,
             Integer.MAX_VALUE,
             10000,
+            Integer.MAX_VALUE,
+            20000,
             true
     );
 

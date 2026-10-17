@@ -69,6 +69,10 @@ export interface SubscriptionDetails {
   appointmentTodayLimit?: number;
   appointmentTotalCount?: number;
   appointmentTotalLimit?: number;
+  geminiRepliesToday?: number;
+  geminiRepliesDailyLimit?: number;
+  geminiRepliesMonth?: number;
+  geminiRepliesMonthlyLimit?: number;
 }
 
 export interface CheckoutOrder {

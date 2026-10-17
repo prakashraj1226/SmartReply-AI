@@ -269,6 +269,11 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
             <div class="mini-progress"><div class="mini-bar" [style.width.%]="calcPercent(subscription()?.aiTodayChats, subscription()?.aiTodayLimit)"></div></div>
           </div>
           <div class="trial-limit-item">
+            <span class="tli-label">Gemini Bot Replies (Today)</span>
+            <span class="tli-value"><strong>{{ subscription()?.geminiRepliesToday ?? 0 }}</strong> / {{ finiteLimit(subscription()?.geminiRepliesDailyLimit) ?? 50 }}</span>
+            <div class="mini-progress"><div class="mini-bar" [style.width.%]="calcPercent(subscription()?.geminiRepliesToday, subscription()?.geminiRepliesDailyLimit)"></div></div>
+          </div>
+          <div class="trial-limit-item">
             <span class="tli-label">Appointments Today (Total)</span>
             <span class="tli-value"><strong>{{ subscription()?.appointmentTodayCount ?? 0 }}/{{ subscription()?.appointmentTodayLimit ?? 2 }}</strong> (Total: {{ subscription()?.appointmentTotalCount ?? 0 }}/{{ subscription()?.appointmentTotalLimit ?? 15 }})</span>
             <div class="mini-progress"><div class="mini-bar" [style.width.%]="calcPercent(subscription()?.appointmentTotalCount, subscription()?.appointmentTotalLimit)"></div></div>
@@ -309,6 +314,10 @@ import { SubscriptionService, SubscriptionDetails, SubscriptionPlan, CheckoutOrd
               <li>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 <span>Up to <strong>{{ p.maxAgents }}</strong> Staff Agent {{ p.maxAgents === 1 ? 'seat' : 'seats' }}</span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>{{ geminiMonthlyCap(p.code) | number }}</strong> Gemini bot replies / mo</span>
               </li>
               <!-- AI Assistant feature indicator -->
               <li *ngIf="p.code === 'STARTER'">
@@ -1549,8 +1558,23 @@ export class SubscriptionsComponent implements OnInit {
   }
 
   calcPercent(val?: number, max?: number): number {
-    if (!max || max <= 0) return 0;
+    if (!max || max <= 0 || max >= 2147483647) return 0;
     return Math.min(100, Math.round(((val ?? 0) / max) * 100));
+  }
+
+  /** Hide Java Integer.MAX_VALUE caps in the UI. */
+  finiteLimit(max?: number): number | null {
+    if (max == null || max >= 2147483647) return null;
+    return max;
+  }
+
+  geminiMonthlyCap(planCode?: string): number {
+    switch ((planCode || '').toUpperCase()) {
+      case 'STARTER': return 1000;
+      case 'GROWTH': return 5000;
+      case 'PRO': return 20000;
+      default: return 0;
+    }
   }
 
   scrollToPlans(): void {

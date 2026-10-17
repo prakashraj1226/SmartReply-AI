@@ -14,6 +14,7 @@ import com.smartreplyai.knowledgebase.KnowledgeArticleRepository;
 import com.smartreplyai.staff.Staff;
 import com.smartreplyai.staff.StaffRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -38,6 +39,7 @@ public class PlanLimitService {
     private final KnowledgeArticleRepository articleRepository;
     private final AppointmentRepository appointmentRepository;
     private final AiAssistantDailyUsageRepository aiAssistantDailyUsageRepository;
+    private final GeminiReplyDailyUsageRepository geminiReplyDailyUsageRepository;
     private final ConversationRepository conversationRepository;
     private final BusinessRepository businessRepository;
 
@@ -48,6 +50,7 @@ public class PlanLimitService {
                             KnowledgeArticleRepository articleRepository,
                             AppointmentRepository appointmentRepository,
                             AiAssistantDailyUsageRepository aiAssistantDailyUsageRepository,
+                            GeminiReplyDailyUsageRepository geminiReplyDailyUsageRepository,
                             ConversationRepository conversationRepository,
                             BusinessRepository businessRepository) {
         this.subscriptionRepository = subscriptionRepository;
@@ -57,6 +60,7 @@ public class PlanLimitService {
         this.articleRepository = articleRepository;
         this.appointmentRepository = appointmentRepository;
         this.aiAssistantDailyUsageRepository = aiAssistantDailyUsageRepository;
+        this.geminiReplyDailyUsageRepository = geminiReplyDailyUsageRepository;
         this.conversationRepository = conversationRepository;
         this.businessRepository = businessRepository;
     }
@@ -282,6 +286,65 @@ public class PlanLimitService {
             return false;
         }
         return sub.getPlan() != null && sub.getPlan().isAiFeaturesEnabled();
+    }
+
+    /**
+     * Whether a Gemini-powered customer reply (WhatsApp/Telegram) is still within plan caps.
+     * Does not throw — callers should fall back to FAQ/rules when false.
+     */
+    @Transactional(readOnly = true)
+    public boolean canUseGeminiCustomerReply(UUID businessId) {
+        if (!isBusinessActive(businessId)) {
+            return false;
+        }
+        Subscription sub = subscriptionRepository.findByBusinessId(businessId).orElse(null);
+        if (sub == null || sub.getPlan() == null || sub.isTrialExpired()) {
+            return false;
+        }
+        PlanLimits.LimitConfig config = PlanLimits.forPlan(sub.getPlan().getCode());
+        if (config == null) {
+            return true;
+        }
+
+        LocalDate today = LocalDate.now(ASIA_KOLKATA);
+        if (config.maxGeminiRepliesDaily() < Integer.MAX_VALUE) {
+            int todayCount = getTodayGeminiReplies(businessId, today);
+            if (todayCount >= config.maxGeminiRepliesDaily()) {
+                return false;
+            }
+        }
+        if (config.maxGeminiRepliesMonthly() < Integer.MAX_VALUE) {
+            long monthCount = getMonthGeminiReplies(businessId, today);
+            if (monthCount >= config.maxGeminiRepliesMonthly()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordGeminiCustomerReply(UUID businessId) {
+        LocalDate today = LocalDate.now(ASIA_KOLKATA);
+        GeminiReplyDailyUsage usage = geminiReplyDailyUsageRepository.findByBusinessIdAndUsageDate(businessId, today)
+                .orElseGet(() -> {
+                    Business business = businessRepository.findById(businessId)
+                            .orElseThrow(() -> new BadRequestException("Business not found"));
+                    return new GeminiReplyDailyUsage(business, today, 0);
+                });
+        usage.setReplyCount(usage.getReplyCount() + 1);
+        geminiReplyDailyUsageRepository.save(usage);
+    }
+
+    public int getTodayGeminiReplies(UUID businessId, LocalDate date) {
+        return geminiReplyDailyUsageRepository.findByBusinessIdAndUsageDate(businessId, date)
+                .map(GeminiReplyDailyUsage::getReplyCount)
+                .orElse(0);
+    }
+
+    public long getMonthGeminiReplies(UUID businessId, LocalDate anyDayInMonth) {
+        LocalDate start = anyDayInMonth.withDayOfMonth(1);
+        LocalDate end = anyDayInMonth.withDayOfMonth(anyDayInMonth.lengthOfMonth());
+        return geminiReplyDailyUsageRepository.sumRepliesBetween(businessId, start, end);
     }
 
     @Transactional

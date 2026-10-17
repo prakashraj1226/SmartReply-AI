@@ -51,6 +51,10 @@ public class SubscriptionDetailsDto {
     private int appointmentTodayLimit;
     private long appointmentTotalCount;
     private int appointmentTotalLimit;
+    private long geminiRepliesToday;
+    private int geminiRepliesDailyLimit;
+    private long geminiRepliesMonth;
+    private int geminiRepliesMonthlyLimit;
 
     public SubscriptionDetailsDto() {
     }
@@ -335,5 +339,37 @@ public class SubscriptionDetailsDto {
 
     public void setAppointmentTotalLimit(int appointmentTotalLimit) {
         this.appointmentTotalLimit = appointmentTotalLimit;
+    }
+
+    public long getGeminiRepliesToday() {
+        return geminiRepliesToday;
+    }
+
+    public void setGeminiRepliesToday(long geminiRepliesToday) {
+        this.geminiRepliesToday = geminiRepliesToday;
+    }
+
+    public int getGeminiRepliesDailyLimit() {
+        return geminiRepliesDailyLimit;
+    }
+
+    public void setGeminiRepliesDailyLimit(int geminiRepliesDailyLimit) {
+        this.geminiRepliesDailyLimit = geminiRepliesDailyLimit;
+    }
+
+    public long getGeminiRepliesMonth() {
+        return geminiRepliesMonth;
+    }
+
+    public void setGeminiRepliesMonth(long geminiRepliesMonth) {
+        this.geminiRepliesMonth = geminiRepliesMonth;
+    }
+
+    public int getGeminiRepliesMonthlyLimit() {
+        return geminiRepliesMonthlyLimit;
+    }
+
+    public void setGeminiRepliesMonthlyLimit(int geminiRepliesMonthlyLimit) {
+        this.geminiRepliesMonthlyLimit = geminiRepliesMonthlyLimit;
     }
 }
