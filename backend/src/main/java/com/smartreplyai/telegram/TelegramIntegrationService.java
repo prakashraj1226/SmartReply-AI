@@ -6,7 +6,6 @@ import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessRepository;
 import com.smartreplyai.common.BadRequestException;
 import com.smartreplyai.common.ResourceNotFoundException;
-import com.smartreplyai.conversation.Conversation;
 import com.smartreplyai.conversation.ConversationRepository;
 import com.smartreplyai.conversation.ConversationService;
 import com.smartreplyai.message.MessageRepository;
@@ -348,7 +347,17 @@ public class TelegramIntegrationService {
         );
 
         try {
-            processIncomingWebhook(objectMapper.writeValueAsString(payload), account.getWebhookVerifyToken(), null);
+            conversationService.runAwaitingAiReply(() -> {
+                try {
+                    processIncomingWebhook(objectMapper.writeValueAsString(payload), account.getWebhookVerifyToken(), null);
+                } catch (RuntimeException re) {
+                    throw re;
+                } catch (Exception e) {
+                    throw new BadRequestException("The automatic reply could not be created: " + e.getMessage());
+                }
+            });
+        } catch (BadRequestException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("Error simulating Telegram webhook", e);
             throw new BadRequestException("The automatic reply could not be created: " + e.getMessage());
@@ -356,10 +365,8 @@ public class TelegramIntegrationService {
 
         String syntheticPhone = "tg:" + userId;
         String reply = customerRepository.findByBusinessIdAndPhoneNumber(businessId, syntheticPhone)
-                .flatMap(customer -> conversationRepository.findByBusinessIdAndCustomerId(businessId, customer.getId()))
-                .map(Conversation::getLastMessageSnippet)
-                .filter(snippet -> snippet != null && !snippet.equals(text.trim()))
-                .orElse("The automatic reply is turned off for this chat.");
+                .map(customer -> conversationService.resolveAutoReplySnippet(businessId, customer.getId(), text.trim()))
+                .orElse("No chat was created for this test. Try again.");
 
         boolean simulated = account.isSandbox() || account.getAccessToken() == null || account.getAccessToken().isBlank();
         return new AutoReplyResult(text.trim(), reply, simulated);

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartreplyai.business.Business;
 import com.smartreplyai.business.BusinessRepository;
 import com.smartreplyai.common.BadRequestException;
-import com.smartreplyai.conversation.Conversation;
 import com.smartreplyai.conversation.ConversationRepository;
 import com.smartreplyai.conversation.ConversationService;
 import com.smartreplyai.customer.Customer;
@@ -93,6 +92,13 @@ class TelegramIntegrationServiceTest {
 
         when(integrationAccountRepository.findByWebhookVerifyToken("tg_sec_99998888"))
                 .thenReturn(Optional.of(account));
+
+        // Default mock would skip the Runnable; simulators need it to actually run.
+        doAnswer(invocation -> {
+            Runnable work = invocation.getArgument(0);
+            work.run();
+            return null;
+        }).when(conversationService).runAwaitingAiReply(any());
     }
 
     @Test
@@ -225,11 +231,8 @@ class TelegramIntegrationServiceTest {
         cust.setId(UUID.randomUUID());
         when(customerRepository.findByBusinessIdAndPhoneNumber(businessId, "tg:999"))
                 .thenReturn(Optional.of(cust));
-
-        Conversation conv = new Conversation(business, cust);
-        conv.setLastMessageSnippet("Cleaning is ₹1200.");
-        when(conversationRepository.findByBusinessIdAndCustomerId(businessId, cust.getId()))
-                .thenReturn(Optional.of(conv));
+        when(conversationService.resolveAutoReplySnippet(businessId, cust.getId(), "What is the fee?"))
+                .thenReturn("Cleaning is ₹1200.");
 
         AutoReplyResult result = service.simulateCustomerMessage(
                 businessId, "What is the fee?", "999", "Tester", "tester_tg");

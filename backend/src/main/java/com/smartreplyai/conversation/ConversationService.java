@@ -33,11 +33,16 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Service
 public class ConversationService {
 
     private static final Logger logger = LoggerFactory.getLogger(ConversationService.class);
+
+    /** When true, handleCustomerMessage waits for the async AI job (used by channel simulators). */
+    private static final ThreadLocal<Boolean> AWAIT_AI_REPLY = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
@@ -159,8 +164,22 @@ public class ConversationService {
     }
 
     /**
+     * Run work while forcing inbound AI generation to finish before returning
+     * (Telegram/WhatsApp "Get automatic reply" simulators).
+     */
+    public void runAwaitingAiReply(Runnable work) {
+        AWAIT_AI_REPLY.set(Boolean.TRUE);
+        try {
+            work.run();
+        } finally {
+            AWAIT_AI_REPLY.remove();
+        }
+    }
+
+    /**
      * 1) Commit customer message immediately (REQUIRES_NEW).
      * 2) Generate AI reply asynchronously so Live Inbox can show the customer bubble first.
+     *    Simulators set {@link #runAwaitingAiReply} so the AI job completes before they read the reply.
      */
     public Message handleCustomerMessage(UUID businessId, UUID customerId, String textContent, String externalMessageId) {
         InboundPersistResult persisted = transactionTemplate.execute(status ->
@@ -175,7 +194,7 @@ public class ConversationService {
         final String persistedText = persisted.textContent();
         final boolean firstMessage = persisted.isFirstMessage();
 
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture<Void> aiJob = CompletableFuture.runAsync(() -> {
             try {
                 TenantContext.setCurrentTenant(businessId);
                 transactionTemplate.executeWithoutResult(status ->
@@ -194,7 +213,41 @@ public class ConversationService {
             }
         });
 
+        if (Boolean.TRUE.equals(AWAIT_AI_REPLY.get())) {
+            try {
+                aiJob.get(60, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                logger.warn("Timed out waiting for AI auto-reply (conversation={})", conversationId);
+            } catch (Exception e) {
+                logger.error("Error while waiting for AI auto-reply (conversation={})", conversationId, e);
+            }
+        }
+
         return persisted.message();
+    }
+
+    /**
+     * Fresh DB read of the latest snippet after AI may have updated it in another transaction.
+     */
+    public String resolveAutoReplySnippet(UUID businessId, UUID customerId, String customerText) {
+        return transactionTemplate.execute(status -> {
+            Conversation conversation = conversationRepository.findByBusinessIdAndCustomerId(businessId, customerId)
+                    .orElse(null);
+            if (conversation == null) {
+                return "No chat was created for this test. Try again.";
+            }
+            String snippet = conversation.getLastMessageSnippet();
+            if (snippet != null && customerText != null && !snippet.equals(customerText.trim())) {
+                return snippet;
+            }
+            if (!conversation.isAiEnabled()) {
+                return "The automatic reply is turned off for this chat. Open Live Inbox and click Resume AI.";
+            }
+            if (!planLimitService.canSendWhatsAppAutoReply(businessId)) {
+                return "Your free trial has ended. Please upgrade your plan to continue automatic replies.";
+            }
+            return "The automatic reply is still generating. Open Live Inbox — the AI reply should appear shortly.";
+        });
     }
 
     private InboundPersistResult persistCustomerInbound(UUID businessId, UUID customerId,
