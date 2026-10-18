@@ -150,22 +150,6 @@ import { AuthService } from '../../../core/services/auth.service';
           Don't have an account?
           <a routerLink="/auth/register" class="register-link">Start 14-day free trial</a>
         </div>
-
-        <!-- Server API Endpoint Setting for Mobile / Local Testing -->
-        <div class="server-config-toggle">
-          <button type="button" class="btn-server-toggle" (click)="toggleServerConfig()">
-            ⚙️ Server: {{ currentServerDisplay }} (Change)
-          </button>
-          <div *ngIf="showServerConfig" class="server-config-box">
-            <input type="text" [(ngModel)]="customApiUrl" placeholder="https://..." class="form-input" style="font-size: 0.8rem; padding: 0.4rem 0.6rem; margin-bottom: 8px; width: 100%; box-sizing: border-box;" />
-            <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
-              <button type="button" class="btn-preset" (click)="setApiPreset('https://smartreply-backend-lyda.onrender.com/api')">Prod (Render)</button>
-              <button type="button" class="btn-preset" (click)="setApiPreset('http://10.0.2.2:8081/api')">Emulator</button>
-              <button type="button" class="btn-preset" (click)="setApiPreset('http://localhost:8081/api')">Localhost</button>
-              <button type="button" class="btn-preset-save" (click)="saveServerUrl()">Save & Reload</button>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Super Admin Forgot Password Modal Overlay -->
@@ -945,51 +929,6 @@ import { AuthService } from '../../../core/services/auth.service';
       justify-content: center;
       margin: 0 auto 1.25rem;
     }
-
-    .server-config-toggle {
-      margin-top: 1.25rem;
-      text-align: center;
-    }
-    .btn-server-toggle {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #94a3b8;
-      font-size: 0.75rem;
-      padding: 0.35rem 0.85rem;
-      border-radius: 9999px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-    .btn-server-toggle:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #ffffff;
-    }
-    .server-config-box {
-      margin-top: 0.75rem;
-      padding: 0.75rem;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 8px;
-    }
-    .btn-preset {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #e2e8f0;
-      font-size: 0.7rem;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .btn-preset-save {
-      background: #2563eb;
-      border: none;
-      color: #ffffff;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 0.25rem 0.65rem;
-      border-radius: 4px;
-      cursor: pointer;
-    }
   `]
 })
 export class LoginComponent implements OnInit {
@@ -1006,43 +945,6 @@ export class LoginComponent implements OnInit {
   isLoading = false;
   showPassword = false;
   errorMessage = '';
-
-  showServerConfig = false;
-  customApiUrl = (typeof window !== 'undefined' && localStorage.getItem('sr_custom_api_url')) || '';
-
-  get currentServerDisplay(): string {
-    if (this.customApiUrl) {
-      try {
-        const u = new URL(this.customApiUrl);
-        return u.host;
-      } catch {
-        return this.customApiUrl.slice(0, 20);
-      }
-    }
-    return 'Production (Render)';
-  }
-
-  toggleServerConfig(): void {
-    this.showServerConfig = !this.showServerConfig;
-    if (this.showServerConfig && !this.customApiUrl) {
-      this.customApiUrl = 'https://smartreply-backend-lyda.onrender.com/api';
-    }
-  }
-
-  setApiPreset(url: string): void {
-    this.customApiUrl = url;
-  }
-
-  saveServerUrl(): void {
-    if (typeof window !== 'undefined') {
-      if (this.customApiUrl && this.customApiUrl.trim()) {
-        localStorage.setItem('sr_custom_api_url', this.customApiUrl.trim());
-      } else {
-        localStorage.removeItem('sr_custom_api_url');
-      }
-      window.location.reload();
-    }
-  }
 
   ngOnInit(): void {
     if (this.route.snapshot.queryParamMap.get('reason') === 'suspended') {

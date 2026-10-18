@@ -73,41 +73,6 @@ import { SubscriptionService } from '../../core/services/subscription.service';
         <main class="page-content" [class.inbox-page-pad]="hideTrialBanner()">
           <router-outlet></router-outlet>
         </main>
-
-        <!-- Mobile Bottom Navigation (Visible only on mobile screens <= 768px) -->
-        <nav class="mobile-bottom-nav">
-          <a routerLink="/inbox" routerLinkActive="active" class="mobile-nav-item">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <span>Inbox</span>
-          </a>
-          <a routerLink="/appointments" routerLinkActive="active" class="mobile-nav-item">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
-              <line x1="16" x2="16" y1="2" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="19" y2="10"></line>
-            </svg>
-            <span>Appointments</span>
-          </a>
-          <a routerLink="/customers" routerLinkActive="active" class="mobile-nav-item">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-            <span>Customers</span>
-          </a>
-          <a routerLink="/settings" routerLinkActive="active" class="mobile-nav-item">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-            <span>Settings</span>
-          </a>
-        </nav>
       </div>
       <app-confirm-dialog></app-confirm-dialog>
     </div>
@@ -276,83 +241,13 @@ import { SubscriptionService } from '../../core/services/subscription.service';
       background: #94a3b8;
     }
 
-    .mobile-bottom-nav {
-      display: none;
-    }
-
     @media (max-width: 768px) {
-      app-sidebar {
-        display: none !important;
-      }
       .page-content {
-        padding: 0.5rem 0.6rem calc(72px + env(safe-area-inset-bottom, 0px));
-        max-width: none;
-      }
-      .page-content.inbox-page-pad {
-        padding: 0 0 calc(64px + env(safe-area-inset-bottom, 0px));
-      }
-      .trial-banner-container {
-        padding: 0.4rem 0.6rem 0;
-        max-width: none;
+        padding: 1rem;
       }
       .trial-banner {
         flex-direction: column;
-        align-items: stretch;
-        gap: 0.55rem;
-        padding: 0.7rem 0.85rem;
-      }
-      .banner-left {
-        width: 100%;
-      }
-      .btn-upgrade-banner {
-        width: 100%;
-        justify-content: center;
-        padding: 0.55rem 0.85rem;
-      }
-      .usage-pills {
-        width: 100%;
-      }
-      .mobile-bottom-nav {
-        display: flex;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: calc(60px + env(safe-area-inset-bottom, 0px));
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-        background: #0b1329;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 999;
-        justify-content: space-around;
-        align-items: center;
-        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
-      }
-      .mobile-nav-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        color: #94a3b8;
-        text-decoration: none;
-        font-size: 0.7rem;
-        font-weight: 600;
-        padding: 8px 10px;
-        min-width: 64px;
-        border-radius: 10px;
-        transition: all 0.15s ease;
-        -webkit-tap-highlight-color: transparent;
-      }
-      .mobile-nav-item svg {
-        width: 22px;
-        height: 22px;
-      }
-      .mobile-nav-item.active {
-        color: #60a5fa;
-        background: rgba(96, 165, 250, 0.12);
-      }
-      .mobile-nav-item.active svg {
-        stroke: #60a5fa;
+        align-items: flex-start;
       }
     }
   `]

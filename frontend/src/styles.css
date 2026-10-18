@@ -278,29 +278,3 @@ p {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--slate-400);
 }
-
-/* Mobile app helpers — desktop unchanged */
-@media (max-width: 768px) {
-  html, body {
-    overscroll-behavior-y: none;
-    -webkit-text-size-adjust: 100%;
-  }
-
-  .form-row-2,
-  .modal-form-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  input.form-control,
-  select.form-control,
-  textarea.form-control,
-  .form-control {
-    font-size: 16px !important; /* prevents iOS zoom on focus */
-  }
-
-  .btn,
-  .btn-primary,
-  .btn-secondary {
-    min-height: 44px;
-  }
-}

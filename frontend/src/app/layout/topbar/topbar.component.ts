@@ -310,34 +310,6 @@ import { AuthService } from '../../core/services/auth.service';
         display: none;
       }
     }
-
-    /* Mobile app chrome — desktop topbar unchanged */
-    @media (max-width: 768px) {
-      .topbar {
-        height: 52px;
-        padding: 0 0.65rem;
-      }
-      .breadcrumb-row {
-        display: none;
-      }
-      .page-header-title {
-        font-size: 1.05rem;
-        line-height: 1.2;
-      }
-      .page-icon-badge {
-        width: 32px;
-        height: 32px;
-      }
-      .icon-pill-btn {
-        width: 34px;
-        height: 34px;
-      }
-      .user-avatar-circle {
-        width: 32px;
-        height: 32px;
-        font-size: 0.8rem;
-      }
-    }
   `]
 })
 export class TopbarComponent implements OnInit {
