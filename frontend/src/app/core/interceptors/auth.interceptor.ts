@@ -35,10 +35,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         authService.logout();
         router.navigate(['/auth/login']);
       } else if (error.status === 403 && !req.url.includes('/auth/login')) {
-        const msg = (error.error?.message || '').toLowerCase();
+        const msg = (typeof error.error === 'string' ? error.error : (error.error?.message || '')).toLowerCase();
+        // Empty-body 403 usually means JWT missing/invalid after backend restart
         if (msg.includes('suspended')) {
           authService.logout();
           router.navigate(['/auth/login'], { queryParams: { reason: 'suspended' } });
+        } else if (!msg || msg.includes('session expired') || msg.includes('not logged in')) {
+          authService.logout();
+          router.navigate(['/auth/login'], { queryParams: { reason: 'session' } });
         }
       }
       return throwError(() => error);

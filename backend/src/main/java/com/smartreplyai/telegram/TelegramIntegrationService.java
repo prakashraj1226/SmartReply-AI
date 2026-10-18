@@ -181,7 +181,7 @@ public class TelegramIntegrationService {
         return toDto(account);
     }
 
-    @Transactional
+    // Not @Transactional: ConversationService commits customer msg first, then AI (REQUIRES_NEW)
     public void processIncomingWebhook(String rawPayload, String secretHeader, String pathSecret) {
         String secret = (secretHeader != null && !secretHeader.isBlank()) ? secretHeader.trim() : null;
         if (secret == null && pathSecret != null && !pathSecret.isBlank()) {

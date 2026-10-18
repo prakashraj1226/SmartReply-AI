@@ -16,6 +16,7 @@ export interface ConversationDto {
   customerId: string;
   customerName: string;
   customerPhone: string;
+  channel?: 'WHATSAPP' | 'TELEGRAM' | string;
   status: 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
   aiEnabled: boolean;
   unreadCount: number;

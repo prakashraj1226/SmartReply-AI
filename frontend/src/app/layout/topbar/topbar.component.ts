@@ -370,7 +370,7 @@ export class TopbarComponent implements OnInit {
     if (url.includes('/inbox')) {
       this.currentRouteKey = 'inbox';
       this.sectionLabel = 'Operations';
-      this.pageTitle = 'Unified WhatsApp Inbox';
+      this.pageTitle = 'Live Inbox';
     } else if (url.includes('/knowledge-base')) {
       this.currentRouteKey = 'knowledge-base';
       this.sectionLabel = 'AI Grounding';

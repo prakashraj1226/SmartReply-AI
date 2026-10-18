@@ -25,6 +25,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -71,6 +74,12 @@ class ConversationServiceTest {
     @Mock
     private com.smartreplyai.subscription.PlanLimitService planLimitService;
 
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
+    @Mock
+    private TransactionStatus transactionStatus;
+
     @InjectMocks
     private ConversationService conversationService;
 
@@ -94,6 +103,9 @@ class ConversationServiceTest {
 
         lenient().when(integrationAccountRepository.findByBusinessIdAndProvider(any(), any()))
                 .thenReturn(Optional.empty());
+        // TransactionTemplate needs a status so both persist + AI commits run in unit tests
+        lenient().when(transactionManager.getTransaction(any(TransactionDefinition.class)))
+                .thenReturn(transactionStatus);
     }
 
     @Test
@@ -136,6 +148,8 @@ class ConversationServiceTest {
                 .thenReturn(Optional.of(testCustomer));
         when(conversationRepository.findByBusinessIdAndCustomerId(businessId, testCustomer.getId()))
                 .thenReturn(Optional.of(testConversation));
+        when(conversationRepository.findByBusinessIdAndId(businessId, testConversation.getId()))
+                .thenReturn(Optional.of(testConversation));
         when(messageRepository.save(any(Message.class))).thenAnswer(i -> i.getArgument(0));
 
         AiGenerationResponse aiResponse = new AiGenerationResponse(
@@ -157,9 +171,10 @@ class ConversationServiceTest {
         assertNotNull(incoming);
         assertEquals("CUSTOMER", incoming.getSenderType());
         assertEquals("wamid.123", incoming.getExternalMessageId());
-        // Verify AI message was saved
-        verify(messageRepository, times(2)).save(any(Message.class));
-        verify(aiService).processIncomingMessage(eq(businessId), eq("What are your business hours?"), anyList(), any(), any(), anyBoolean());
+        // AI runs async after customer commit
+        verify(aiService, timeout(3000)).processIncomingMessage(
+                eq(businessId), eq("What are your business hours?"), anyList(), any(), any(), anyBoolean());
+        verify(messageRepository, timeout(3000).times(2)).save(any(Message.class));
         assertEquals(0, testConversation.getUnreadCount()); // Cleared since AI answered confidently
     }
 
@@ -169,6 +184,8 @@ class ConversationServiceTest {
         when(customerRepository.findByBusinessIdAndId(businessId, testCustomer.getId()))
                 .thenReturn(Optional.of(testCustomer));
         when(conversationRepository.findByBusinessIdAndCustomerId(businessId, testCustomer.getId()))
+                .thenReturn(Optional.of(testConversation));
+        when(conversationRepository.findByBusinessIdAndId(businessId, testConversation.getId()))
                 .thenReturn(Optional.of(testConversation));
         when(messageRepository.save(any(Message.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -188,8 +205,10 @@ class ConversationServiceTest {
         conversationService.handleCustomerMessage(
                 businessId, testCustomer.getId(), "Can you give me a discount on dental surgery?", "wamid.456");
 
+        verify(aiService, timeout(3000)).processIncomingMessage(
+                eq(businessId), anyString(), anyList(), any(), any(), anyBoolean());
         assertEquals("PENDING", testConversation.getStatus());
-        verify(conversationRepository).save(testConversation);
+        verify(conversationRepository, atLeastOnce()).save(testConversation);
     }
 
     @Test

@@ -1,6 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map, startWith } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth.service';
 import { AssistantService } from '../../core/services/assistant.service';
 import { SubscriptionService } from '../../core/services/subscription.service';
@@ -36,7 +38,12 @@ import { SubscriptionService } from '../../core/services/subscription.service';
         </div>
         <div class="tenant-info">
           <span class="tenant-title">{{ user.businessName || 'My Workspace' }}</span>
-          <span class="tenant-plan" [class.tenant-trial]="subscription()?.isTrial" [class.tenant-expired]="subscription()?.isTrialExpired">
+          <span
+            class="tenant-plan"
+            *ngIf="!isInboxRoute()"
+            [class.tenant-trial]="subscription()?.isTrial"
+            [class.tenant-expired]="subscription()?.isTrialExpired"
+          >
             {{ getPlanBadgeText() }}
           </span>
         </div>
@@ -513,9 +520,21 @@ export class SidebarComponent {
   authService = inject(AuthService);
   assistant = inject(AssistantService);
   private subscriptionService = inject(SubscriptionService);
+  private router = inject(Router);
   subscription = this.subscriptionService.currentSubscription;
 
   isCollapsed = false;
+
+  private readonly urlPath = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map(() => this.router.url),
+      startWith(this.router.url)
+    ),
+    { initialValue: this.router.url }
+  );
+
+  readonly isInboxRoute = computed(() => (this.urlPath() || '').startsWith('/inbox'));
 
   toggleCollapse() {
     this.isCollapsed = !this.isCollapsed;

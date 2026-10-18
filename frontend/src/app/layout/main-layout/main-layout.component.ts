@@ -1,6 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map, startWith } from 'rxjs/operators';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
 import { AssistantPanelComponent } from '../assistant-panel/assistant-panel.component';
@@ -18,8 +20,8 @@ import { SubscriptionService } from '../../core/services/subscription.service';
       <div class="main-wrapper">
         <app-topbar></app-topbar>
 
-        <!-- PERSISTENT TRIAL NOTICES -->
-        <div *ngIf="subscription() as sub" class="trial-banner-container">
+        <!-- Trial notices hidden on Live Inbox so messaging stays focused -->
+        <div *ngIf="!hideTrialBanner() && subscription() as sub" class="trial-banner-container">
           <!-- Expired Trial Alert -->
           <div *ngIf="sub.isTrial && sub.isTrialExpired" class="trial-banner expired">
             <div class="banner-left">
@@ -68,7 +70,7 @@ import { SubscriptionService } from '../../core/services/subscription.service';
           </div>
         </div>
 
-        <main class="page-content">
+        <main class="page-content" [class.inbox-page-pad]="hideTrialBanner()">
           <router-outlet></router-outlet>
         </main>
       </div>
@@ -205,6 +207,20 @@ import { SubscriptionService } from '../../core/services/subscription.service';
       max-width: 1600px;
       width: 100%;
       margin: 0 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Live Inbox: tighter pad so chat uses more height */
+    .page-content.inbox-page-pad {
+      overflow: hidden;
+      padding: 0.35rem 0.65rem;
+    }
+
+    .page-content.inbox-page-pad > * {
+      flex: 1;
+      min-height: 0;
     }
 
     .page-content::-webkit-scrollbar {
@@ -238,7 +254,19 @@ import { SubscriptionService } from '../../core/services/subscription.service';
 })
 export class MainLayoutComponent implements OnInit {
   private subscriptionService = inject(SubscriptionService);
+  private router = inject(Router);
   subscription = this.subscriptionService.currentSubscription;
+
+  private readonly urlPath = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map(() => this.router.url),
+      startWith(this.router.url)
+    ),
+    { initialValue: this.router.url }
+  );
+
+  readonly hideTrialBanner = computed(() => (this.urlPath() || '').startsWith('/inbox'));
 
   ngOnInit(): void {
     this.subscriptionService.refreshSubscription();

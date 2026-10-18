@@ -166,7 +166,7 @@ public class WhatsAppIntegrationService {
         }
     }
 
-    @Transactional
+    // Not @Transactional: ConversationService commits customer msg first, then AI (REQUIRES_NEW)
     public void processIncomingWebhook(String rawPayload, String signatureHeader) {
         try {
             JsonNode root = objectMapper.readTree(rawPayload);
