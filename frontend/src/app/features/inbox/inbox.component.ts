@@ -59,13 +59,18 @@ import { WhatsAppService } from '../../core/services/whatsapp.service';
         </div>
       </div>
 
-      <div class="inbox-workspace-card">
+      <div class="inbox-workspace-card" [class.has-selected-conv]="!!selectedConversation()" [class.no-selected-conv]="!selectedConversation()">
 
         <!-- LEFT PANEL: Chat list -->
         <aside class="left-panel">
           <div class="panel-header">
             <div class="chats-title-row">
               <h2 class="chats-title">Chats</h2>
+              <div class="channel-filter-pills">
+                <button type="button" class="channel-pill" [class.active]="selectedChannel() === 'ALL'" (click)="setChannelFilter('ALL')">All</button>
+                <button type="button" class="channel-pill" [class.active]="selectedChannel() === 'WHATSAPP'" (click)="setChannelFilter('WHATSAPP')">WhatsApp</button>
+                <button type="button" class="channel-pill" [class.active]="selectedChannel() === 'TELEGRAM'" (click)="setChannelFilter('TELEGRAM')">Telegram</button>
+              </div>
             </div>
 
             <div class="search-box">
@@ -164,6 +169,11 @@ import { WhatsAppService } from '../../core/services/whatsapp.service';
         <main class="middle-panel" *ngIf="selectedConversation(); else noSelectionTpl">
           <header class="chat-header">
             <div class="chat-header-info">
+              <button type="button" class="btn-mobile-back" (click)="selectedConversation.set(null)" title="Back to chats">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
               <div class="avatar-header" [ngStyle]="{'background-color': getAvatarColor(selectedConversation()!.customerName)}">
                 {{ getInitials(selectedConversation()!.customerName) }}
               </div>
@@ -2083,6 +2093,50 @@ import { WhatsAppService } from '../../core/services/whatsapp.service';
       to { transform: rotate(360deg); }
     }
 
+    .channel-filter-pills {
+      display: inline-flex;
+      align-items: center;
+      background: #f1f5f9;
+      border-radius: 9999px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .channel-pill {
+      border: none;
+      background: transparent;
+      padding: 0.18rem 0.55rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #64748b;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .channel-pill.active {
+      background: #2563eb;
+      color: #ffffff;
+      box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-mobile-back {
+      display: none;
+      background: transparent;
+      border: none;
+      color: #334155;
+      padding: 0.25rem;
+      margin-right: 0.35rem;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+
+    .btn-mobile-back:hover {
+      background: #f1f5f9;
+    }
+
     @media (max-width: 1100px) {
       .topbar-center {
         display: none;
@@ -2096,6 +2150,108 @@ import { WhatsAppService } from '../../core/services/whatsapp.service';
       }
       .topbar-subtitle {
         display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .inbox-page {
+        height: 100%;
+        gap: 0;
+        max-height: none;
+      }
+      /* Hide desktop title card on phone — topbar already shows Live Inbox */
+      .inbox-topbar {
+        display: none !important;
+      }
+      .inbox-workspace-card {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        height: 100%;
+        flex: 1;
+        min-height: 0;
+      }
+      .btn-mobile-back {
+        display: inline-flex !important;
+      }
+      .left-panel {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 !important;
+        display: flex !important;
+        border-right: none;
+      }
+      .middle-panel {
+        width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 !important;
+      }
+      .has-selected-conv .left-panel {
+        display: none !important;
+      }
+      .no-selected-conv .middle-panel {
+        display: none !important;
+      }
+      .panel-header {
+        padding: 0.65rem 0.75rem 0.55rem;
+        gap: 0.45rem;
+      }
+      .chats-title-row {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      .chats-title {
+        font-size: 1.1rem;
+      }
+      .channel-filter-pills {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .conversation-item {
+        padding: 0.7rem 0.85rem;
+        min-height: 64px;
+      }
+      .chat-header {
+        padding: 0.5rem 0.65rem;
+        height: auto;
+        min-height: 52px;
+      }
+      .btn-hdr-action span {
+        display: none;
+      }
+      .btn-hdr-action {
+        padding: 0.4rem 0.55rem;
+        min-height: 36px;
+      }
+      .messages-container {
+        padding: 10px 12px 12px;
+      }
+      .message-wrapper {
+        max-width: 88%;
+      }
+      .composer-container {
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+      }
+      .composer-input-pill {
+        padding: 8px 12px;
+      }
+      .composer-input-pill textarea {
+        font-size: 1rem;
+      }
+      .suggestions-bar {
+        padding: 6px 10px;
+      }
+      .empty-selection {
+        padding: 1.25rem;
+      }
+      .wa-web-title {
+        font-size: 1.15rem;
+      }
+      .btn-wa-simulate {
+        width: 100%;
+        max-width: 280px;
       }
     }
   `]

@@ -1,6 +1,7 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { SettingsService, BusinessProfile, AiConfig, TeamMember, InviteMemberRequest, UpdateTeamMemberRequest } from '../../core/services/settings.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
@@ -131,6 +132,9 @@ import { SubscriptionService } from '../../core/services/subscription.service';
           </button>
           <button class="tab-pill-btn" [class.active]="activeTab() === 'security'" (click)="setTab('security')">
             🔒 Security & Compliance
+          </button>
+          <button class="tab-pill-btn" [class.active]="activeTab() === 'app'" (click)="setTab('app')">
+            📱 App & Server
           </button>
         </div>
       </div>
@@ -383,6 +387,54 @@ import { SubscriptionService } from '../../core/services/subscription.service';
               <h4>Role-Based Access Control (RBAC)</h4>
               <p>Only verified clinic owners and invited agents can inspect patient communication histories.</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: APP & SERVER -->
+      <div *ngIf="activeTab() === 'app'" class="content-card">
+        <div class="card-header-flex">
+          <div class="title-with-badge">
+            <div class="icon-badge blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+            </div>
+            <div>
+              <h3 class="card-main-title">Mobile App & Server Connection</h3>
+              <p class="card-sub-title">Configure backend API endpoint and manage session</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body-form" style="display: flex; flex-direction: column; gap: 1.25rem; padding: 1.25rem;">
+          <div class="form-group">
+            <label style="font-weight: 600; font-size: 0.85rem; color: #1e293b; display: block; margin-bottom: 0.35rem;">Backend API URL</label>
+            <input type="text" [(ngModel)]="customApiUrl" class="form-control" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box;" placeholder="https://smartreply-backend-lyda.onrender.com/api" />
+            <span style="font-size: 0.75rem; color: #64748b; margin-top: 0.35rem; display: block;">Supports production, emulator (http://10.0.2.2:8081/api), or local LAN (http://&lt;your-ip&gt;:8081/api).</span>
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <button type="button" class="btn-cancel" (click)="setPresetApiUrl('https://smartreply-backend-lyda.onrender.com/api')">Production (Render)</button>
+            <button type="button" class="btn-cancel" (click)="setPresetApiUrl('http://10.0.2.2:8081/api')">Android Emulator</button>
+            <button type="button" class="btn-cancel" (click)="setPresetApiUrl('http://localhost:8081/api')">Localhost (8081)</button>
+            <button type="button" class="btn-send-sim" style="background: #2563eb; color: #ffffff; border: none; padding: 0.55rem 1.25rem; border-radius: 8px; font-weight: 700; cursor: pointer;" (click)="saveCustomApiUrl()">Save & Reload App</button>
+          </div>
+
+          <div style="border-top: 1px solid #e2e8f0; padding-top: 1.5rem; margin-top: 0.5rem;">
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; color: #0f172a;">Account Session</h4>
+            <p style="font-size: 0.825rem; color: #64748b; margin-bottom: 1rem;">
+              Logged in as: <strong>{{ authService.currentUser()?.email || 'User' }}</strong> ({{ authService.tenantRole() }})
+            </p>
+            <button type="button" (click)="doLogout()" style="background: #dc2626; color: #ffffff; border: none; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 700; font-size: 0.825rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              <span>Logout from SmartReply</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1367,6 +1419,56 @@ import { SubscriptionService } from '../../core/services/subscription.service';
       }
     }
 
+    /* Mobile app layout — desktop settings unchanged */
+    @media (max-width: 768px) {
+      .settings-page {
+        gap: 0.65rem;
+        padding-bottom: 0.5rem;
+      }
+      .hero-banner-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
+        min-height: 0;
+        border-radius: 12px;
+      }
+      .hero-subtitle {
+        font-size: 0.8rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .hero-actions {
+        width: 100%;
+      }
+      .btn-hero-primary {
+        width: 100%;
+        justify-content: center;
+      }
+      .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.55rem;
+      }
+      .form-row-2 {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+      }
+      .card-body-form {
+        padding: 1rem;
+        gap: 0.9rem;
+      }
+      .form-control {
+        font-size: 1rem;
+        padding: 0.75rem 0.9rem;
+        min-height: 44px;
+      }
+      .modal-form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .modal-footer {
       padding: 0.85rem 1.4rem;
       background: #f8fafc;
@@ -1449,16 +1551,40 @@ import { SubscriptionService } from '../../core/services/subscription.service';
   `]
 })
 export class SettingsComponent implements OnInit {
-  activeTab = signal<'profile' | 'ai' | 'team' | 'security'>(
+  activeTab = signal<'profile' | 'ai' | 'team' | 'security' | 'app'>(
     (typeof window !== 'undefined' && localStorage.getItem('settings_active_tab') as any) || 'profile'
   );
 
-  setTab(tab: 'profile' | 'ai' | 'team' | 'security'): void {
+  setTab(tab: 'profile' | 'ai' | 'team' | 'security' | 'app'): void {
     this.activeTab.set(tab);
     if (typeof window !== 'undefined') {
       localStorage.setItem('settings_active_tab', tab);
     }
   }
+
+  private router = inject(Router);
+  customApiUrl = (typeof window !== 'undefined' && localStorage.getItem('sr_custom_api_url')) || 'https://smartreply-backend-lyda.onrender.com/api';
+
+  setPresetApiUrl(url: string): void {
+    this.customApiUrl = url;
+  }
+
+  saveCustomApiUrl(): void {
+    if (typeof window !== 'undefined') {
+      if (this.customApiUrl && this.customApiUrl.trim()) {
+        localStorage.setItem('sr_custom_api_url', this.customApiUrl.trim());
+      } else {
+        localStorage.removeItem('sr_custom_api_url');
+      }
+      window.location.reload();
+    }
+  }
+
+  doLogout(): void {
+    this.authService.logout();
+    this.router.navigate(['/auth/login']);
+  }
+
   isSaving = signal<boolean>(false);
   isInviting = signal<boolean>(false);
   isUpdating = signal<boolean>(false);
