@@ -71,3 +71,11 @@ Login Page: http://localhost:4201/auth/login
 Register Page: http://localhost:4201/auth/register
 Dashboard: http://localhost:4201/dashboard
 Unified Live Inbox: http://localhost:4201/inbox
+
+
+cd /home/maintwiz/Music/smartreply-ai/frontend
+npm run apk:build
+
+
+
+

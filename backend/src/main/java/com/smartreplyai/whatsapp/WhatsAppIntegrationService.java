@@ -277,7 +277,7 @@ public class WhatsAppIntegrationService {
             // Find or create customer
             Customer customer = customerRepository.findByBusinessIdAndPhoneNumber(businessId, formattedPhone)
                     .orElseGet(() -> {
-                        Customer newCust = new Customer(finalAccount.getBusiness(), formattedPhone, senderName, null);
+                        Customer newCust = new Customer(owningBusiness, formattedPhone, senderName, null);
                         return customerRepository.save(newCust);
                     });
 
@@ -293,7 +293,7 @@ public class WhatsAppIntegrationService {
                 customer.setOptInStatus("OPTED_IN");
                 customerRepository.save(customer);
                 whatsAppClient.sendTextMessage(finalAccount, formattedPhone,
-                        "You have successfully subscribed to messages from " + finalAccount.getBusiness().getName() + ".");
+                        "You have successfully subscribed to messages from " + owningBusiness.getName() + ".");
                 return;
             }
 

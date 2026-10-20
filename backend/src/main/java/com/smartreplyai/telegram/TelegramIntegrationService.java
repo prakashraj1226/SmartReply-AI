@@ -201,15 +201,15 @@ public class TelegramIntegrationService {
             throw new BadRequestException("Invalid Telegram webhook secret");
         }
 
-        Business owningBusiness = account.getBusiness();
-        if (owningBusiness == null || !owningBusiness.isActive()) {
-            logger.info("Ignoring Telegram inbound update for suspended business (account={})", account.getId());
-            return;
-        }
-
-        UUID businessId = owningBusiness.getId();
         UUID prevTenant = TenantContext.getBusinessId();
         try {
+            Business owningBusiness = account.getBusiness();
+            if (owningBusiness == null || !owningBusiness.isActive()) {
+                logger.info("Ignoring Telegram inbound update for suspended business (account={})", account.getId());
+                return;
+            }
+
+            UUID businessId = owningBusiness.getId();
             TenantContext.setCurrentTenant(businessId);
 
             JsonNode root = objectMapper.readTree(rawPayload);
@@ -266,7 +266,7 @@ public class TelegramIntegrationService {
 
             Customer customer = customerRepository.findByBusinessIdAndPhoneNumber(businessId, syntheticPhone)
                     .orElseGet(() -> {
-                        Customer newCust = new Customer(account.getBusiness(), syntheticPhone, finalDisplayName, null);
+                        Customer newCust = new Customer(owningBusiness, syntheticPhone, finalDisplayName, null);
                         return customerRepository.save(newCust);
                     });
 
